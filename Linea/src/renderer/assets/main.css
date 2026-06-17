@@ -1,13 +1,16 @@
 @import './base.css';
 
 body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: rgba(20, 20, 20, 0.85);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  background-image: url('./wavy-lines.svg');
-  background-size: cover;
+  height: 100vh;
   user-select: none;
+  -webkit-app-region: drag;
 }
 
 code {
@@ -27,11 +30,11 @@ code {
 }
 
 #app {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  margin-bottom: 80px;
+  font-size: 20px;
+}
+
+#app button {
+  -webkit-app-region: no-drag;
 }
 
 .logo {

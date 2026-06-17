@@ -1,27 +1,45 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, globalShortcut, screen, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { IPC } from '../shared/ipcChannels'
+import { nextClickThroughState } from './clickThrough'
+
+let mainWindow: BrowserWindow | null = null
+let clickThrough = false
 
 function createWindow(): void {
+  const { width } = screen.getPrimaryDisplay().workAreaSize
+
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+  mainWindow = new BrowserWindow({
+    width: 320,
+    height: 160,
+    x: width - 340,
+    y: 40,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    alwaysOnTop: true,
+    resizable: true,
+    skipTaskbar: true,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false
     }
   })
+  const win = mainWindow // win is BrowserWindow here
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+  win.on('ready-to-show', () => {
+    win.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
@@ -29,10 +47,16 @@ function createWindow(): void {
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    win.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+function toggleClickThrough(): void {
+  if (!mainWindow) return
+  clickThrough = nextClickThroughState(clickThrough)
+  mainWindow.setIgnoreMouseEvents(clickThrough)
 }
 
 // This method will be called when Electron has finished
@@ -49,16 +73,29 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
-
   createWindow()
+
+  ipcMain.handle(IPC.TOGGLE_CLICK_THROUGH, () => {
+    toggleClickThrough()
+    return clickThrough
+  })
+
+  ipcMain.handle(IPC.GET_CLICK_THROUGH_STATE, () => clickThrough)
+
+  const registered = globalShortcut.register('CommandOrControl+Shift+Period', toggleClickThrough)
+  if (!registered) {
+    console.error('Global shortcut registration failed — another app may own Ctrl+Shift+Period')
+  }
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

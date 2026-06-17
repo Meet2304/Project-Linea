@@ -1,26 +1,9 @@
-function init(): void {
-  window.addEventListener('DOMContentLoaded', () => {
-    doAThing()
-  })
-}
+const appEl = document.getElementById('app')
+const button = document.createElement('button')
+button.textContent = 'Toggle click-through'
+appEl?.appendChild(button)
 
-function doAThing(): void {
-  const versions = window.electron.process.versions
-  replaceText('.electron-version', `Electron v${versions.electron}`)
-  replaceText('.chrome-version', `Chromium v${versions.chrome}`)
-  replaceText('.node-version', `Node v${versions.node}`)
-
-  const ipcHandlerBtn = document.getElementById('ipcHandler')
-  ipcHandlerBtn?.addEventListener('click', () => {
-    window.electron.ipcRenderer.send('ping')
-  })
-}
-
-function replaceText(selector: string, text: string): void {
-  const element = document.querySelector<HTMLElement>(selector)
-  if (element) {
-    element.innerText = text
-  }
-}
-
-init()
+button.addEventListener('click', async () => {
+  const isClickThrough = await window.linea.toggleClickThrough()
+  button.textContent = isClickThrough ? 'Click-through ON' : 'Toggle click-through'
+})
