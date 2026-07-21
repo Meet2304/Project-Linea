@@ -1,43 +1,61 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [main, master]
   push:
-    branches: [main, master]
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: Format, lint, typecheck, build
+  unit-tests:
+    name: Unit tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: Linea
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.12
+          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Format check
-        run: bun run format-check
-
-      - name: Lint
-        run: bun run lint
-
-      - name: Typecheck
+      - name: Type check
         run: bun run typecheck
 
-      - name: Build
+      - name: Unit tests
+        run: bun run test
+
+  e2e-tests:
+    name: Playwright e2e
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: Linea
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build app
         run: bun run build
+
+      - name: Install Playwright
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: bun run test:e2e
