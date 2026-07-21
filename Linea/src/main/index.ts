@@ -19,6 +19,7 @@ import { SPOTIFY_CLIENT_ID, SPOTIFY_REDIRECT_URI, SPOTIFY_SCOPE, LOOPBACK_PORT }
 import { fetchCurrentlyPlaying, hasTrackChanged } from './spotifyPlayer'
 import { getLyricsForTrack } from './lyricsCache'
 import { loadPrefs, savePrefs } from './prefs'
+import { initAutoUpdater } from './updater'
 
 let mainWindow: BrowserWindow | null = null
 let clickThrough = false
@@ -187,7 +188,7 @@ function startPolling(): void {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.meet2304.linea')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -195,6 +196,7 @@ app.whenReady().then(() => {
 
   createWindow()
   startPolling()
+  initAutoUpdater()
 
   ipcMain.handle(IPC.TOGGLE_CLICK_THROUGH, () => {
     toggleClickThrough()

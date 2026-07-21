@@ -157,14 +157,12 @@ User-data files at runtime (not in repo): `auth.dat`, `prefs.json`, `lyrics-cach
 
 ## Architectural notes for Stage 3
 
-Stage 3 should assume this feature set is stable and focus on:
+Stage 3 assumed this feature set was stable and delivered testing, packaging, and auto-update — see [linea-stage3-completion.md](./linea-stage3-completion.md).
 
-1. Broader testing / QA pass (manual auth + lyrics paths)
-2. Packaging with `electron-builder`
-3. Distribution / update strategy (`electron-updater` if kept)
-4. Cleanup of unused scaffold CSS / declarations
+Remaining optional cleanup (not required for Stage 2 or 3 exit):
 
-Do not expand lyrics sources or multi-provider auth until packaging and release hygiene are in place.
+1. Unused scaffold CSS / `window.electron` declarations
+2. Click-through button label sync when the global shortcut fires
 
 ---
 
@@ -186,4 +184,4 @@ Do not expand lyrics sources or multi-provider auth until packaging and release 
 | Result | **Complete** |
 | Recorded | 2026-07-21 06:37:58 +05:30 |
 | Commit | `6f10db9` |
-| Next stage | Stage 3 — Testing pass, packaging & distribution |
+| Next stage | Stage 3 — **Complete** ([linea-stage3-completion.md](./linea-stage3-completion.md)) |
