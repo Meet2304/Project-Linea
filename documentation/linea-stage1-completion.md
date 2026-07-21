@@ -225,4 +225,4 @@ Do not pull forward from later stages until Stage 2 guide exists: Spotify PKCE a
 | Stage | 1 — Foundation (Phases 1–4) |
 | Result | **Complete** |
 | Recorded | 2026-06-17 22:53:15 +05:30 |
-| Next stage | Stage 2 — Spotify auth, currently-playing, lyrics (LRCLIB) |
+| Next stage | Stage 2 — complete; see [linea-stage2-completion.md](./linea-stage2-completion.md) |

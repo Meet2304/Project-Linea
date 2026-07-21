@@ -1,11 +1,17 @@
 # Linea — Stage 2: Features (Phases 5–8)
 
-**Status:** Source of truth for guided build
-**Scope:** Spotify auth, live now-playing, synced lyrics, settings UI
+**Status:** Complete — historical build guide  
+**As-built record:** [linea-stage2-completion.md](./linea-stage2-completion.md)  
+**Scope:** Spotify auth, live now-playing, synced lyrics, settings UI  
 **Builds on:** Stage 1 (frameless overlay shell, IPC boundary) — see
-`linea-stage1-foundation.md` and `linea-stage1-completion.md`
-**Application path:** `Linea/` (within `Project-Linea` repository)
-**Package manager:** Bun (`bun install`, `bun run dev`, `bun test`)
+`linea-stage1-foundation.md` and `linea-stage1-completion.md`  
+**Application path:** `Linea/` (within `Project-Linea` repository)  
+**Package manager:** Bun or npm (`npm install`, `npm run dev`, `npm test` verified on completion)
+
+> Prefer the [completion record](./linea-stage2-completion.md) for what shipped.
+> This document remains the phase-by-phase reference; a few reference snippets
+> differ from the as-built code (notably client-ID env naming and idle
+> now-playing handling).
 
 ---
 
@@ -135,9 +141,11 @@ keep one.
 1. Create an app at the Spotify Developer Dashboard.
 2. Add a redirect URI matching exactly what the code below uses:
    `http://127.0.0.1:8888/callback` (must be `127.0.0.1`, not `localhost`
-   — Spotify treats them as different strings).
+   — Spotify treats them as different strings; use forward slashes only).
 3. Copy the **Client ID** only — PKCE means no client secret is needed.
-4. Note: as of the developer platform changes earlier this year, new apps
+4. Put it in `Linea/.env` as `MAIN_VITE_SPOTIFY_CLIENT_ID=...`
+   (see `Linea/.env.example`). Restart `npm run dev` after changing env.
+5. Note: as of the developer platform changes earlier this year, new apps
    in Development Mode require the developer's Spotify account to be
    Premium, are limited to one Development Mode client ID, and cap
    authorized users at five. None of that is a real constraint for
@@ -147,8 +155,8 @@ keep one.
 
 `src/main/config.ts` (new)
 ```ts
-export const SPOTIFY_CLIENT_ID =
-  process.env.SPOTIFY_CLIENT_ID ?? '<your-client-id-here>'
+// As-built: electron-vite main env (see Linea/.env.example)
+export const SPOTIFY_CLIENT_ID = import.meta.env.MAIN_VITE_SPOTIFY_CLIENT_ID ?? ''
 export const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:8888/callback'
 export const SPOTIFY_SCOPE = 'user-read-currently-playing'
 export const LOOPBACK_PORT = 8888
@@ -397,16 +405,16 @@ describe('PKCE helpers', () => {
 ```
 
 ### Acceptance criteria
-- [ ] Clicking "Connect Spotify" opens the real system browser, not a
+- [x] Clicking "Connect Spotify" opens the real system browser, not a
       window inside Linea
-- [ ] After approving access, the browser tab shows a simple confirmation
+- [x] After approving access, the browser tab shows a simple confirmation
       page and Linea reports a connected state
-- [ ] `auth.dat` exists in the app's user data directory and is unreadable
+- [x] `auth.dat` exists in the app's user data directory and is unreadable
       as plain text
-- [ ] Restarting the app and checking auth state reflects the stored
+- [x] Restarting the app and checking auth state reflects the stored
       refresh token without requiring login again
-- [ ] `bun test` passes the new PKCE tests
-- [ ] You can explain, unprompted, why the verifier is generated fresh
+- [x] `npm test` / `bun test` passes the new PKCE tests
+- [x] You can explain, unprompted, why the verifier is generated fresh
       every login while the challenge is what's sent upfront
 
 ### Common pitfalls
@@ -560,14 +568,18 @@ onNowPlaying: (callback: (data: NowPlaying) => void) => {
 `NowPlaying` from `src/shared/types`.)
 
 ### Acceptance criteria
-- [ ] Playing/pausing/skipping tracks on Spotify is reflected in the
+- [x] Playing/pausing/skipping tracks on Spotify is reflected in the
       renderer within a couple of seconds, without any user action in Linea
-- [ ] Leaving Spotify paused or idle doesn't throw errors — the 204 case is
+- [x] Leaving Spotify paused or idle doesn't throw errors — the 204 case is
       handled as "nothing playing," not as a failure
-- [ ] Letting the app sit past an hour keeps working without re-login
+- [x] Letting the app sit past an hour keeps working without re-login
       (token refresh is happening silently)
-- [ ] You can explain why this phase uses `send`/`on` while click-through
+- [x] You can explain why this phase uses `send`/`on` while click-through
       and login use `invoke`/`handle`
+
+**As-built note:** when Spotify returns 204, main sends `null` on
+`NOW_PLAYING` and clears lyrics so the overlay can show an idle message
+(the earlier reference snippet returned without notifying the renderer).
 
 ### Common pitfalls
 - **Forgetting the 204 check**: calling `response.json()` on an empty 204
@@ -692,8 +704,11 @@ export async function getLyricsForTrack(params: {
   const data = await response.json()
   const lines = data.syncedLyrics ? parseLrc(data.syncedLyrics) : []
 
-  mkdirSync(cacheDir(), { recursive: true })
-  writeFileSync(cacheFile(params.trackId), JSON.stringify(lines))
+  // As-built: only cache non-empty results so a transient miss isn't sticky
+  if (lines.length > 0) {
+    mkdirSync(cacheDir(), { recursive: true })
+    writeFileSync(cacheFile(params.trackId), JSON.stringify(lines))
+  }
   return lines
 }
 ```
@@ -790,14 +805,14 @@ describe('getCurrentLineIndex', () => {
 ```
 
 ### Acceptance criteria
-- [ ] Playing a song with known lyrics on LRCLIB results in the correct
+- [x] Playing a song with known lyrics on LRCLIB results in the correct
       line being identifiable at any given position
-- [ ] Switching tracks triggers exactly one lyrics fetch, not one per poll
+- [x] Switching tracks triggers exactly one lyrics fetch, not one per poll
       tick (verify via a console log or breakpoint in `getLyricsForTrack`)
-- [ ] Re-playing a previously played track loads from the local cache file
+- [x] Re-playing a previously played track loads from the local cache file
       instead of hitting the network again
-- [ ] `bun test` passes the new LRC parser tests
-- [ ] You can explain why `parseLrc` and `getCurrentLineIndex` live in
+- [x] `npm test` / `bun test` passes the new LRC parser tests
+- [x] You can explain why `parseLrc` and `getCurrentLineIndex` live in
       `src/shared/` instead of `src/main/`
 
 ### Common pitfalls
@@ -957,14 +972,17 @@ describe('clampPrefs', () => {
 ```
 
 ### Acceptance criteria
-- [ ] Current lyric line is visually distinct from the previous/next lines
-- [ ] Adjusting the opacity slider updates the window live and persists
+- [x] Current lyric line is visually distinct from the previous/next lines
+- [x] Adjusting the opacity slider updates the window live and persists
       after restarting the app
-- [ ] An invalid/out-of-range value written directly into `prefs.json` by
+- [x] An invalid/out-of-range value written directly into `prefs.json` by
       hand still produces a valid, clamped UI on next launch
-- [ ] `bun test` passes the new prefs tests
-- [ ] You can explain why prefs and the refresh token are stored in two
+- [x] `npm test` / `bun test` passes the new prefs tests
+- [x] You can explain why prefs and the refresh token are stored in two
       separate files instead of one
+
+**As-built note:** default window is **380×240** (not Stage 1’s 320×160) so
+status, lyric neighbors, and both settings sliders fit without crowding.
 
 ### Common pitfalls
 - **Settings UI in the draggable region**: any new interactive element
@@ -978,26 +996,25 @@ describe('clampPrefs', () => {
 
 ## Stage 2 — exit checklist
 
-- [ ] Spotify login completes via the system browser and survives an app
+- [x] Spotify login completes via the system browser and survives an app
       restart without re-prompting
-- [ ] Now-playing data updates the renderer continuously while music plays,
+- [x] Now-playing data updates the renderer continuously while music plays,
       handling paused/idle (204) correctly
-- [ ] Lyrics are fetched once per track change, cached locally, and the
+- [x] Lyrics are fetched once per track change, cached locally, and the
       correct line is identifiable at any position
-- [ ] Renderer shows the current line plus dimmed neighbors, updating
+- [x] Renderer shows the current line plus dimmed neighbors, updating
       smoothly between poll ticks via local position interpolation
-- [ ] Settings (opacity, font size) persist across restarts in a separate
+- [x] Settings (opacity, font size) persist across restarts in a separate
       file from the encrypted auth token
-- [ ] All four new pure-logic modules have passing Vitest files
+- [x] All four new pure-logic modules have passing Vitest files
       (`spotifyAuth`, `lyrics`/LRC parsing, `prefs`)
-- [ ] Learner can explain, unprompted: why PKCE replaces a client secret,
+- [x] Learner can explain, unprompted: why PKCE replaces a client secret,
       why now-playing uses push IPC while login/prefs use request-response,
       why lyric sync logic lives in `shared/` instead of `main/`, and why
       secrets and preferences are stored separately
 
-If any of these aren't true, stay in Stage 2 — Stage 3 (testing pass,
-packaging, distribution) assumes a feature-complete app, not a partially
-wired one.
+**Signed off:** see [linea-stage2-completion.md](./linea-stage2-completion.md).
+Stage 3 (testing pass, packaging, distribution) may proceed.
 
 ---
 
@@ -1022,10 +1039,12 @@ wired one.
 
 ```
 Linea/
+├── .env.example                 # MAIN_VITE_SPOTIFY_CLIENT_ID
 ├── electron.vite.config.ts
 ├── package.json
 ├── tsconfig.json / tsconfig.node.json / tsconfig.web.json
 ├── src/
+│   ├── env.d.ts                 # new
 │   ├── main/
 │   │   ├── index.ts
 │   │   ├── clickThrough.ts
@@ -1073,6 +1092,7 @@ Linea/
 
 ## References
 
+- [Stage 2 completion record](./linea-stage2-completion.md)
 - [Stage 1 build guide](./linea-stage1-foundation.md)
 - [Stage 1 completion record](./linea-stage1-completion.md)
 - [Spotify Web API — Authorization Code with PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
@@ -1081,11 +1101,13 @@ Linea/
 
 ---
 
-## Sign-off (fill in on completion)
+## Sign-off
 
 | Field | Value |
 |---|---|
 | Stage | 2 — Features (Phases 5–8) |
-| Result | _pending_ |
-| Recorded | _pending_ |
+| Result | **Complete** |
+| Recorded | 2026-07-21 06:37:58 +05:30 |
+| Commit | `6f10db9` |
+| Full record | [linea-stage2-completion.md](./linea-stage2-completion.md) |
 | Next stage | Stage 3 — Testing pass, packaging & distribution |
