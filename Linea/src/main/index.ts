@@ -3,19 +3,37 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { IPC } from '../shared/ipcChannels'
+import type { NowPlaying, Prefs } from '../shared/types'
+import type { LyricLine } from '../shared/lyrics'
 import { nextClickThroughState } from './clickThrough'
+import {
+  generateCodeVerifier,
+  generateCodeChallenge,
+  buildAuthUrl,
+  exchangeCodeForTokens,
+  refreshAccessToken
+} from './spotifyAuth'
+import { startLoopbackServer } from './loopbackServer'
+import { saveRefreshToken, loadRefreshToken, clearRefreshToken } from './tokenStore'
+import { SPOTIFY_CLIENT_ID, SPOTIFY_REDIRECT_URI, SPOTIFY_SCOPE, LOOPBACK_PORT } from './config'
+import { fetchCurrentlyPlaying, hasTrackChanged } from './spotifyPlayer'
+import { getLyricsForTrack } from './lyricsCache'
+import { loadPrefs, savePrefs } from './prefs'
 
 let mainWindow: BrowserWindow | null = null
 let clickThrough = false
+let accessToken: string | null = null
+let tokenExpiresAt = 0
+let lastNowPlaying: NowPlaying | null = null
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 function createWindow(): void {
   const { width } = screen.getPrimaryDisplay().workAreaSize
 
-  // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 320,
-    height: 160,
-    x: width - 340,
+    width: 380,
+    height: 240,
+    x: width - 400,
     y: 40,
     frame: false,
     transparent: true,
@@ -33,7 +51,7 @@ function createWindow(): void {
       nodeIntegration: false
     }
   })
-  const win = mainWindow // win is BrowserWindow here
+  const win = mainWindow
 
   win.on('ready-to-show', () => {
     win.show()
@@ -44,8 +62,6 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -59,21 +75,126 @@ function toggleClickThrough(): void {
   mainWindow.setIgnoreMouseEvents(clickThrough)
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+function sendNowPlaying(data: NowPlaying | null): void {
+  mainWindow?.webContents.send(IPC.NOW_PLAYING, data)
+}
+
+function sendLyrics(lines: LyricLine[]): void {
+  mainWindow?.webContents.send(IPC.LYRICS_UPDATE, lines)
+}
+
+async function loginToSpotify(): Promise<boolean> {
+  if (!SPOTIFY_CLIENT_ID) {
+    throw new Error(
+      'Missing MAIN_VITE_SPOTIFY_CLIENT_ID. Add it to Linea/.env and restart the app.'
+    )
+  }
+
+  const verifier = generateCodeVerifier()
+  const challenge = generateCodeChallenge(verifier)
+  const { server, code } = await startLoopbackServer(LOOPBACK_PORT)
+
+  const authUrl = buildAuthUrl({
+    clientId: SPOTIFY_CLIENT_ID,
+    redirectUri: SPOTIFY_REDIRECT_URI,
+    codeChallenge: challenge,
+    scope: SPOTIFY_SCOPE
+  })
+  await shell.openExternal(authUrl)
+
+  try {
+    const authCode = await code
+    const tokens = await exchangeCodeForTokens({
+      clientId: SPOTIFY_CLIENT_ID,
+      redirectUri: SPOTIFY_REDIRECT_URI,
+      code: authCode,
+      codeVerifier: verifier
+    })
+    saveRefreshToken(tokens.refreshToken)
+    accessToken = tokens.accessToken
+    tokenExpiresAt = Date.now() + tokens.expiresIn * 1000
+    return true
+  } finally {
+    server.close()
+  }
+}
+
+function logoutFromSpotify(): void {
+  clearRefreshToken()
+  accessToken = null
+  tokenExpiresAt = 0
+  lastNowPlaying = null
+  sendNowPlaying(null)
+  sendLyrics([])
+}
+
+async function ensureFreshAccessToken(): Promise<string | null> {
+  if (accessToken && Date.now() < tokenExpiresAt - 30_000) return accessToken
+  if (!SPOTIFY_CLIENT_ID) return null
+
+  const refreshToken = loadRefreshToken()
+  if (!refreshToken) return null
+
+  const { accessToken: newToken, expiresIn } = await refreshAccessToken({
+    clientId: SPOTIFY_CLIENT_ID,
+    refreshToken
+  })
+  accessToken = newToken
+  tokenExpiresAt = Date.now() + expiresIn * 1000
+  return accessToken
+}
+
+async function pollNowPlaying(): Promise<void> {
+  try {
+    const token = await ensureFreshAccessToken()
+    if (!token || !mainWindow) return
+
+    const nowPlaying = await fetchCurrentlyPlaying(token)
+    if (!nowPlaying) {
+      if (lastNowPlaying !== null) {
+        lastNowPlaying = null
+        sendNowPlaying(null)
+        sendLyrics([])
+      }
+      return
+    }
+
+    sendNowPlaying(nowPlaying)
+
+    if (hasTrackChanged(lastNowPlaying, nowPlaying) && nowPlaying.trackId) {
+      const lines = await getLyricsForTrack({
+        trackId: nowPlaying.trackId,
+        trackName: nowPlaying.trackName,
+        artistName: nowPlaying.artistName,
+        albumName: nowPlaying.albumName,
+        durationSec: Math.round(nowPlaying.durationMs / 1000)
+      })
+      sendLyrics(lines)
+    }
+
+    lastNowPlaying = nowPlaying
+  } catch (error) {
+    console.error('Now-playing poll failed:', error)
+  }
+}
+
+function startPolling(): void {
+  if (pollTimer) return
+  void pollNowPlaying()
+  pollTimer = setInterval(() => {
+    void pollNowPlaying()
+  }, 2000)
+}
+
 app.whenReady().then(() => {
-  // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
   createWindow()
+  startPolling()
 
   ipcMain.handle(IPC.TOGGLE_CLICK_THROUGH, () => {
     toggleClickThrough()
@@ -82,30 +203,35 @@ app.whenReady().then(() => {
 
   ipcMain.handle(IPC.GET_CLICK_THROUGH_STATE, () => clickThrough)
 
+  ipcMain.handle(IPC.SPOTIFY_LOGIN, () => loginToSpotify())
+  ipcMain.handle(IPC.SPOTIFY_LOGOUT, () => {
+    logoutFromSpotify()
+  })
+  ipcMain.handle(IPC.SPOTIFY_AUTH_STATE, () => accessToken !== null || loadRefreshToken() !== null)
+
+  ipcMain.handle(IPC.GET_PREFS, () => loadPrefs())
+  ipcMain.handle(IPC.SET_PREFS, (_event, partial: Partial<Prefs>) => savePrefs(partial))
+
   const registered = globalShortcut.register('CommandOrControl+Shift+Period', toggleClickThrough)
   if (!registered) {
     console.error('Global shortcut registration failed — another app may own Ctrl+Shift+Period')
   }
 
   app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
