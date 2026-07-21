@@ -12,30 +12,175 @@
 
   <body>
     <div id="app">
-      <header class="top-bar">
-        <div id="status" class="status">Not connected</div>
-        <div class="actions">
-          <button id="auth-btn" type="button">Connect Spotify</button>
-          <button id="click-through-btn" type="button">Click-through</button>
+      <!-- Disconnected -->
+      <div id="connect-view" class="connect" hidden>
+        <div class="wordmark">linea</div>
+        <div class="connect-tag">// see the shape of sound</div>
+        <button id="connect-btn" class="btn-primary" type="button">Connect Spotify</button>
+        <div id="connect-status" class="connect-status"></div>
+      </div>
+
+      <!-- Player -->
+      <div id="player-view" hidden>
+        <header class="header">
+          <canvas id="art" width="104" height="104"></canvas>
+          <div class="track">
+            <div id="track-title" class="track-title">Nothing playing</div>
+            <div id="track-artist" class="track-artist">Play a song on Spotify</div>
+          </div>
+          <span id="state-tag" class="tag tag-teal">Now playing</span>
+        </header>
+
+        <div class="scrub">
+          <input
+            id="seek"
+            class="slider"
+            type="range"
+            min="0"
+            max="1000"
+            step="1"
+            value="0"
+            aria-label="Seek"
+          />
+          <div class="timecodes">
+            <span id="time-elapsed" class="mono">0:00</span>
+            <span id="time-remaining" class="mono">-0:00</span>
+          </div>
         </div>
-      </header>
 
-      <section class="lyrics">
-        <div id="lyric-prev" class="lyric-neighbor"></div>
-        <div id="lyric" class="lyric-current">Play a song on Spotify</div>
-        <div id="lyric-next" class="lyric-neighbor"></div>
-      </section>
+        <div class="transport">
+          <div class="transport-left">
+            <button
+              id="btn-shuffle"
+              class="icon-btn icon-btn-sm feature-sapphire"
+              type="button"
+              aria-label="Shuffle"
+            ></button>
+            <button id="btn-prev" class="icon-btn" type="button" aria-label="Previous"></button>
+            <button
+              id="btn-play"
+              class="icon-btn icon-btn-lg filled round"
+              type="button"
+              aria-label="Play or pause"
+            ></button>
+            <button id="btn-next" class="icon-btn" type="button" aria-label="Next"></button>
+            <button
+              id="btn-repeat"
+              class="icon-btn icon-btn-sm feature-sapphire"
+              type="button"
+              aria-label="Repeat"
+            ></button>
+          </div>
+          <div class="transport-right">
+            <button
+              id="btn-like"
+              class="icon-btn icon-btn-sm feature-garnet"
+              type="button"
+              aria-label="Like"
+            ></button>
+            <button
+              id="btn-lyrics"
+              class="icon-btn icon-btn-sm feature-amethyst"
+              type="button"
+              aria-label="Toggle lyrics"
+            ></button>
+            <button
+              id="btn-settings"
+              class="icon-btn icon-btn-sm"
+              type="button"
+              aria-label="Settings"
+            ></button>
+          </div>
+        </div>
 
-      <footer class="settings">
-        <label>
-          Opacity
-          <input id="opacity-slider" type="range" min="0.2" max="1" step="0.05" value="0.9" />
-        </label>
-        <label>
-          Size
-          <input id="font-slider" type="range" min="12" max="28" step="1" value="16" />
-        </label>
-      </footer>
+        <section id="lyrics-panel" class="lyrics">
+          <div class="lyrics-head">
+            <span class="tag tag-amethyst">Live lyrics</span>
+            <span id="lyrics-state" class="mono lyrics-state">Synced</span>
+          </div>
+          <div id="lyrics-list" class="lyrics-list"></div>
+        </section>
+      </div>
+
+      <!-- Settings popover -->
+      <div id="settings-pop" class="settings-pop" hidden>
+        <div class="set-row">
+          <span class="set-label">Theme</span>
+          <button
+            id="set-theme"
+            class="switch"
+            type="button"
+            role="switch"
+            aria-checked="false"
+            aria-label="Dark theme"
+          ></button>
+        </div>
+        <div class="set-row">
+          <span class="set-label">Pin on top</span>
+          <button
+            id="set-pin"
+            class="switch"
+            type="button"
+            role="switch"
+            aria-checked="true"
+            aria-label="Pin on top"
+          ></button>
+        </div>
+        <div class="set-row">
+          <span class="set-label">Click-through</span>
+          <span class="set-hint">Ctrl+Shift+.</span>
+          <button
+            id="set-clickthrough"
+            class="switch"
+            type="button"
+            role="switch"
+            aria-checked="false"
+            aria-label="Click-through"
+          ></button>
+        </div>
+        <div class="set-row">
+          <span class="set-label">Opacity</span>
+          <input
+            id="set-opacity"
+            class="slider"
+            type="range"
+            min="0.6"
+            max="1"
+            step="0.02"
+            value="0.92"
+            aria-label="Panel opacity"
+          />
+        </div>
+        <div class="set-row">
+          <span class="set-label">Text size</span>
+          <input
+            id="set-fontsize"
+            class="slider"
+            type="range"
+            min="12"
+            max="28"
+            step="1"
+            value="14"
+            aria-label="Lyrics text size"
+          />
+        </div>
+        <div class="set-row">
+          <span class="set-label">Lyrics</span>
+          <button
+            id="set-lyrics"
+            class="switch"
+            type="button"
+            role="switch"
+            aria-checked="true"
+            aria-label="Show lyrics"
+          ></button>
+        </div>
+        <div class="set-footer">
+          <button id="set-disconnect" class="btn-text-danger" type="button">Disconnect</button>
+        </div>
+      </div>
+
+      <div id="toast" class="toast" hidden></div>
     </div>
 
     <script type="module" src="./src/renderer.ts"></script>

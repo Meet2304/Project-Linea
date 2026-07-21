@@ -7,5 +7,11 @@ export const IPC = {
   NOW_PLAYING: 'linea:now-playing',
   LYRICS_UPDATE: 'linea:lyrics-update',
   GET_PREFS: 'linea:get-prefs',
-  SET_PREFS: 'linea:set-prefs'
+  SET_PREFS: 'linea:set-prefs',
+  PLAYER_COMMAND: 'linea:player-command',
+  TOGGLE_LIKE: 'linea:toggle-like',
+  SET_PINNED: 'linea:set-pinned',
+  SET_LYRICS_EXPANDED: 'linea:set-lyrics-expanded',
+  CLICK_THROUGH_CHANGED: 'linea:click-through-changed',
+  PLAYER_ERROR: 'linea:player-error'
 } as const

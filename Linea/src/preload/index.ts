@@ -1,7 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipcChannels'
-import type { NowPlaying, Prefs } from '../shared/types'
+import type {
+  ApiResult,
+  PlayerCommand,
+  PlayerErrorEvent,
+  PlayerState,
+  Prefs
+} from '../shared/types'
 import type { LyricLine } from '../shared/lyrics'
+
+function subscribe<T>(channel: string): (callback: (data: T) => void) => () => void {
+  return (callback) => {
+    const listener = (_event: unknown, data: T): void => callback(data)
+    ipcRenderer.on(channel, listener)
+    return () => ipcRenderer.removeListener(channel, listener)
+  }
+}
 
 contextBridge.exposeInMainWorld('linea', {
   toggleClickThrough: (): Promise<boolean> => ipcRenderer.invoke(IPC.TOGGLE_CLICK_THROUGH),
@@ -9,16 +23,16 @@ contextBridge.exposeInMainWorld('linea', {
   login: (): Promise<boolean> => ipcRenderer.invoke(IPC.SPOTIFY_LOGIN),
   logout: (): Promise<void> => ipcRenderer.invoke(IPC.SPOTIFY_LOGOUT),
   getAuthState: (): Promise<boolean> => ipcRenderer.invoke(IPC.SPOTIFY_AUTH_STATE),
-  onNowPlaying: (callback: (data: NowPlaying | null) => void): (() => void) => {
-    const listener = (_event: unknown, data: NowPlaying | null): void => callback(data)
-    ipcRenderer.on(IPC.NOW_PLAYING, listener)
-    return () => ipcRenderer.removeListener(IPC.NOW_PLAYING, listener)
-  },
-  onLyricsUpdate: (callback: (lines: LyricLine[]) => void): (() => void) => {
-    const listener = (_event: unknown, lines: LyricLine[]): void => callback(lines)
-    ipcRenderer.on(IPC.LYRICS_UPDATE, listener)
-    return () => ipcRenderer.removeListener(IPC.LYRICS_UPDATE, listener)
-  },
+  playerCommand: (command: PlayerCommand): Promise<ApiResult<null>> =>
+    ipcRenderer.invoke(IPC.PLAYER_COMMAND, command),
+  toggleLike: (): Promise<ApiResult<boolean>> => ipcRenderer.invoke(IPC.TOGGLE_LIKE),
+  setPinned: (pinned: boolean): Promise<void> => ipcRenderer.invoke(IPC.SET_PINNED, pinned),
+  setLyricsExpanded: (expanded: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.SET_LYRICS_EXPANDED, expanded),
+  onNowPlaying: subscribe<PlayerState | null>(IPC.NOW_PLAYING),
+  onLyricsUpdate: subscribe<LyricLine[]>(IPC.LYRICS_UPDATE),
+  onClickThroughChanged: subscribe<boolean>(IPC.CLICK_THROUGH_CHANGED),
+  onPlayerError: subscribe<PlayerErrorEvent>(IPC.PLAYER_ERROR),
   getPrefs: (): Promise<Prefs> => ipcRenderer.invoke(IPC.GET_PREFS),
   setPrefs: (partial: Partial<Prefs>): Promise<Prefs> => ipcRenderer.invoke(IPC.SET_PREFS, partial)
 })
