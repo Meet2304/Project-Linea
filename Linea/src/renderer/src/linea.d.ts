@@ -17,6 +17,15 @@ interface LineaAPI {
   toggleLike: () => Promise<ApiResult<boolean>>
   setPinned: (pinned: boolean) => Promise<void>
   setLyricsExpanded: (expanded: boolean) => Promise<void>
+  resizeTo: (height: number) => Promise<void>
+  getWindowBounds: () => Promise<{ x: number; y: number; width: number; height: number }>
+  setWindowBounds: (bounds: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }) => Promise<void>
+  closeWindow: () => Promise<void>
   onNowPlaying: (callback: (data: PlayerState | null) => void) => () => void
   onLyricsUpdate: (callback: (lines: LyricLine[]) => void) => () => void
   onClickThroughChanged: (callback: (on: boolean) => void) => () => void

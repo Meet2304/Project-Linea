@@ -1,27 +1,31 @@
 import type { Prefs, Theme } from '../../shared/types'
+import { el } from './playerUi'
+import { icons } from './icons'
 
 export interface SettingsCallbacks {
   onTheme: (theme: Theme) => void
-  onPin: (pinned: boolean) => void
   onClickThrough: () => void
   onOpacity: (value: number) => void
   onFontSize: (value: number) => void
   onLyricsExpanded: (expanded: boolean) => void
   onDisconnect: () => void
+  /** Fires after the now/settings view swaps so the host can resize. */
+  onViewChange: () => void
 }
 
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T
 }
 
-const pop = byId('settings-pop')
 const themeSwitch = byId<HTMLButtonElement>('set-theme')
-const pinSwitch = byId<HTMLButtonElement>('set-pin')
 const clickThroughSwitch = byId<HTMLButtonElement>('set-clickthrough')
 const opacitySlider = byId<HTMLInputElement>('set-opacity')
 const fontSlider = byId<HTMLInputElement>('set-fontsize')
 const lyricsSwitch = byId<HTMLButtonElement>('set-lyrics')
+const closeBtn = byId<HTMLButtonElement>('set-close')
 const disconnectBtn = byId<HTMLButtonElement>('set-disconnect')
+
+let onViewChange: () => void = () => {}
 
 function isOn(node: HTMLElement): boolean {
   return node.getAttribute('aria-checked') === 'true'
@@ -39,15 +43,14 @@ function updateSliderFill(slider: HTMLInputElement): void {
 }
 
 export function initSettings(cb: SettingsCallbacks): void {
+  onViewChange = cb.onViewChange
+
+  closeBtn.innerHTML = icons.x
+
   themeSwitch.addEventListener('click', () => {
     const dark = !isOn(themeSwitch)
     setOn(themeSwitch, dark)
     cb.onTheme(dark ? 'dark' : 'light')
-  })
-  pinSwitch.addEventListener('click', () => {
-    const pinned = !isOn(pinSwitch)
-    setOn(pinSwitch, pinned)
-    cb.onPin(pinned)
   })
   clickThroughSwitch.addEventListener('click', () => {
     // State is owned by main (global shortcut can also toggle it);
@@ -67,6 +70,7 @@ export function initSettings(cb: SettingsCallbacks): void {
     setOn(lyricsSwitch, expanded)
     cb.onLyricsExpanded(expanded)
   })
+  closeBtn.addEventListener('click', () => closeSettings())
   disconnectBtn.addEventListener('click', () => {
     closeSettings()
     cb.onDisconnect()
@@ -75,19 +79,10 @@ export function initSettings(cb: SettingsCallbacks): void {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeSettings()
   })
-  document.addEventListener('pointerdown', (event) => {
-    if (pop.hidden) return
-    const target = event.target as Node
-    if (!pop.contains(target) && (target as HTMLElement).id !== 'btn-settings') {
-      const settingsBtn = document.getElementById('btn-settings')
-      if (!settingsBtn?.contains(target)) closeSettings()
-    }
-  })
 }
 
 export function reflectPrefs(prefs: Prefs): void {
   setOn(themeSwitch, prefs.theme === 'dark')
-  setOn(pinSwitch, prefs.pinned)
   setOn(lyricsSwitch, prefs.lyricsExpanded)
   opacitySlider.value = String(prefs.opacity)
   fontSlider.value = String(prefs.fontSize)
@@ -99,10 +94,17 @@ export function reflectClickThrough(on: boolean): void {
   setOn(clickThroughSwitch, on)
 }
 
+function setSettingsOpen(open: boolean): void {
+  el.settingsView.hidden = !open
+  el.nowView.hidden = open
+  el.btnSettings.dataset.active = String(open)
+  onViewChange()
+}
+
 export function toggleSettings(): void {
-  pop.hidden = !pop.hidden
+  setSettingsOpen(el.settingsView.hidden)
 }
 
 export function closeSettings(): void {
-  pop.hidden = true
+  if (!el.settingsView.hidden) setSettingsOpen(false)
 }

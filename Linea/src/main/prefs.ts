@@ -6,8 +6,8 @@ import type { Prefs, Theme } from '../shared/types'
 const prefsFile = (): string => join(app.getPath('userData'), 'prefs.json')
 
 const DEFAULT_PREFS: Prefs = {
-  opacity: 0.92,
-  fontSize: 14,
+  opacity: 0.95,
+  fontSize: 15,
   theme: 'light',
   pinned: true,
   lyricsExpanded: true

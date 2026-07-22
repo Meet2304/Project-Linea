@@ -29,11 +29,13 @@ import { getLyricsForTrack } from './lyricsCache'
 import { loadPrefs, savePrefs } from './prefs'
 import { initAutoUpdater } from './updater'
 
-// Window hugs the 384px panel + a 12px shadow gutter per side; height
-// is driven programmatically by the lyrics expanded/compact pref.
-const WINDOW_WIDTH = 408
-const COMPACT_HEIGHT = 232
-const EXPANDED_HEIGHT = 470
+// The panel fills the window minus a 30px shadow gutter per side. The
+// window is freely resizable (custom grips in the renderer drive
+// SET_WINDOW_BOUNDS); these are the launch and floor sizes.
+const INITIAL_WIDTH = 480
+const INITIAL_HEIGHT = 264
+const MIN_WIDTH = 372
+const MIN_HEIGHT = 200
 
 let mainWindow: BrowserWindow | null = null
 let clickThrough = false
@@ -54,8 +56,27 @@ function rememberLiked(trackId: string, liked: boolean): void {
   likedCache.set(trackId, liked)
 }
 
-function windowHeight(prefs: Prefs): number {
-  return prefs.lyricsExpanded ? EXPANDED_HEIGHT : COMPACT_HEIGHT
+/** Set the window height only (used by the lyrics collapse/expand),
+ *  keeping the top-right anchor so it grows downward. */
+function resizeWindowTo(height: number): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const { height: availH } = screen.getPrimaryDisplay().workAreaSize
+  const clamped = Math.round(Math.max(MIN_HEIGHT, Math.min(height, availH - 40)))
+  const bounds = mainWindow.getBounds()
+  if (bounds.height === clamped) return
+  mainWindow.setBounds({ ...bounds, height: clamped })
+}
+
+/** Apply a full renderer-driven bounds (custom edge/corner resize). */
+function setWindowBounds(bounds: { x: number; y: number; width: number; height: number }): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const area = screen.getPrimaryDisplay().workAreaSize
+  mainWindow.setBounds({
+    x: Math.round(bounds.x),
+    y: Math.round(bounds.y),
+    width: Math.round(Math.max(MIN_WIDTH, Math.min(bounds.width, area.width))),
+    height: Math.round(Math.max(MIN_HEIGHT, Math.min(bounds.height, area.height)))
+  })
 }
 
 function createWindow(): void {
@@ -63,17 +84,17 @@ function createWindow(): void {
   const prefs = loadPrefs()
 
   mainWindow = new BrowserWindow({
-    width: WINDOW_WIDTH,
-    height: windowHeight(prefs),
-    x: width - WINDOW_WIDTH - 20,
+    width: INITIAL_WIDTH,
+    height: INITIAL_HEIGHT,
+    x: width - INITIAL_WIDTH - 20,
     y: 40,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
     alwaysOnTop: prefs.pinned,
     resizable: true,
-    minWidth: WINDOW_WIDTH,
-    minHeight: COMPACT_HEIGHT,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     skipTaskbar: true,
     show: false,
     autoHideMenuBar: true,
@@ -91,6 +112,27 @@ function createWindow(): void {
     win.show()
   })
 
+  // Null the reference so poll/lyrics callbacks never touch a destroyed
+  // window (a silent crash source once the widget can be closed).
+  win.on('closed', () => {
+    mainWindow = null
+  })
+
+  // A transparent, always-on-top overlay can lose its GPU/render process
+  // after long sessions on Windows. Recover in place instead of leaving a
+  // dead panel on screen.
+  win.webContents.on('render-process-gone', (_event, details) => {
+    console.error('Renderer process gone:', details.reason)
+    if (details.reason !== 'clean-exit' && !win.isDestroyed()) {
+      win.reload()
+    }
+  })
+
+  win.on('unresponsive', () => {
+    console.error('Window unresponsive — reloading')
+    if (!win.isDestroyed()) win.reload()
+  })
+
   win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -103,24 +145,31 @@ function createWindow(): void {
   }
 }
 
+/** Send to the renderer only when the window is genuinely alive. */
+function sendToRenderer(channel: string, payload: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload)
+  }
+}
+
 function toggleClickThrough(): void {
-  if (!mainWindow) return
+  if (!mainWindow || mainWindow.isDestroyed()) return
   clickThrough = nextClickThroughState(clickThrough)
   // forward:true keeps hover events flowing so the panel can dim itself.
   mainWindow.setIgnoreMouseEvents(clickThrough, { forward: true })
-  mainWindow.webContents.send(IPC.CLICK_THROUGH_CHANGED, clickThrough)
+  sendToRenderer(IPC.CLICK_THROUGH_CHANGED, clickThrough)
 }
 
 function sendNowPlaying(data: PlayerState | null): void {
-  mainWindow?.webContents.send(IPC.NOW_PLAYING, data)
+  sendToRenderer(IPC.NOW_PLAYING, data)
 }
 
 function sendLyrics(lines: LyricLine[]): void {
-  mainWindow?.webContents.send(IPC.LYRICS_UPDATE, lines)
+  sendToRenderer(IPC.LYRICS_UPDATE, lines)
 }
 
 function sendPlayerError(reason: PlayerErrorReason, message: string): void {
-  mainWindow?.webContents.send(IPC.PLAYER_ERROR, { reason, message })
+  sendToRenderer(IPC.PLAYER_ERROR, { reason, message })
 }
 
 // ------------------------------------------------------------------
@@ -338,6 +387,15 @@ async function handleToggleLike(): Promise<ApiResult<boolean>> {
 // ------------------------------------------------------------------
 // App lifecycle
 // ------------------------------------------------------------------
+// A long-lived background overlay must not die on a stray async error
+// (e.g. a Spotify fetch rejecting during sleep/resume). Log and survive.
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception in main:', error)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection in main:', reason)
+})
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.meet2304.linea')
 
@@ -366,17 +424,36 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.TOGGLE_LIKE, () => handleToggleLike())
 
   ipcMain.handle(IPC.SET_PINNED, (_event, pinned: boolean) => {
-    mainWindow?.setAlwaysOnTop(pinned, 'screen-saver')
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setAlwaysOnTop(pinned, 'screen-saver')
+    }
     savePrefs({ pinned })
   })
 
-  ipcMain.handle(IPC.SET_LYRICS_EXPANDED, (_event, expanded: boolean) => {
-    const prefs = savePrefs({ lyricsExpanded: expanded })
-    if (mainWindow) {
-      const bounds = mainWindow.getBounds()
-      mainWindow.setBounds({ ...bounds, height: windowHeight(prefs) })
-    }
+  ipcMain.handle(IPC.CLOSE_WINDOW, () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close()
   })
+
+  ipcMain.handle(IPC.SET_LYRICS_EXPANDED, (_event, expanded: boolean) => {
+    // Height follows the renderer's measurement via RESIZE_WINDOW; here
+    // we only persist the pref.
+    savePrefs({ lyricsExpanded: expanded })
+  })
+
+  ipcMain.handle(IPC.RESIZE_WINDOW, (_event, height: number) => resizeWindowTo(height))
+
+  ipcMain.handle(IPC.GET_WINDOW_BOUNDS, () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return { x: 0, y: 0, width: INITIAL_WIDTH, height: INITIAL_HEIGHT }
+    }
+    return mainWindow.getBounds()
+  })
+
+  ipcMain.handle(
+    IPC.SET_WINDOW_BOUNDS,
+    (_event, bounds: { x: number; y: number; width: number; height: number }) =>
+      setWindowBounds(bounds)
+  )
 
   ipcMain.handle(IPC.GET_PREFS, () => loadPrefs())
   ipcMain.handle(IPC.SET_PREFS, (_event, partial: Partial<Prefs>) => savePrefs(partial))
