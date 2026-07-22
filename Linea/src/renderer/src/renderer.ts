@@ -9,7 +9,6 @@ import '@fontsource/space-mono/700.css'
 import { estimatePositionMs } from '../../shared/lyrics'
 import type { LyricLine } from '../../shared/lyrics'
 import type { PlayerCommand, PlayerErrorReason, PlayerState, Prefs } from '../../shared/types'
-import { renderPanelField } from './cymatics'
 import {
   el,
   injectStaticIcons,
@@ -48,7 +47,6 @@ let prefs: Prefs = {
 let dragging = false
 let seekHoldUntil = 0
 let ticker: ReturnType<typeof setInterval> | null = null
-let cymaTrackId = ''
 /** Window height (px) while lyrics are shown — restored when re-expanding. */
 let lastExpandedHeight = 0
 
@@ -62,8 +60,7 @@ const scheduler = new LyricScheduler((index) => {
 
 // ------------------------------------------------------------------
 // Sizing — the panel fills the window (minus the shadow gutter); the
-// lyrics area shows as many lines as fit, and a subtle cymatic field
-// is redrawn to the live panel size.
+// lyrics area shows as many lines as fit the current height.
 // ------------------------------------------------------------------
 /** How many lyric lines fit the current (resizable) lyrics area. */
 function lyricWindowSize(): number {
@@ -72,43 +69,42 @@ function lyricWindowSize(): number {
   return Math.max(3, Math.min(11, Math.floor((available + 9) / perLine)))
 }
 
-function accentColor(): string {
-  return (
-    getComputedStyle(document.documentElement).getPropertyValue('--sapphire').trim() || '#3a6098'
-  )
-}
+const GUTTER = 30
+const APP_PAD = 14
 
-/** Resize the backing canvas to the panel and redraw the cymatic field. */
-function syncCyma(): void {
-  const w = el.app.clientWidth
-  const h = el.app.clientHeight
-  if (w === 0 || h === 0) return
-  if (el.cyma.width !== w || el.cyma.height !== h) {
-    el.cyma.width = w
-    el.cyma.height = h
-  }
-  renderPanelField(el.cyma, player?.trackId ?? 'linea', accentColor())
+function topbarHeight(): number {
+  return el.playerView.querySelector<HTMLElement>('.topbar')?.getBoundingClientRect().height ?? 22
 }
 
 /** Collapsed window height: everything except the lyrics area. */
 function collapsedHeight(): number {
-  const topbar = el.playerView.querySelector<HTMLElement>('.topbar')
   const controls = el.playerView.querySelector<HTMLElement>('.controls')
-  const GUTTER = 30
-  const APP_PAD = 14
-  const top = topbar?.getBoundingClientRect().height ?? 22
   const ctrl = controls?.getBoundingClientRect().height ?? 60
   // GUTTER*2 (body) + APP_PAD*2 + topbar + controls margin-top + controls
-  return Math.ceil(GUTTER * 2 + APP_PAD * 2 + top + 12 + ctrl + 4)
+  return Math.ceil(GUTTER * 2 + APP_PAD * 2 + topbarHeight() + 12 + ctrl + 4)
 }
 
-// Re-fit lyrics live during a resize; redraw the (costlier) field once it
-// settles.
-let cymaTimer: ReturnType<typeof setTimeout> | null = null
+// Grow the window to fit the settings when it opens; restore on close.
+let heightBeforeSettings = 0
+function onSettingsToggle(): void {
+  const open = !el.settingsView.hidden
+  if (open) {
+    void window.linea.getWindowBounds().then((b) => {
+      heightBeforeSettings = b.height
+      const needed = Math.ceil(
+        GUTTER * 2 + APP_PAD * 2 + topbarHeight() + el.settingsView.scrollHeight
+      )
+      if (needed > b.height) void window.linea.resizeTo(needed)
+    })
+  } else if (heightBeforeSettings) {
+    void window.linea.resizeTo(heightBeforeSettings)
+    heightBeforeSettings = 0
+  }
+}
+
+// Re-fit the lyric window as the panel is resized.
 window.addEventListener('resize', () => {
   if (prefs.lyricsExpanded && lines.length > 0) scheduler.sync(lines, player)
-  if (cymaTimer) clearTimeout(cymaTimer)
-  cymaTimer = setTimeout(syncCyma, 140)
 })
 
 // ------------------------------------------------------------------
@@ -337,7 +333,6 @@ async function setLyricsExpanded(expanded: boolean): Promise<void> {
   await window.linea.resizeTo(expanded ? lastExpandedHeight || 260 : collapsedHeight())
   requestAnimationFrame(() => {
     if (expanded) scheduler.sync(lines, player)
-    syncCyma()
   })
   await window.linea.setLyricsExpanded(expanded)
 }
@@ -345,7 +340,6 @@ async function setLyricsExpanded(expanded: boolean): Promise<void> {
 function applyTheme(theme: Prefs['theme']): void {
   queuePrefs({ theme })
   applyPrefsToDom(prefs)
-  syncCyma()
 }
 
 // ------------------------------------------------------------------
@@ -361,7 +355,6 @@ function setConnected(isConnected: boolean): void {
     scheduler.stop()
     updateTicker()
   }
-  syncCyma()
 }
 
 async function connect(): Promise<void> {
@@ -402,7 +395,7 @@ async function init(): Promise<void> {
       if (prefs.lyricsExpanded) scheduler.sync(lines, player)
     },
     onLyricsExpanded: (expanded) => void setLyricsExpanded(expanded),
-    onViewChange: () => {},
+    onViewChange: onSettingsToggle,
     onDisconnect: () => {
       void window.linea.logout().then(() => setConnected(false))
     }
@@ -417,12 +410,6 @@ async function init(): Promise<void> {
       player = data
     }
     refreshPlayerUi()
-    // Redraw the ambient field only when the track actually changes.
-    const trackId = player?.trackId ?? 'linea'
-    if (trackId !== cymaTrackId) {
-      cymaTrackId = trackId
-      syncCyma()
-    }
   })
 
   window.linea.onLyricsUpdate((newLines) => {
@@ -458,7 +445,6 @@ async function init(): Promise<void> {
   lastExpandedHeight = bounds.height
   // Honor a persisted collapsed state on launch.
   if (!prefs.lyricsExpanded) await window.linea.resizeTo(collapsedHeight())
-  requestAnimationFrame(syncCyma)
 }
 
 // Keep the overlay alive: log stray errors instead of letting them

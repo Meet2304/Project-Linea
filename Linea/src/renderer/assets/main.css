@@ -5,7 +5,7 @@
    A small landscape panel that FILLS the window minus a shadow
    gutter, so custom resize grips sit on the panel's own edge.
    Lyrics are the hero; the transport is a quiet strip beneath.
-   A faint cymatic field sits behind everything.
+   A faint jewel-wash gradient sits behind everything.
    ============================================================ */
 
 * {
@@ -36,7 +36,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 14px 16px;
-  overflow: hidden; /* clip the cymatic field to the rounded corners */
+  overflow: hidden; /* clip the ambient wash to the rounded corners */
   background: color-mix(
     in oklch,
     var(--panel-bg-base) calc(var(--panel-alpha) * 100%),
@@ -53,15 +53,26 @@ body {
   opacity: 0.55;
 }
 
-/* Cymatic field ---------------------------------------------- */
-.cyma {
+/* Ambient jewel wash — a soft, static sapphire→amethyst gradient
+   from opposite corners. Calm and elegant; no canvas, no animation. */
+#app::before {
+  content: '';
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
   z-index: 0;
   pointer-events: none;
-  opacity: var(--cyma-alpha);
+  opacity: var(--ambient-alpha);
+  background:
+    radial-gradient(
+      135% 100% at 6% -8%,
+      var(--accent) 0%,
+      transparent 42%
+    ),
+    radial-gradient(
+      130% 100% at 104% 108%,
+      var(--amethyst) 0%,
+      transparent 46%
+    );
 }
 
 .stack {
@@ -445,6 +456,9 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  /* The panel is a drag region; a drag region eats wheel events, so the
+     scrollable settings must opt out to scroll. */
+  -webkit-app-region: no-drag;
   animation: fade-in var(--dur) var(--ease-out);
 }
 
@@ -639,83 +653,68 @@ input:focus-visible {
   cursor: nesw-resize;
 }
 
+/* Corner ticks trace the panel's own rounded corner (concentric):
+   inset 6px inside an 18px outer radius → a 12px arc. */
 .corner {
   position: absolute;
   z-index: 4;
-  width: 9px;
-  height: 9px;
+  width: 14px;
+  height: 14px;
   pointer-events: none;
   opacity: 0;
   border: 1.5px solid var(--text-faint);
-  transition:
-    opacity var(--dur) var(--ease),
-    transform var(--dur) var(--ease);
+  transition: opacity var(--dur) var(--ease);
 }
 
 .corner-nw {
-  top: 7px;
-  left: 7px;
+  top: 6px;
+  left: 6px;
   border-right: 0;
   border-bottom: 0;
-  border-top-left-radius: 4px;
+  border-top-left-radius: 12px;
 }
 .corner-ne {
-  top: 7px;
-  right: 7px;
+  top: 6px;
+  right: 6px;
   border-left: 0;
   border-bottom: 0;
-  border-top-right-radius: 4px;
+  border-top-right-radius: 12px;
 }
 .corner-se {
-  bottom: 7px;
-  right: 7px;
+  bottom: 6px;
+  right: 6px;
   border-left: 0;
   border-top: 0;
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 12px;
 }
 .corner-sw {
-  bottom: 7px;
-  left: 7px;
+  bottom: 6px;
+  left: 6px;
   border-right: 0;
   border-top: 0;
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 12px;
 }
 
 #app:hover .corner {
   opacity: 0.5;
 }
 
-/* A gentle outward "tug" that invites the user to pull — hover-only
+/* A gentle "breathing" tug that invites the user to pull — hover-only
    (never idle) so a transparent, always-on-top window is not
-   continuously composited. */
+   continuously composited. Opacity-only keeps the arc aligned to the
+   panel corner. */
 @media (prefers-reduced-motion: no-preference) {
-  #app:hover .corner-nw {
-    animation: tug-nw 1.9s var(--ease) infinite;
-  }
-  #app:hover .corner-ne {
-    animation: tug-ne 1.9s var(--ease) infinite;
-  }
-  #app:hover .corner-se {
-    animation: tug-se 1.9s var(--ease) infinite;
-  }
-  #app:hover .corner-sw {
-    animation: tug-sw 1.9s var(--ease) infinite;
+  #app:hover .corner {
+    animation: tug 1.9s var(--ease) infinite;
   }
 }
 
-@keyframes tug-nw {
-  0%, 100% { transform: translate(0, 0); opacity: 0.4; }
-  50% { transform: translate(-2px, -2px); opacity: 0.75; }
-}
-@keyframes tug-ne {
-  0%, 100% { transform: translate(0, 0); opacity: 0.4; }
-  50% { transform: translate(2px, -2px); opacity: 0.75; }
-}
-@keyframes tug-se {
-  0%, 100% { transform: translate(0, 0); opacity: 0.4; }
-  50% { transform: translate(2px, 2px); opacity: 0.75; }
-}
-@keyframes tug-sw {
-  0%, 100% { transform: translate(0, 0); opacity: 0.4; }
-  50% { transform: translate(-2px, 2px); opacity: 0.75; }
+@keyframes tug {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }

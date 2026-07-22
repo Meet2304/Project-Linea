@@ -11,7 +11,6 @@ function byId<T extends HTMLElement>(id: string): T {
 
 export const el = {
   app: byId('app'),
-  cyma: byId<HTMLCanvasElement>('cyma'),
   connectView: byId('connect-view'),
   playerView: byId('player-view'),
   connectBtn: byId<HTMLButtonElement>('connect-btn'),

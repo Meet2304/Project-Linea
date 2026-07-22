@@ -227,27 +227,3 @@ export function renderTrackArt(
 export function clearArtCache(): void {
   cache.clear()
 }
-
-/**
- * Render a soft, full-panel cymatic field as ambient backdrop. Unlike
- * the album art this fades toward the edges (fade:true), uses a gentler
- * density, and is drawn at the panel's live pixel size — the CSS opacity
- * (--cyma-alpha) keeps it a whisper. Not cached: the panel resizes, and
- * it is only redrawn on track/theme change and at the end of a resize.
- */
-export function renderPanelField(canvas: HTMLCanvasElement, seedKey: string, color: string): void {
-  const ctx = canvas.getContext('2d')
-  if (!ctx || canvas.width === 0 || canvas.height === 0) return
-  const seed = hashSeed(seedKey || 'linea')
-  const pixels = renderPixels(canvas.width, canvas.height, {
-    style: styleForSeed(seed),
-    color,
-    seed: seed % 100000,
-    density: 3 + (seed % 3),
-    dither: 0.35,
-    scale: 2.6,
-    fade: true
-  })
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.putImageData(new ImageData(pixels, canvas.width, canvas.height), 0, 0)
-}

@@ -458,9 +458,15 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.GET_PREFS, () => loadPrefs())
   ipcMain.handle(IPC.SET_PREFS, (_event, partial: Partial<Prefs>) => savePrefs(partial))
 
-  const registered = globalShortcut.register('CommandOrControl+Shift+Period', toggleClickThrough)
-  if (!registered) {
-    console.error('Global shortcut registration failed — another app may own Ctrl+Shift+Period')
+  // Some environments throw while parsing the accelerator rather than
+  // returning false — never let that abort the rest of startup.
+  try {
+    const registered = globalShortcut.register('CommandOrControl+Shift+.', toggleClickThrough)
+    if (!registered) {
+      console.error('Global shortcut registration failed — another app may own Ctrl+Shift+.')
+    }
+  } catch (error) {
+    console.error('Global shortcut registration threw:', error)
   }
 
   app.on('activate', function () {
