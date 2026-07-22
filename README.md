@@ -1,7 +1,7 @@
 # Project-Linea
 
 <p align = 'center'>
-  <img src = 'https://github.com/Meet2304/Project-Linea/blob/main/Project%20Linea%20Header_v0.1.png'>
+  <img src = 'https://github.com/Meet2304/Project-Linea/blob/main/Project%20Linea%20Header_v0.2.png'>
 </p>
 
 <h1 align="center">Linea</h1>
