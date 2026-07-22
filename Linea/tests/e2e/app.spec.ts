@@ -19,15 +19,6 @@ test.afterAll(async () => {
   await app.close()
 })
 
-test('window is always on top', async () => {
-  const isAlwaysOnTop = await app.evaluate(({ BrowserWindow }) => {
-    const win = BrowserWindow.getAllWindows()[0]
-    if (!win) throw new Error('No BrowserWindow open')
-    return win.isAlwaysOnTop()
-  })
-  expect(isAlwaysOnTop).toBe(true)
-})
-
 test('window is frameless', async () => {
   // Frameless windows have matching outer and content bounds (no title-bar chrome)
   const isFrameless = await app.evaluate(({ BrowserWindow }) => {
@@ -40,17 +31,18 @@ test('window is frameless', async () => {
   expect(isFrameless).toBe(true)
 })
 
-test('window opens with the correct initial size', async () => {
+test('window opens at panel size (compact or expanded)', async () => {
   const bounds = await app.evaluate(({ BrowserWindow }) => {
     const win = BrowserWindow.getAllWindows()[0]
     if (!win) throw new Error('No BrowserWindow open')
     return win.getBounds()
   })
-  // Windows DPI scaling can nudge getBounds() by a few pixels
-  expect(bounds.width).toBeGreaterThanOrEqual(380)
-  expect(bounds.width).toBeLessThanOrEqual(400)
-  expect(bounds.height).toBeGreaterThanOrEqual(240)
-  expect(bounds.height).toBeLessThanOrEqual(260)
+  // 408 wide; height is 232 (compact) or 470 (expanded); DPI scaling can
+  // nudge getBounds() by a few pixels
+  expect(bounds.width).toBeGreaterThanOrEqual(400)
+  expect(bounds.width).toBeLessThanOrEqual(430)
+  expect(bounds.height).toBeGreaterThanOrEqual(220)
+  expect(bounds.height).toBeLessThanOrEqual(490)
 })
 
 test('renderer exposes window.linea but not window.require', async () => {
@@ -62,19 +54,94 @@ test('renderer exposes window.linea but not window.require', async () => {
   expect(requireApi).toBe('undefined')
 })
 
-test('click-through toggle button exists and can be clicked', async () => {
-  const button = page.locator('#click-through-btn')
-  await expect(button).toBeVisible()
-  await button.click()
-  const text = await button.textContent()
-  expect(text).toMatch(/click-through/i)
+test('shows either the connect view or the player view', async () => {
+  const connectVisible = await page.locator('#connect-view').isVisible()
+  const playerVisible = await page.locator('#player-view').isVisible()
+  expect(connectVisible || playerVisible).toBe(true)
 })
 
 test('click-through state changes via IPC', async () => {
   const stateBefore = await page.evaluate(async () => window.linea.getClickThroughState())
-
-  await page.locator('#click-through-btn').click()
-
+  await page.evaluate(async () => window.linea.toggleClickThrough())
   const stateAfter = await page.evaluate(async () => window.linea.getClickThroughState())
   expect(stateAfter).not.toBe(stateBefore)
+  // restore
+  await page.evaluate(async () => window.linea.toggleClickThrough())
+})
+
+test('click-through toggles broadcast to the renderer (desync regression)', async () => {
+  // Toggling from ANY path (IPC, global shortcut) must push
+  // CLICK_THROUGH_CHANGED so UI switches never desync.
+  const received = await page.evaluate(
+    async () =>
+      await new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => resolve(false), 2000)
+        const unsubscribe = window.linea.onClickThroughChanged(() => {
+          clearTimeout(timeout)
+          unsubscribe()
+          resolve(true)
+        })
+        void window.linea.toggleClickThrough()
+      })
+  )
+  expect(received).toBe(true)
+  await page.evaluate(async () => window.linea.toggleClickThrough())
+})
+
+test('theme pref persists through the prefs IPC round trip', async () => {
+  const original = await page.evaluate(async () => (await window.linea.getPrefs()).theme)
+  const flipped = original === 'dark' ? 'light' : 'dark'
+
+  await page.evaluate(async (theme) => {
+    await window.linea.setPrefs({ theme: theme as 'light' | 'dark' })
+  }, flipped)
+  const persisted = await page.evaluate(async () => (await window.linea.getPrefs()).theme)
+  expect(persisted).toBe(flipped)
+
+  // restore
+  await page.evaluate(async (theme) => {
+    await window.linea.setPrefs({ theme: theme as 'light' | 'dark' })
+  }, original)
+})
+
+test('lyrics expanded toggle resizes the window', async () => {
+  const heightOf = (): Promise<number> =>
+    app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0]
+      if (!win) throw new Error('No BrowserWindow open')
+      return win.getBounds().height
+    })
+
+  const expanded = await page.evaluate(async () => (await window.linea.getPrefs()).lyricsExpanded)
+  const before = await heightOf()
+
+  await page.evaluate(async (next) => {
+    await window.linea.setLyricsExpanded(next)
+  }, !expanded)
+  const after = await heightOf()
+  expect(after).not.toBe(before)
+
+  // restore
+  await page.evaluate(async (original) => {
+    await window.linea.setLyricsExpanded(original)
+  }, expanded)
+})
+
+test('pin toggle updates always-on-top', async () => {
+  const pinned = await page.evaluate(async () => (await window.linea.getPrefs()).pinned)
+
+  await page.evaluate(async (next) => {
+    await window.linea.setPinned(next)
+  }, !pinned)
+  const onTop = await app.evaluate(({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (!win) throw new Error('No BrowserWindow open')
+    return win.isAlwaysOnTop()
+  })
+  expect(onTop).toBe(!pinned)
+
+  // restore
+  await page.evaluate(async (original) => {
+    await window.linea.setPinned(original)
+  }, pinned)
 })

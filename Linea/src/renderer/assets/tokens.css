@@ -1,0 +1,137 @@
+/* ============================================================
+   LINEA — DESIGN TOKENS
+   Source of truth: the "Linea Design System" Claude Design
+   project. Light theme is faithful to the system; the dark
+   variant is derived from the same ramps so component CSS
+   only ever references semantic tokens + jewel accents.
+   ============================================================ */
+:root {
+  /* --- Neutrals (cool white → ink) --- */
+  --white: #ffffff;
+  --paper: #fbfbfc;
+  --mist: #f2f3f6;
+  --fog: #e7e9ef;
+  --line: #dfe2ea;
+  --line-strong: #c6cbd7;
+  --slate: #9aa1b2;
+  --steel: #656d80;
+  --ink-2: #3a4051;
+  --ink: #1b1e28;
+
+  /* --- Jewel accents — one per feature --- */
+  --sapphire: #3a6098; /* playback / brand accent */
+  --amethyst: #6d5b9e; /* live lyrics */
+  --teal: #2f7d7a; /* now playing */
+  --emerald: #3a7a5c; /* library */
+  --garnet: #9a4552; /* likes */
+  --citrine: #b1873a; /* search */
+
+  --sapphire-wash: #eaeff6;
+  --amethyst-wash: #efecf5;
+  --teal-wash: #e7f1f0;
+  --emerald-wash: #e9f2ec;
+  --garnet-wash: #f6ebed;
+  --citrine-wash: #f6f0e4;
+
+  /* --- Semantic --- */
+  --accent: var(--sapphire);
+  --accent-wash: var(--sapphire-wash);
+
+  /* Panel translucency lives in one variable so text never
+     inherits it. JS drives --panel-alpha from the opacity pref. */
+  --panel-alpha: 0.92;
+  --panel-bg-base: var(--white);
+  --panel-border: var(--line);
+
+  --surface-raised: var(--white);
+  --surface-sunken: var(--mist);
+  --track: var(--fog);
+
+  --text-primary: var(--ink);
+  --text-body: var(--ink-2);
+  --text-secondary: var(--steel);
+  --text-faint: var(--slate);
+  --text-on-accent: #ffffff;
+  --focus-ring: var(--sapphire);
+
+  /* --- Type --- */
+  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --w-light: 300;
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semibold: 600;
+  --w-bold: 700;
+  --tracking-mono: 0.06em;
+  --tracking-caps: 0.14em;
+
+  /* --- Radii --- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+  --radius-round: 999px;
+
+  /* --- Shadows (diffuse, cool — light through water) --- */
+  --shadow-sm: 0 2px 8px rgba(27, 30, 40, 0.06);
+  --shadow-md: 0 8px 24px rgba(27, 30, 40, 0.08);
+  --shadow-overlay: 0 24px 70px rgba(27, 30, 40, 0.18);
+  --ring: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 30%, transparent);
+
+  /* --- Motion (quiet, water-like; no bounce) --- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 220ms;
+  --dur-slow: 420ms;
+
+  --blur-panel: 18px;
+
+  /* JS-driven prefs */
+  --lyrics-size: 14px;
+}
+
+[data-theme='dark'] {
+  --paper: #1b1e28;
+  --mist: #262b38;
+  --fog: #2d3342;
+  --line: #353c4e;
+  --line-strong: #47506a;
+  --slate: #6f7893;
+  --steel: #9aa1b2;
+  --ink-2: #c6cbd7;
+  --ink: #eef0f5;
+
+  --sapphire: #7396c8;
+  --amethyst: #a08fce;
+  --teal: #5aa5a2;
+  --emerald: #6aa989;
+  --garnet: #c9737f;
+  --citrine: #cfa45e;
+
+  --sapphire-wash: #2d3647;
+  --amethyst-wash: #343548;
+  --teal-wash: #293941;
+  --emerald-wash: #2c393d;
+  --garnet-wash: #3b313c;
+  --citrine-wash: #3c3837;
+
+  --panel-alpha: 0.96;
+  --panel-bg-base: #20242f;
+  --panel-border: var(--line);
+
+  --surface-raised: #262b38;
+  --surface-sunken: #1b1e28;
+  --track: #2d3342;
+
+  --text-on-accent: #16181f;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-overlay: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
