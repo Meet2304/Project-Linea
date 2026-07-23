@@ -34,8 +34,9 @@
   --citrine-wash: #f6f0e4;
 
   /* --- Semantic --- */
-  --accent: var(--sapphire);
-  --accent-wash: var(--sapphire-wash);
+  /* Mono accent — black in light, white in dark (via --ink). */
+  --accent: var(--ink);
+  --accent-wash: var(--mist);
   /* Per-track jewel — JS sets this from the dither hue so lyrics +
      progress stay matched. Falls back to amethyst before first track. */
   --lyric-accent: var(--amethyst);
@@ -66,7 +67,7 @@
   --text-secondary: var(--steel);
   --text-faint: var(--slate);
   --text-on-accent: #ffffff;
-  --focus-ring: var(--sapphire);
+  --focus-ring: var(--ink);
 
   /* --- Type --- */
   --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
@@ -155,6 +156,8 @@
   --surface-raised: #16181d;
   --surface-sunken: #0d0e11;
   --track: #23262e;
+
+  --accent-wash: var(--surface-sunken);
 
   --text-on-accent: #0a0b0d;
 

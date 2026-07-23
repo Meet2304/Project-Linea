@@ -32,8 +32,8 @@ import { initAutoUpdater } from './updater'
 // The panel fills the window minus a 30px shadow gutter per side. The
 // window is freely resizable (custom grips in the renderer drive
 // SET_WINDOW_BOUNDS); these are the launch and floor sizes.
-const INITIAL_WIDTH = 620
-const INITIAL_HEIGHT = 300
+const INITIAL_WIDTH = 720
+const INITIAL_HEIGHT = 250
 const MIN_WIDTH = 372
 const MIN_HEIGHT = 150
 
@@ -56,8 +56,8 @@ function rememberLiked(trackId: string, liked: boolean): void {
   likedCache.set(trackId, liked)
 }
 
-/** Set the window height only (used by the lyrics collapse/expand),
- *  keeping the top-right anchor so it grows downward. */
+/** Set the window height only (preset sizing), keeping the top-right
+ *  anchor so it grows downward. */
 function resizeWindowTo(height: number): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
   const { height: availH } = screen.getPrimaryDisplay().workAreaSize
@@ -437,12 +437,6 @@ app.whenReady().then(() => {
 
   ipcMain.handle(IPC.CLOSE_WINDOW, () => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close()
-  })
-
-  ipcMain.handle(IPC.SET_LYRICS_EXPANDED, (_event, expanded: boolean) => {
-    // Height follows the renderer's measurement via RESIZE_WINDOW; here
-    // we only persist the pref.
-    savePrefs({ lyricsExpanded: expanded })
   })
 
   ipcMain.handle(IPC.RESIZE_WINDOW, (_event, height: number) => resizeWindowTo(height))

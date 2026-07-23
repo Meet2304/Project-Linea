@@ -11,7 +11,6 @@ export const IPC = {
   PLAYER_COMMAND: 'linea:player-command',
   TOGGLE_LIKE: 'linea:toggle-like',
   SET_PINNED: 'linea:set-pinned',
-  SET_LYRICS_EXPANDED: 'linea:set-lyrics-expanded',
   RESIZE_WINDOW: 'linea:resize-window',
   GET_WINDOW_BOUNDS: 'linea:get-window-bounds',
   SET_WINDOW_BOUNDS: 'linea:set-window-bounds',

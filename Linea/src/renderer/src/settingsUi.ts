@@ -5,7 +5,6 @@ export interface SettingsCallbacks {
   onTheme: (theme: Theme) => void
   onClickThrough: () => void
   onLyricsSize: (size: LyricsSize) => void
-  onLyricsExpanded: (expanded: boolean) => void
   onShowTimestamps: (show: boolean) => void
   onDisconnect: () => void
   /** Fires after the now/settings view swaps. */
@@ -19,7 +18,6 @@ function byId<T extends HTMLElement>(id: string): T {
 const themeSwitch = byId<HTMLButtonElement>('set-theme')
 const clickThroughSwitch = byId<HTMLButtonElement>('set-clickthrough')
 const sizeSegs = Array.from(document.querySelectorAll<HTMLButtonElement>('.seg'))
-const lyricsSwitch = byId<HTMLButtonElement>('set-lyrics')
 const timestampsSwitch = byId<HTMLButtonElement>('set-timestamps')
 const disconnectBtn = byId<HTMLButtonElement>('set-disconnect')
 const settingsScroll = byId('settings-scroll')
@@ -68,11 +66,6 @@ export function initSettings(cb: SettingsCallbacks): void {
       cb.onLyricsSize(size)
     })
   })
-  lyricsSwitch.addEventListener('click', () => {
-    const expanded = !isOn(lyricsSwitch)
-    setOn(lyricsSwitch, expanded)
-    cb.onLyricsExpanded(expanded)
-  })
   timestampsSwitch.addEventListener('click', () => {
     const show = !isOn(timestampsSwitch)
     setOn(timestampsSwitch, show)
@@ -93,7 +86,6 @@ export function initSettings(cb: SettingsCallbacks): void {
 
 export function reflectPrefs(prefs: Prefs): void {
   setOn(themeSwitch, prefs.theme === 'dark')
-  setOn(lyricsSwitch, prefs.lyricsExpanded)
   setOn(timestampsSwitch, prefs.showTimestamps)
   reflectSize(prefs.lyricsSize)
 }

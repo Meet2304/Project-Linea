@@ -16,7 +16,6 @@ interface LineaAPI {
   playerCommand: (command: PlayerCommand) => Promise<ApiResult<null>>
   toggleLike: () => Promise<ApiResult<boolean>>
   setPinned: (pinned: boolean) => Promise<void>
-  setLyricsExpanded: (expanded: boolean) => Promise<void>
   resizeTo: (height: number) => Promise<void>
   getWindowBounds: () => Promise<{ x: number; y: number; width: number; height: number }>
   setWindowBounds: (bounds: {

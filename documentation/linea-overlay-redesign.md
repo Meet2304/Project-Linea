@@ -22,7 +22,7 @@ A follow-up polish pass on `website/ui-finetuning` refined chrome reveal, accent
 ## What changed (by theme)
 
 ### Layout & theme
-- **Landscape panel** that fills the window minus a shadow gutter (default window 480×264, freely resizable; min 372×150).
+- **Landscape panel** that fills the window minus a shadow gutter (default window 720×250, freely resizable; min 372×150).
 - **Softer, uncut shadow** — the gutter (30px) exceeds the shadow's reach so it fades instead of clipping to a hard rectangle.
 - **Near-black dark theme** with a reworked neutral ramp; light theme stays pure white.
 - **Settings in place** — the gear swaps the now-playing area for a settings view in the same panel (Esc / ✕ to close); it scrolls rather than resizing the window.
@@ -30,7 +30,7 @@ A follow-up polish pass on `website/ui-finetuning` refined chrome reveal, accent
 ### Lyrics (the hero)
 - **Fully scrollable** lyric list. While *following*, the active line stays vertically centered; scrolling away to read ahead/behind reveals a **minimal round jump-to-current button**, which re-locks on tap (or automatically once the current line returns near center).
 - **Scroll cues** — a soft fade at whichever edge has more lines signals scrollability.
-- **Size presets** replace the old font slider: **Small / Medium / Large** = 13/15/18px paired with **6 / 4 / 3** default visible lines. A live preview line in settings shows the chosen size without leaving the menu; picking a preset sizes the window to that line count.
+- **Size presets** replace the old font slider: **Small / Medium / Large** = 13/15/18px paired with **6 / 5 / 3** default visible lines. A live preview line in settings shows the chosen size without leaving the menu; picking a preset sizes the window to that line count.
 - **Optional timestamps** — a settings toggle shows LRC times beside each line; off by default.
 
 ### Cymatic identity
@@ -39,9 +39,8 @@ A follow-up polish pass on `website/ui-finetuning` refined chrome reveal, accent
 - The same per-track jewel drives `--lyric-accent` so active lyrics, the edge progress hairline, and the seek thumb stay matched.
 
 ### Interaction & window sizing
-- **Inverted drag model** — the panel is no longer a blanket `-webkit-app-region: drag` surface (which intercepted clicks and scroll and made the lyrics toggle flaky). Only the **top bar** and the **connect view** are drag handles; lyrics, controls, and settings are fully interactive.
+- **Inverted drag model** — the panel is no longer a blanket `-webkit-app-region: drag` surface (which intercepted clicks and scroll). Only the **top bar** and the **connect view** are drag handles; lyrics, controls, and settings are fully interactive.
 - **Custom edge/corner resize** — grips sit on the panel's own edge (the OS border is out in the transparent gutter). Corner hints are **pointer-reactive**: only the nearest corner fades in, is magnetically pulled toward the cursor, and pulses once on approach. Corner arcs share `--panel-radius` with the panel.
-- **Collapse hugs the chrome** — turning lyrics off measures after layout and shrinks the window to fit (no retained height / empty gap).
 - **Pin & Close** promoted into the top bar: pin is a pin-icon toggle whose whole icon turns accent when active; close (✕) dismisses the widget. Settings uses the same latched active treatment while open.
 - Removed the always-on playing dot, the like button, and the old settings popover.
 
@@ -63,6 +62,7 @@ Polish layered on the redesign:
 - **Edge progress** — simple opacity crossfade on hover (no vertical motion).
 - **Settings plate** — translucent backing when needed, without a hard border at high shell opacity.
 - **Panel opacity setting** — **removed from settings for this PR**. `Prefs.opacity` remains on the schema for a future control, but `clampPrefs()` always writes the solid default (`0.95`) so experimental clear-shell work does not ship. Re-adding a polished opacity control is an explicit follow-up.
+- **Lyrics show/hide** — **removed entirely** (transport chevron + settings row). Lyrics are always visible; `Prefs.lyricsExpanded` stays on the schema but is locked to `true`.
 
 ---
 
@@ -72,11 +72,11 @@ Polish layered on the redesign:
 
 | Field | Before | After |
 |---|---|---|
-| Lyrics size | `fontSize` (12–28px slider) | `lyricsSize` preset (S/M/L → 13/15/18px, 6/4/3 lines) |
+| Lyrics size | `fontSize` (12–28px slider) | `lyricsSize` preset (S/M/L → 13/15/18px, 6/5/3 lines) |
 | Timestamps | n/a | `showTimestamps: boolean` (default `false`) |
 | Opacity | user slider | schema kept; UI deferred — always locked to `0.95` |
 
-`clampPrefs()` migrates legacy `fontSize`-only files to the default (`medium`); unit tests updated accordingly. Other prefs (`theme`, `pinned`, `lyricsExpanded`) unchanged.
+`clampPrefs()` migrates legacy `fontSize`-only files to the default (`medium`); unit tests updated accordingly. `lyricsExpanded` is locked to `true` (collapse UI removed). Other prefs (`theme`, `pinned`) unchanged.
 
 ---
 
@@ -84,7 +84,7 @@ Polish layered on the redesign:
 
 | Channel | Direction | Purpose |
 |---|---|---|
-| `RESIZE_WINDOW` | renderer → main | Set window height only (collapse/expand, preset sizing) |
+| `RESIZE_WINDOW` | renderer → main | Set window height only (preset sizing) |
 | `GET_WINDOW_BOUNDS` | renderer → main | Read current bounds (custom resize) |
 | `SET_WINDOW_BOUNDS` | renderer → main | Apply full bounds (edge/corner drag) |
 | `CLOSE_WINDOW` | renderer → main | Dismiss the overlay |
@@ -106,7 +106,7 @@ Existing now-playing / lyrics / prefs / transport channels are unchanged.
 | `src/renderer/src/settingsUi.ts` | Inline settings view, segmented size control, timestamps toggle |
 | `src/renderer/src/cymatics.ts` | `phase` animation parameter, `renderThumb()` |
 | `src/main/index.ts` | Window config, custom-resize + close IPC, focus events, crash-recovery + guards |
-| `src/main/prefs.ts` | `lyricsSize` preset + legacy `fontSize` migration; opacity locked to solid default |
+| `src/main/prefs.ts` | `lyricsSize` preset + legacy `fontSize` migration; opacity + lyricsExpanded locked |
 | `src/shared/types.ts`, `ipcChannels.ts` | `LyricsSize` type, new IPC channels |
 
 ---
@@ -127,7 +127,7 @@ E2e window-size and resize assertions were updated for the new dimensions and th
 
 ## Known limitations / follow-ups
 
-- The window can be resized in height while lyrics are shown; a manual height is kept until the next lyrics/preset toggle re-sizes to fit.
+- The window can be resized in height; a manual height is kept until the next lyrics-size preset change re-sizes to fit.
 - The thumbnail renders at CSS pixel size (no devicePixelRatio scaling) and is intentionally softened — crisp enough at ~30px, cheap to animate.
 - Manual window size is not persisted across restarts (only the size preset and other prefs are).
 - **Panel opacity control** is deferred: shell stays at the solid default until a polished clear→solid slider ships.

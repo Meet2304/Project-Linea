@@ -35,7 +35,12 @@ describe('clampPrefs', () => {
 
   it('coerces non-boolean toggles to their defaults', () => {
     expect(clampPrefs({ pinned: 'yes' as never }).pinned).toBe(true)
-    expect(clampPrefs({ lyricsExpanded: 0 as never }).lyricsExpanded).toBe(true)
     expect(clampPrefs({ pinned: false }).pinned).toBe(false)
+  })
+
+  it('locks lyricsExpanded to true (collapse UI removed)', () => {
+    expect(clampPrefs({ lyricsExpanded: false }).lyricsExpanded).toBe(true)
+    expect(clampPrefs({ lyricsExpanded: 0 as never }).lyricsExpanded).toBe(true)
+    expect(clampPrefs({}).lyricsExpanded).toBe(true)
   })
 })

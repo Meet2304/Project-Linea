@@ -33,6 +33,9 @@ function clampBoolean(value: unknown, fallback: boolean): boolean {
  * Opacity is kept on the Prefs schema for a future control, but the setting
  * UI is deferred — always persist the solid default so experimental clear
  * values from earlier builds don't ship.
+ *
+ * Lyrics are always shown; `lyricsExpanded` stays on the schema for old
+ * prefs.json files but is locked to true (collapse UI removed).
  */
 export function clampPrefs(input: Partial<Prefs>): Prefs {
   return {
@@ -40,7 +43,7 @@ export function clampPrefs(input: Partial<Prefs>): Prefs {
     lyricsSize: clampLyricsSize(input.lyricsSize),
     theme: clampTheme(input.theme),
     pinned: clampBoolean(input.pinned, DEFAULT_PREFS.pinned),
-    lyricsExpanded: clampBoolean(input.lyricsExpanded, DEFAULT_PREFS.lyricsExpanded),
+    lyricsExpanded: true,
     showTimestamps: clampBoolean(input.showTimestamps, DEFAULT_PREFS.showTimestamps)
   }
 }

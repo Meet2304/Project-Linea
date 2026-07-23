@@ -65,8 +65,12 @@
                 class="jump-btn"
                 type="button"
                 hidden
+                data-dir="down"
                 aria-label="Jump to current line"
-              ></button>
+              >
+                <span class="jump-label">Now</span>
+                <span class="jump-dir" aria-hidden="true"></span>
+              </button>
             </section>
 
             <div class="controls">
@@ -107,12 +111,6 @@
                   class="ghost-btn ghost-btn-sm feature-sapphire"
                   type="button"
                   aria-label="Repeat"
-                ></button>
-                <button
-                  id="btn-lyrics"
-                  class="ghost-btn ghost-btn-sm feature-amethyst"
-                  type="button"
-                  aria-label="Toggle lyrics"
                 ></button>
               </div>
             </div>
@@ -170,17 +168,6 @@
                     </button>
                   </div>
                   <div class="set-row">
-                    <span class="set-label">Show lyrics</span>
-                    <button
-                      id="set-lyrics"
-                      class="switch"
-                      type="button"
-                      role="switch"
-                      aria-checked="true"
-                      aria-label="Show lyrics"
-                    ></button>
-                  </div>
-                  <div class="set-row">
                     <span class="set-label">Timestamps</span>
                     <button
                       id="set-timestamps"
@@ -211,8 +198,11 @@
                       <button class="seg" type="button" data-size="large">L</button>
                     </div>
                   </div>
-                  <div id="size-preview" class="size-preview" aria-hidden="true">
-                    the shape of sound
+                  <div class="size-preview-box" aria-hidden="true">
+                    <span class="size-preview-label">Preview</span>
+                    <span id="size-preview" class="size-preview">
+                      Is this the real life? Is this just fantasy?
+                    </span>
                   </div>
                 </div>
                 <div class="settings-foot">

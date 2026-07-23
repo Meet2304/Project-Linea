@@ -71,26 +71,17 @@ const MIN_H = 150
 const scheduler = new LyricScheduler((index) => {
   setActiveLyric(index)
   if (following) centerActiveLyric(false)
+  else updateJumpButton()
 })
 
 // ------------------------------------------------------------------
 // Sizing — the panel fills the window (minus the shadow gutter).
 // ------------------------------------------------------------------
 const GUTTER = 30
-const APP_PAD = 14
+const APP_PAD = 12
 
 function topbarHeight(): number {
   return el.playerView.querySelector<HTMLElement>('.topbar')?.getBoundingClientRect().height ?? 22
-}
-
-function controlsHeight(): number {
-  return el.playerView.querySelector<HTMLElement>('.controls')?.getBoundingClientRect().height ?? 60
-}
-
-/** Collapsed window height: everything except the lyrics area. */
-function collapsedHeight(): number {
-  // GUTTER*2 (body) + APP_PAD*2 + topbar + controls margin-top + controls
-  return Math.ceil(GUTTER * 2 + APP_PAD * 2 + topbarHeight() + 12 + controlsHeight() + 4)
 }
 
 /** Window height that shows exactly the preset's line count.
@@ -136,9 +127,7 @@ function updateScrollFades(): void {
   el.lyricsPanel.dataset.down = String(s.scrollTop + s.clientHeight < s.scrollHeight - 2)
 }
 
-function onLyricsScroll(): void {
-  updateScrollFades()
-  if (autoScrolling) return
+function updateJumpButton(): void {
   const active = el.lyricsList.querySelector<HTMLElement>('.lyric-row[data-pos="active"]')
   if (!active) {
     el.btnJump.hidden = true
@@ -147,9 +136,24 @@ function onLyricsScroll(): void {
   const panel = el.lyricsScroll.getBoundingClientRect()
   const row = active.getBoundingClientRect()
   const rowCenter = row.top + row.height / 2
+  const mid = panel.top + panel.height / 2
   // Following again once the current line is back near the middle.
-  following = Math.abs(rowCenter - (panel.top + panel.height / 2)) < panel.height * 0.3
+  following = Math.abs(rowCenter - mid) < panel.height * 0.3
   el.btnJump.hidden = following
+  if (following) return
+  // Arrow points toward the active line from the user's view.
+  const dir = rowCenter < mid ? 'up' : 'down'
+  el.btnJump.dataset.dir = dir
+  el.btnJump.setAttribute(
+    'aria-label',
+    dir === 'up' ? 'Jump up to current line' : 'Jump down to current line'
+  )
+}
+
+function onLyricsScroll(): void {
+  updateScrollFades()
+  if (autoScrolling) return
+  updateJumpButton()
 }
 
 // ------------------------------------------------------------------
@@ -448,7 +452,7 @@ function wireResizeGrips(): void {
 // ------------------------------------------------------------------
 function refreshPlayerUi(): void {
   renderHeader(player)
-  renderTransport(player, prefs.lyricsExpanded)
+  renderTransport(player)
   if (player) {
     renderScrubber(estimatePositionMs(player), player.durationMs)
   } else {
@@ -509,20 +513,28 @@ function anchorPosition(): void {
   player = { ...player, progressMs: estimatePositionMs(player), fetchedAt: Date.now() }
 }
 
+function togglePlayPause(): void {
+  if (!connected || !player || el.playerView.hidden) return
+  // Settings occupies the same surface — don't hijack its clicks.
+  if (!el.settingsView.hidden) return
+  const wasPlaying = player.isPlaying
+  void sendCommand(
+    { type: wasPlaying ? 'pause' : 'play' },
+    () => {
+      if (!player) return
+      anchorPosition()
+      player = { ...player, isPlaying: !wasPlaying }
+    },
+    () => {
+      if (player) player = { ...player, isPlaying: wasPlaying }
+    }
+  )
+}
+
 function wireTransport(): void {
-  el.btnPlay.addEventListener('click', () => {
-    const wasPlaying = player?.isPlaying ?? false
-    void sendCommand(
-      { type: wasPlaying ? 'pause' : 'play' },
-      () => {
-        if (!player) return
-        anchorPosition()
-        player = { ...player!, isPlaying: !wasPlaying }
-      },
-      () => {
-        if (player) player = { ...player, isPlaying: wasPlaying }
-      }
-    )
+  el.btnPlay.addEventListener('click', (event) => {
+    event.stopPropagation()
+    togglePlayPause()
   })
 
   el.btnNext.addEventListener('click', () => void sendCommand({ type: 'next' }))
@@ -555,10 +567,6 @@ function wireTransport(): void {
     )
   })
 
-  el.btnLyrics.addEventListener('click', () => {
-    void setLyricsExpanded(!prefs.lyricsExpanded)
-  })
-
   el.btnPin.addEventListener('click', () => {
     const pinned = !prefs.pinned
     prefs = { ...prefs, pinned }
@@ -569,6 +577,20 @@ function wireTransport(): void {
   el.btnSettings.addEventListener('click', () => toggleSettings())
 
   el.btnClose.addEventListener('click', () => void window.linea.closeWindow())
+
+  // Click empty panel chrome / lyrics to play or pause — skip real controls.
+  el.app.addEventListener('click', (event) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    if (
+      target.closest(
+        'button, input, a, label, .grip, .corner, .switch, .segmented, .theme-toggle, #settings-view, .controls'
+      )
+    ) {
+      return
+    }
+    togglePlayPause()
+  })
 
   el.lyricsScroll.addEventListener('scroll', onLyricsScroll)
   // Slightly amplify wheel so short flicks move through lyrics more easily
@@ -628,37 +650,6 @@ function queuePrefs(partial: Partial<Prefs>): void {
   }, 300)
 }
 
-async function setLyricsExpanded(expanded: boolean): Promise<void> {
-  prefs = { ...prefs, lyricsExpanded: expanded }
-  if (!expanded) {
-    // Remember the current (expanded) height so re-expanding restores it.
-    const bounds = await window.linea.getWindowBounds()
-    lastExpandedHeight = bounds.height
-  }
-  setLyricsVisible(expanded)
-  renderTransport(player, expanded)
-  reflectPrefs(prefs)
-  void window.linea.setLyricsExpanded(expanded)
-  // Resize AFTER the layout reflects the new visibility, so the collapsed
-  // measurement is exact and the window hugs the chrome (no empty gap).
-  requestAnimationFrame(() => {
-    const target = expanded
-      ? lastExpandedHeight || presetWindowHeight(prefs.lyricsSize)
-      : collapsedHeight()
-    void window.linea.resizeTo(target)
-    requestAnimationFrame(() => {
-      updateLyricPadding()
-      updateScrollFades()
-      if (expanded) {
-        following = true
-        el.btnJump.hidden = true
-        scheduler.sync(lines, player)
-        centerActiveLyric(false)
-      }
-    })
-  })
-}
-
 function applyTheme(theme: Prefs['theme']): void {
   queuePrefs({ theme })
   applyPrefsToDom(prefs)
@@ -668,11 +659,9 @@ function applyTheme(theme: Prefs['theme']): void {
 function applyLyricsSize(size: LyricsSize): void {
   queuePrefs({ lyricsSize: size })
   applyPrefsToDom(prefs)
-  if (prefs.lyricsExpanded) {
-    const h = presetWindowHeight(size)
-    lastExpandedHeight = h
-    void window.linea.resizeTo(h)
-  }
+  const h = presetWindowHeight(size)
+  lastExpandedHeight = h
+  void window.linea.resizeTo(h)
   requestAnimationFrame(() => {
     updateLyricPadding()
     updateScrollFades()
@@ -697,7 +686,7 @@ function setConnected(isConnected: boolean): void {
     // Player view is now visible and measurable — size to the preset.
     requestAnimationFrame(() => {
       lastExpandedHeight = presetWindowHeight(prefs.lyricsSize)
-      void window.linea.resizeTo(prefs.lyricsExpanded ? lastExpandedHeight : collapsedHeight())
+      void window.linea.resizeTo(lastExpandedHeight)
       requestAnimationFrame(() => {
         updateLyricPadding()
         updateScrollFades()
@@ -740,7 +729,6 @@ async function init(): Promise<void> {
     onTheme: applyTheme,
     onClickThrough: () => void window.linea.toggleClickThrough(),
     onLyricsSize: applyLyricsSize,
-    onLyricsExpanded: (expanded) => void setLyricsExpanded(expanded),
     onShowTimestamps: (show) => {
       queuePrefs({ showTimestamps: show })
       applyPrefsToDom(prefs)
@@ -801,7 +789,7 @@ async function init(): Promise<void> {
   applyPrefsToDom(prefs)
   reflectPrefs(prefs)
   reflectPin(prefs.pinned)
-  setLyricsVisible(prefs.lyricsExpanded)
+  setLyricsVisible()
   reflectClickThrough(clickThrough)
   el.app.dataset.clickthrough = String(clickThrough)
   setWindowFocused(document.hasFocus())
