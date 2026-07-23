@@ -14,6 +14,11 @@ export function generateCodeVerifier(): string {
   return base64url(randomBytes(32))
 }
 
+/** Random OAuth `state` — ties the loopback callback to this login attempt. */
+export function generateState(): string {
+  return base64url(randomBytes(16))
+}
+
 export function generateCodeChallenge(verifier: string): string {
   const hash = createHash('sha256').update(verifier).digest()
   return base64url(hash)
@@ -24,6 +29,7 @@ export function buildAuthUrl(params: {
   redirectUri: string
   codeChallenge: string
   scope: string
+  state: string
 }): string {
   const url = new URL('https://accounts.spotify.com/authorize')
   url.searchParams.set('client_id', params.clientId)
@@ -32,6 +38,7 @@ export function buildAuthUrl(params: {
   url.searchParams.set('code_challenge_method', 'S256')
   url.searchParams.set('code_challenge', params.codeChallenge)
   url.searchParams.set('scope', params.scope)
+  url.searchParams.set('state', params.state)
   return url.toString()
 }
 
@@ -52,7 +59,8 @@ export async function exchangeCodeForTokens(params: {
   const response = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body
+    body,
+    signal: AbortSignal.timeout(15_000)
   })
   if (!response.ok) throw new Error(`Spotify token exchange failed: ${response.status}`)
 
@@ -81,7 +89,8 @@ export async function refreshAccessToken(params: {
   const response = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body
+    body,
+    signal: AbortSignal.timeout(15_000)
   })
   if (!response.ok) throw new Error(`Spotify token refresh failed: ${response.status}`)
 

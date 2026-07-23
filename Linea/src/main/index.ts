@@ -7,7 +7,8 @@ import {
   ipcMain,
   Tray,
   Menu,
-  nativeImage
+  nativeImage,
+  session
 } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -27,6 +28,7 @@ import { nextClickThroughState } from './clickThrough'
 import {
   generateCodeVerifier,
   generateCodeChallenge,
+  generateState,
   buildAuthUrl,
   exchangeCodeForTokens
 } from './spotifyAuth'
@@ -106,13 +108,15 @@ function createWindow(): void {
     resizable: true,
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
-    skipTaskbar: true,
+    // Keep the overlay in the taskbar/Alt-Tab switcher so it can be
+    // reached with the normal app-switching shortcuts.
+    skipTaskbar: false,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -238,13 +242,15 @@ async function loginToSpotify(): Promise<boolean> {
 
   const verifier = generateCodeVerifier()
   const challenge = generateCodeChallenge(verifier)
-  const { server, code } = await startLoopbackServer(LOOPBACK_PORT)
+  const state = generateState()
+  const { server, code } = await startLoopbackServer(LOOPBACK_PORT, state)
 
   const authUrl = buildAuthUrl({
     clientId: SPOTIFY_CLIENT_ID,
     redirectUri: SPOTIFY_REDIRECT_URI,
     codeChallenge: challenge,
-    scope: SPOTIFY_SCOPE
+    scope: SPOTIFY_SCOPE,
+    state
   })
   await shell.openExternal(authUrl)
 
@@ -371,8 +377,10 @@ async function pollOnce(): Promise<void> {
     sendNowPlaying(state)
 
     if (trackChanged && state.trackId) {
+      // Both fetches run in the background — lyrics arriving late must
+      // not delay scheduling the next playback poll.
       if (!scopeLimited) void updateLikedState(state.trackId)
-      await refreshLyrics(state)
+      refreshLyrics(state).catch((error) => console.error('Lyrics refresh failed:', error))
     }
   } catch (error) {
     console.error('Now-playing poll failed:', error)
@@ -439,6 +447,46 @@ async function handleToggleLike(): Promise<ApiResult<boolean>> {
 }
 
 // ------------------------------------------------------------------
+// IPC input validation — the renderer is the least-trusted process, so
+// every value crossing into main is checked before use (malformed
+// numbers would corrupt window bounds; unchecked command fields would
+// be interpolated into Spotify API URLs).
+// ------------------------------------------------------------------
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function isValidBounds(
+  value: unknown
+): value is { x: number; y: number; width: number; height: number } {
+  if (typeof value !== 'object' || value === null) return false
+  const b = value as Record<string, unknown>
+  return (
+    isFiniteNumber(b.x) && isFiniteNumber(b.y) && isFiniteNumber(b.width) && isFiniteNumber(b.height)
+  )
+}
+
+function isValidPlayerCommand(value: unknown): value is PlayerCommand {
+  if (typeof value !== 'object' || value === null) return false
+  const cmd = value as Record<string, unknown>
+  switch (cmd.type) {
+    case 'play':
+    case 'pause':
+    case 'next':
+    case 'previous':
+      return true
+    case 'seek':
+      return isFiniteNumber(cmd.positionMs)
+    case 'shuffle':
+      return typeof cmd.state === 'boolean'
+    case 'repeat':
+      return cmd.mode === 'off' || cmd.mode === 'context' || cmd.mode === 'track'
+    default:
+      return false
+  }
+}
+
+// ------------------------------------------------------------------
 // App lifecycle
 // ------------------------------------------------------------------
 // A long-lived background overlay must not die on a stray async error
@@ -450,8 +498,24 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled rejection in main:', reason)
 })
 
+// The renderer never needs to navigate away from the bundled page (the
+// dev server in dev). Block everything else so a hijacked link can't
+// load remote content inside the privileged window.
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-navigate', (event, url) => {
+    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    if (!(is.dev && devUrl && url.startsWith(devUrl))) event.preventDefault()
+  })
+})
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.meet2304.linea')
+
+  // The overlay has no use for camera/mic/geolocation/etc. — deny all
+  // permission requests outright.
+  session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) =>
+    callback(false)
+  )
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -475,21 +539,27 @@ app.whenReady().then(() => {
   })
   ipcMain.handle(IPC.SPOTIFY_AUTH_STATE, () => hasAuth())
 
-  ipcMain.handle(IPC.PLAYER_COMMAND, (_event, cmd: PlayerCommand) => handlePlayerCommand(cmd))
+  ipcMain.handle(IPC.PLAYER_COMMAND, (_event, cmd: unknown): Promise<ApiResult<null>> => {
+    if (!isValidPlayerCommand(cmd)) return Promise.resolve({ ok: false, reason: 'network' })
+    return handlePlayerCommand(cmd)
+  })
   ipcMain.handle(IPC.TOGGLE_LIKE, () => handleToggleLike())
 
-  ipcMain.handle(IPC.SET_PINNED, (_event, pinned: boolean) => {
+  ipcMain.handle(IPC.SET_PINNED, (_event, pinned: unknown) => {
+    const value = pinned === true
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setAlwaysOnTop(pinned, 'screen-saver')
+      mainWindow.setAlwaysOnTop(value, 'screen-saver')
     }
-    savePrefs({ pinned })
+    savePrefs({ pinned: value })
   })
 
   ipcMain.handle(IPC.CLOSE_WINDOW, () => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close()
   })
 
-  ipcMain.handle(IPC.RESIZE_WINDOW, (_event, height: number) => resizeWindowTo(height))
+  ipcMain.handle(IPC.RESIZE_WINDOW, (_event, height: unknown) => {
+    if (isFiniteNumber(height)) resizeWindowTo(height)
+  })
 
   ipcMain.handle(IPC.GET_WINDOW_BOUNDS, () => {
     if (!mainWindow || mainWindow.isDestroyed()) {
@@ -498,14 +568,14 @@ app.whenReady().then(() => {
     return mainWindow.getBounds()
   })
 
-  ipcMain.handle(
-    IPC.SET_WINDOW_BOUNDS,
-    (_event, bounds: { x: number; y: number; width: number; height: number }) =>
-      setWindowBounds(bounds)
-  )
+  ipcMain.handle(IPC.SET_WINDOW_BOUNDS, (_event, bounds: unknown) => {
+    if (isValidBounds(bounds)) setWindowBounds(bounds)
+  })
 
   ipcMain.handle(IPC.GET_PREFS, () => loadPrefs())
-  ipcMain.handle(IPC.SET_PREFS, (_event, partial: Partial<Prefs>) => savePrefs(partial))
+  ipcMain.handle(IPC.SET_PREFS, (_event, partial: unknown) =>
+    savePrefs(typeof partial === 'object' && partial !== null ? (partial as Partial<Prefs>) : {})
+  )
 
   // Some environments throw while parsing the accelerator rather than
   // returning false — never let that abort the rest of startup.

@@ -98,10 +98,14 @@ export function renderScrubber(positionMs: number, durationMs: number): void {
   el.timeRemaining.textContent = formatRemaining(durationMs, positionMs)
 }
 
+/** Cached row elements so per-boundary updates never re-query the DOM. */
+let lyricRows: HTMLElement[] = []
+
 /** Build every lyric line once; the container scrolls and the active
  *  line is tracked separately via setActiveLyric(). */
 export function renderAllLyrics(lines: LyricLine[]): void {
   if (lines.length === 0) {
+    lyricRows = []
     el.lyricsList.replaceChildren(emptyMessage('No synced lyrics for this track'))
     return
   }
@@ -122,15 +126,19 @@ export function renderAllLyrics(lines: LyricLine[]): void {
     row.append(time, text)
     return row
   })
+  lyricRows = rows
   el.lyricsList.replaceChildren(...rows)
 }
 
-/** Mark past/active/next on the already-rendered rows. */
+/** Mark past/active/next on the already-rendered rows. Only rows whose
+ *  position actually changed are written, so a typical boundary touches
+ *  two elements instead of restyling the whole list. */
 export function setActiveLyric(index: number): void {
-  el.lyricsList.querySelectorAll<HTMLElement>('.lyric-row').forEach((row) => {
-    const i = Number(row.dataset.index)
-    row.dataset.pos = i === index ? 'active' : i < index ? 'past' : 'next'
-  })
+  for (let i = 0; i < lyricRows.length; i++) {
+    const pos = i === index ? 'active' : i < index ? 'past' : 'next'
+    const row = lyricRows[i]
+    if (row && row.dataset.pos !== pos) row.dataset.pos = pos
+  }
 }
 
 function emptyMessage(text: string): HTMLElement {
