@@ -17,11 +17,12 @@ Just a minimal, floating window that stays out of your way while keeping you con
 
 ## Features
 
-- **Synced lyrics** — timestamped LRC lyrics from lrclib, highlighted line by line in time with playback
-- **Full transport** — play/pause, skip, seek, shuffle, repeat, and like, right from the overlay (playback control requires Spotify Premium)
-- **Cymatics theme** — procedurally generated, dithered standing-wave album art, unique per track
-- **Light & dark themes** — cool white "quiet layer" or dark glass, one toggle away
-- **Personalizable** — pin on top, panel opacity, lyrics text size, compact/expanded mode
+- **Scrollable synced lyrics** — timestamped LRC lyrics from lrclib, highlighted in time with playback; scroll to read ahead and tap the minimal "now" button to snap back to the current line
+- **Lyrics-first, landscape overlay** — a compact, freely resizable window that fills to your size; drag any edge or corner to resize, drag the top bar to move
+- **Full transport** — play/pause, skip, seek, shuffle, and repeat right from the overlay (playback control requires Spotify Premium)
+- **Cymatic thumbnail** — a small procedurally-generated standing-wave tile beside the title, unique per track and evolving while the song plays
+- **Light & dark themes** — pure-white "quiet layer" or near-black glass, one toggle away
+- **Personalizable** — pin on top and close from the top bar; panel opacity, three lyric-size presets (with a live preview), and show/hide lyrics in settings
 - **Click-through mode** — let clicks pass through the overlay (`Ctrl+Shift+.`)
-- **Fast by design** — event-driven lyric scheduling (no animation loop), adaptive polling that backs off when idle, per-track lyric and art caches
+- **Fast by design** — event-driven lyric scheduling (no always-on loop), adaptive polling that backs off when idle, and crash-resilient main/renderer error handling
 </p>

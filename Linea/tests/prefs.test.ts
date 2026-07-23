@@ -8,16 +8,18 @@ describe('clampPrefs', () => {
     expect(clampPrefs({ opacity: -2 }).opacity).toBe(0.6)
   })
 
-  it('clamps fontSize into [12, 28]', () => {
-    expect(clampPrefs({ fontSize: 40 }).fontSize).toBe(28)
-    expect(clampPrefs({ fontSize: 4 }).fontSize).toBe(12)
+  it('clamps lyricsSize to a known preset, defaulting to medium', () => {
+    expect(clampPrefs({ lyricsSize: 'small' }).lyricsSize).toBe('small')
+    expect(clampPrefs({ lyricsSize: 'large' }).lyricsSize).toBe('large')
+    expect(clampPrefs({ lyricsSize: 'huge' as never }).lyricsSize).toBe('medium')
+    expect(clampPrefs({}).lyricsSize).toBe('medium')
   })
 
-  it('migrates old prefs files (opacity + fontSize only) with defaults', () => {
-    const migrated = clampPrefs({ opacity: 0.9, fontSize: 16 })
+  it('migrates old prefs files (opacity + legacy fontSize) with defaults', () => {
+    const migrated = clampPrefs({ opacity: 0.9, fontSize: 16 } as never)
     expect(migrated).toEqual({
       opacity: 0.9,
-      fontSize: 16,
+      lyricsSize: 'medium',
       theme: 'light',
       pinned: true,
       lyricsExpanded: true

@@ -19,6 +19,8 @@ export interface CymaticOptions {
   seed?: number
   /** Radial vignette toward edges. */
   fade?: boolean
+  /** Animation phase (radians); 0 is the still frame. */
+  phase?: number
 }
 
 // 8x8 ordered Bayer matrix → normalized thresholds
@@ -69,32 +71,38 @@ interface FlowPhases {
   p5: number
 }
 
-function fieldRipple(x: number, y: number, sources: RippleSource[], k: number): number {
+function fieldRipple(
+  x: number,
+  y: number,
+  sources: RippleSource[],
+  k: number,
+  phase: number
+): number {
   let v = 0
   for (const s of sources) {
     const dx = x - s.x
     const dy = y - s.y
     const d = Math.sqrt(dx * dx + dy * dy)
-    v += Math.cos(d * k * s.f) / (1 + d * 0.6)
+    v += Math.cos(d * k * s.f - phase) / (1 + d * 0.6)
   }
   return v / Math.sqrt(sources.length)
 }
 
-function fieldChladni(x: number, y: number, n: number, m: number): number {
-  const a = Math.cos(n * Math.PI * x) * Math.cos(m * Math.PI * y)
-  const b = Math.cos(m * Math.PI * x) * Math.cos(n * Math.PI * y)
+function fieldChladni(x: number, y: number, n: number, m: number, phase: number): number {
+  const a = Math.cos(n * Math.PI * x + phase * 0.3) * Math.cos(m * Math.PI * y + phase * 0.2)
+  const b = Math.cos(m * Math.PI * x - phase * 0.2) * Math.cos(n * Math.PI * y - phase * 0.3)
   return a - b
 }
 
-function fieldLattice(x: number, y: number, n: number): number {
-  return (Math.cos(x * n * Math.PI) + Math.cos(y * n * Math.PI)) * 0.5
+function fieldLattice(x: number, y: number, n: number, phase: number): number {
+  return (Math.cos(x * n * Math.PI + phase) + Math.cos(y * n * Math.PI + phase)) * 0.5
 }
 
-function fieldFlow(x: number, y: number, p: FlowPhases, warp: number): number {
-  const wx = x + Math.sin(y * 2.3 + p.p1) * warp
-  const wy = y + Math.cos(x * 2.1 + p.p2) * warp
+function fieldFlow(x: number, y: number, p: FlowPhases, warp: number, phase: number): number {
+  const wx = x + Math.sin(y * 2.3 + p.p1 + phase) * warp
+  const wy = y + Math.cos(x * 2.1 + p.p2 + phase) * warp
   return (
-    Math.sin(wx * 3.1 + p.p3) * 0.6 +
+    Math.sin(wx * 3.1 + p.p3 + phase) * 0.6 +
     Math.sin((wx + wy) * 2.2 + p.p4) * 0.4 +
     Math.cos(wy * 4.0 - p.p5) * 0.3
   )
@@ -114,6 +122,7 @@ export function renderPixels(
   const scale = opts.scale ?? 1.6
   const seed = opts.seed ?? 7
   const fade = opts.fade ?? true
+  const phase = opts.phase ?? 0
 
   const data = new Uint8ClampedArray(new ArrayBuffer(width * height * 4))
   const rand = mulberry32(seed)
@@ -146,14 +155,14 @@ export function renderPixels(
 
       let val: number
       if (opts.style === 'chladni') {
-        val = Math.abs(fieldChladni(nx * 0.5, ny * 0.5, chN, chM))
+        val = Math.abs(fieldChladni(nx * 0.5, ny * 0.5, chN, chM, phase))
         val = 1 - Math.min(1, val * 2.2)
       } else if (opts.style === 'lattice') {
-        val = Math.abs(fieldLattice(nx, ny, density))
+        val = Math.abs(fieldLattice(nx, ny, density, phase))
       } else if (opts.style === 'flow') {
-        val = (fieldFlow(nx, ny, phases, warp) + 1) * 0.5
+        val = (fieldFlow(nx, ny, phases, warp, phase) + 1) * 0.5
       } else {
-        val = (fieldRipple(nx, ny, sources, k) + 1) * 0.5
+        val = (fieldRipple(nx, ny, sources, k, phase) + 1) * 0.5
       }
 
       if (fade) {
@@ -226,4 +235,33 @@ export function renderTrackArt(
 /** Clear cached art (theme switches invalidate colors). */
 export function clearArtCache(): void {
   cache.clear()
+}
+
+/**
+ * Small cymatic thumbnail beside the track title. Pattern (style +
+ * geometry) is seeded from the track and hue is the caller's per-track
+ * jewel, so every song looks distinct; `phase` animates it so it evolves
+ * while the song plays. Cheap enough (small canvas) to redraw per frame.
+ */
+export function renderThumb(
+  canvas: HTMLCanvasElement,
+  seedKey: string,
+  color: string,
+  phase: number
+): void {
+  const ctx = canvas.getContext('2d')
+  if (!ctx || canvas.width === 0 || canvas.height === 0) return
+  const seed = hashSeed(seedKey || 'linea')
+  const pixels = renderPixels(canvas.width, canvas.height, {
+    style: styleForSeed(seed),
+    color,
+    seed: seed % 100000,
+    density: 4 + (seed % 4),
+    dither: 0.28,
+    scale: 1.5,
+    fade: true,
+    phase
+  })
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.putImageData(new ImageData(pixels, canvas.width, canvas.height), 0, 0)
 }

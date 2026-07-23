@@ -31,18 +31,18 @@ test('window is frameless', async () => {
   expect(isFrameless).toBe(true)
 })
 
-test('window opens at panel size (compact or expanded)', async () => {
+test('window opens at panel size', async () => {
   const bounds = await app.evaluate(({ BrowserWindow }) => {
     const win = BrowserWindow.getAllWindows()[0]
     if (!win) throw new Error('No BrowserWindow open')
     return win.getBounds()
   })
-  // 408 wide; height is 232 (compact) or 470 (expanded); DPI scaling can
-  // nudge getBounds() by a few pixels
-  expect(bounds.width).toBeGreaterThanOrEqual(400)
-  expect(bounds.width).toBeLessThanOrEqual(430)
-  expect(bounds.height).toBeGreaterThanOrEqual(220)
-  expect(bounds.height).toBeLessThanOrEqual(490)
+  // 480 wide (landscape) by default; freely resizable. DPI scaling can
+  // nudge getBounds() by a few pixels.
+  expect(bounds.width).toBeGreaterThanOrEqual(460)
+  expect(bounds.width).toBeLessThanOrEqual(500)
+  expect(bounds.height).toBeGreaterThanOrEqual(100)
+  expect(bounds.height).toBeLessThanOrEqual(700)
 })
 
 test('renderer exposes window.linea but not window.require', async () => {
@@ -104,7 +104,7 @@ test('theme pref persists through the prefs IPC round trip', async () => {
   }, original)
 })
 
-test('lyrics expanded toggle resizes the window', async () => {
+test('resizeTo drives the window height (renderer-measured auto-size)', async () => {
   const heightOf = (): Promise<number> =>
     app.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0]
@@ -112,19 +112,15 @@ test('lyrics expanded toggle resizes the window', async () => {
       return win.getBounds().height
     })
 
-  const expanded = await page.evaluate(async () => (await window.linea.getPrefs()).lyricsExpanded)
   const before = await heightOf()
-
-  await page.evaluate(async (next) => {
-    await window.linea.setLyricsExpanded(next)
-  }, !expanded)
-  const after = await heightOf()
-  expect(after).not.toBe(before)
+  await page.evaluate(async () => window.linea.resizeTo(360))
+  const grown = await heightOf()
+  expect(grown).not.toBe(before)
+  // Height tracks the requested value (allowing DPI-scaling drift).
+  expect(Math.abs(grown - 360)).toBeLessThanOrEqual(10)
 
   // restore
-  await page.evaluate(async (original) => {
-    await window.linea.setLyricsExpanded(original)
-  }, expanded)
+  await page.evaluate(async (original) => window.linea.resizeTo(original), before)
 })
 
 test('pin toggle updates always-on-top', async () => {

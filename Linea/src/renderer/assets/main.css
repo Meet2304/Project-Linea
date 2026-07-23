@@ -1,9 +1,11 @@
 @import './tokens.css';
 
 /* ============================================================
-   LINEA — OVERLAY PANEL
-   The window is transparent; #app is the floating 384px panel.
-   Panel translucency is --panel-alpha only — text stays opaque.
+   LINEA — MINIMAL OVERLAY
+   A small landscape panel that FILLS the window minus a shadow
+   gutter, so custom resize grips sit on the panel's own edge.
+   Lyrics are the hero; the transport is a quiet strip beneath.
+   A small evolving cymatic thumbnail sits beside the track title.
    ============================================================ */
 
 * {
@@ -23,32 +25,43 @@ body {
   font-size: var(--text-sm);
   color: var(--text-primary);
   user-select: none;
-  padding: 12px; /* shadow gutter around the panel */
+  display: flex;
+  padding: 30px; /* shadow gutter — must exceed the shadow's reach so it never clips */
 }
 
 #app {
   position: relative;
-  width: 384px;
-  margin: 0 auto;
-  padding: 16px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  overflow: hidden; /* clip the ambient wash to the rounded corners */
   background: color-mix(
     in oklch,
     var(--panel-bg-base) calc(var(--panel-alpha) * 100%),
     transparent
   );
-  /* Note: cannot blur the desktop behind a transparent BrowserWindow;
-     kept for the in-page layers it does affect. */
-  backdrop-filter: blur(var(--blur-panel));
-  -webkit-backdrop-filter: blur(var(--blur-panel));
   border: 1px solid var(--panel-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-overlay);
-  -webkit-app-region: drag;
+  /* The panel is NOT a drag region — only the top bar and connect view
+     are (below). A blanket drag region intercepts clicks/scroll on the
+     lyrics and controls. */
   transition: opacity var(--dur) var(--ease);
 }
 
 #app[data-clickthrough='true'] {
-  opacity: 0.7;
+  opacity: 0.55;
+}
+
+.stack {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 button,
@@ -89,16 +102,19 @@ input:focus-visible {
    Connect (disconnected) view
    ------------------------------------------------------------ */
 .connect {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 22px 0 26px;
   text-align: center;
+  /* Only drag handle while disconnected (there's no top bar here). */
+  -webkit-app-region: drag;
 }
 
 .wordmark {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: var(--w-medium);
   letter-spacing: -0.03em;
   color: var(--text-primary);
@@ -108,8 +124,8 @@ input:focus-visible {
 .wordmark::after {
   content: '';
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   margin-left: 5px;
   border-radius: 50%;
   background: var(--accent);
@@ -124,8 +140,8 @@ input:focus-visible {
 }
 
 .btn-primary {
-  margin-top: 8px;
-  padding: 9px 22px;
+  margin-top: 6px;
+  padding: 8px 20px;
   border-radius: var(--radius-round);
   background: var(--accent);
   color: var(--text-on-accent);
@@ -156,25 +172,47 @@ input:focus-visible {
 }
 
 /* ------------------------------------------------------------
-   Header row: art · track info · state tag
+   Player layout
    ------------------------------------------------------------ */
-.header {
+#player-view {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
 }
 
-#art {
-  width: 52px;
-  height: 52px;
+#now-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top bar: thumb · track · pin · settings · close — the drag handle. */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 22px;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
+  -webkit-app-region: drag;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
   background: var(--surface-sunken);
+  border: 1px solid var(--panel-border);
 }
 
 .track {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
 }
 
 .track-title {
@@ -194,35 +232,219 @@ input:focus-visible {
   text-overflow: ellipsis;
 }
 
-.tag {
-  flex-shrink: 0;
-  display: inline-flex;
+.topbar-actions {
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: var(--radius-round);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-mono);
-  text-transform: uppercase;
-  line-height: 1.5;
-}
-
-.tag-teal {
-  color: var(--teal);
-  background: var(--teal-wash);
-}
-
-.tag-amethyst {
-  color: var(--amethyst);
-  background: var(--amethyst-wash);
+  gap: 1px;
+  flex-shrink: 0;
 }
 
 /* ------------------------------------------------------------
-   Scrubber
+   Ghost buttons (all controls are quiet by default)
    ------------------------------------------------------------ */
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  color: var(--text-faint);
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.ghost-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.ghost-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-sunken);
+}
+
+.ghost-btn:active {
+  transform: scale(0.92);
+}
+
+.ghost-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: none;
+  transform: none;
+}
+
+.ghost-btn-sm {
+  width: 26px;
+  height: 26px;
+}
+
+.ghost-btn-sm svg {
+  width: 15px;
+  height: 15px;
+}
+
+.play-btn {
+  color: var(--text-primary);
+}
+
+.play-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Feature-colored active states (lyrics, shuffle, repeat) */
+.ghost-btn[data-active='true'] {
+  color: var(--feature, var(--accent));
+}
+
+.feature-amethyst {
+  --feature: var(--amethyst);
+}
+
+.feature-sapphire {
+  --feature: var(--sapphire);
+}
+
+/* Pin — the whole icon changes color + gets a wash when active */
+.btn-pin[data-active='true'] {
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.btn-close:hover {
+  color: var(--garnet);
+  background: var(--garnet-wash);
+}
+
+/* ------------------------------------------------------------
+   Lyrics panel (the hero) — a scrollable viewport with a
+   jump-to-current button pinned to it.
+   ------------------------------------------------------------ */
+.lyrics {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-top: 12px;
+  display: flex;
+}
+
+.lyrics-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none; /* clean edge; the jump button handles wayfinding */
+}
+
+.lyrics-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.lyrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.lyric-row {
+  font-size: var(--lyrics-size);
+  line-height: 1.32;
+  color: var(--text-body);
+  opacity: 0.5;
+  transition:
+    opacity var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.lyric-row[data-pos='past'] {
+  opacity: 0.32;
+}
+
+.lyric-row[data-pos='active'] {
+  opacity: 1;
+  color: var(--amethyst);
+  font-weight: var(--w-semibold);
+}
+
+.lyrics-empty {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* Scroll cues — a soft fade at whichever edge has more lines. */
+.lyrics::before,
+.lyrics::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.lyrics::before {
+  top: 0;
+  background: linear-gradient(var(--panel-bg-base), transparent);
+}
+
+.lyrics::after {
+  bottom: 0;
+  background: linear-gradient(transparent, var(--panel-bg-base));
+}
+
+.lyrics[data-up='true']::before {
+  opacity: 1;
+}
+
+.lyrics[data-down='true']::after {
+  opacity: 1;
+}
+
+/* Jump-to-current — a minimal round icon button at the bottom center. */
+.jump-btn {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  border: 1px solid var(--panel-border);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  animation: fade-in var(--dur) var(--ease-out);
+}
+
+.jump-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.jump-btn:hover {
+  background: var(--surface-sunken);
+}
+
+/* ------------------------------------------------------------
+   Controls (quiet strip below the lyrics)
+   ------------------------------------------------------------ */
+.controls {
+  flex-shrink: 0;
+  margin-top: 12px;
+}
+
 .scrub {
-  margin-top: 14px;
+  margin-bottom: 2px;
 }
 
 .slider {
@@ -230,15 +452,14 @@ input:focus-visible {
   appearance: none;
   display: block;
   width: 100%;
-  height: 16px;
+  height: 14px;
   background: transparent;
   cursor: pointer;
 }
 
 .slider::-webkit-slider-runnable-track {
-  height: 4px;
+  height: 3px;
   border-radius: var(--radius-round);
-  /* JS updates --fill (0–100) for the colored portion */
   background: linear-gradient(
     to right,
     var(--slider-color, var(--accent)) calc(var(--fill, 0) * 1%),
@@ -248,8 +469,8 @@ input:focus-visible {
 
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   margin-top: -4px;
   border-radius: 50%;
   background: var(--slider-color, var(--accent));
@@ -273,216 +494,78 @@ input:focus-visible {
 .timecodes {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
   color: var(--text-faint);
+  font-size: 10px;
 }
 
-/* ------------------------------------------------------------
-   Transport row
-   ------------------------------------------------------------ */
+.timecodes .mono {
+  font-size: 10px;
+}
+
 .transport {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
-}
-
-.transport-left,
-.transport-right {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-md);
-  color: var(--text-body);
-  transition:
-    background var(--dur-fast) var(--ease),
-    color var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
+  gap: 2px;
+  margin-top: 2px;
 }
 
-.icon-btn svg {
-  width: 18px;
-  height: 18px;
+/* ------------------------------------------------------------
+   Settings (inline — reuses the now-view space)
+   ------------------------------------------------------------ */
+#settings-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-app-region: no-drag;
+  animation: fade-in var(--dur) var(--ease-out);
+  /* Thin, themed scrollbar (the default is a jarring white in dark mode). */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
-.icon-btn:hover {
-  background: var(--surface-sunken);
+#settings-view::-webkit-scrollbar {
+  width: 5px;
 }
 
-.icon-btn:active {
-  transform: scale(0.94);
+#settings-view::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.icon-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-  background: none;
-  transform: none;
-}
-
-.icon-btn-sm {
-  width: 30px;
-  height: 30px;
-}
-
-.icon-btn-sm svg {
-  width: 16px;
-  height: 16px;
-}
-
-.icon-btn-lg {
-  width: 44px;
-  height: 44px;
-}
-
-.icon-btn-lg svg {
-  width: 20px;
-  height: 20px;
-}
-
-.icon-btn.round {
+#settings-view::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
   border-radius: var(--radius-round);
 }
 
-.icon-btn.filled {
-  background: var(--accent);
-  color: var(--text-on-accent);
-}
-
-.icon-btn.filled:hover {
-  filter: brightness(1.08);
-}
-
-/* Feature-colored "soft" active state (heart, lyrics, shuffle…) */
-.icon-btn[data-active='true'] {
-  color: var(--feature, var(--accent));
-  background: var(--feature-wash, var(--accent-wash));
-}
-
-.feature-garnet {
-  --feature: var(--garnet);
-  --feature-wash: var(--garnet-wash);
-}
-
-.feature-amethyst {
-  --feature: var(--amethyst);
-  --feature-wash: var(--amethyst-wash);
-}
-
-.feature-sapphire {
-  --feature: var(--sapphire);
-  --feature-wash: var(--sapphire-wash);
-}
-
-/* Repeat-track badge */
-.icon-btn .badge {
-  position: absolute;
-  display: none;
-}
-
-/* ------------------------------------------------------------
-   Lyrics panel
-   ------------------------------------------------------------ */
-.lyrics {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--panel-border);
-}
-
-.lyrics-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.lyrics-state {
-  color: var(--text-faint);
-}
-
-.lyrics-list {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.lyric-row {
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
-  opacity: 0.62;
-  transition: opacity var(--dur) var(--ease);
-}
-
-.lyric-row[data-pos='past'] {
-  opacity: 0.4;
-}
-
-.lyric-row[data-pos='active'] {
-  opacity: 1;
-}
-
-.lyric-time {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-mono);
-  color: var(--text-faint);
-  width: 40px;
-  flex-shrink: 0;
-}
-
-.lyric-text {
-  font-size: var(--lyrics-size);
-  line-height: 1.35;
-  color: var(--text-body);
-}
-
-.lyric-row[data-pos='active'] .lyric-text {
-  color: var(--amethyst);
-  font-weight: var(--w-semibold);
-}
-
-.lyrics-empty {
-  font-size: var(--text-xs);
-  color: var(--text-faint);
-}
-
-/* ------------------------------------------------------------
-   Settings popover
-   ------------------------------------------------------------ */
-.settings-pop {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 64px;
-  z-index: 10;
-  padding: 14px 16px;
-  background: var(--surface-raised);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-overlay);
-  -webkit-app-region: no-drag;
-  transform-origin: top right;
-  animation: pop-in var(--dur) var(--ease-out);
-}
-
-@keyframes pop-in {
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(-4px);
+    transform: translateY(-3px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
   }
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+
+.settings-title {
+  color: var(--text-secondary);
+}
+
+.settings-body {
+  padding: 4px 0;
 }
 
 .set-row {
@@ -490,31 +573,70 @@ input:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 32px;
+  min-height: 34px;
 }
 
 .set-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-mono);
-  text-transform: uppercase;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--text-body);
   flex-shrink: 0;
 }
 
 .set-hint {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
   color: var(--text-faint);
-  letter-spacing: var(--tracking-mono);
+  margin-left: auto;
 }
 
 .set-row .slider {
-  width: 130px;
+  width: 120px;
   --slider-color: var(--slate);
 }
 
-/* Switch */
+/* Segmented control (lyrics size) */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  border: 1px solid var(--panel-border);
+}
+
+.seg {
+  min-width: 30px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--w-medium);
+  color: var(--text-secondary);
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.seg:hover {
+  color: var(--text-primary);
+}
+
+.seg[data-active='true'] {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+/* Live preview of the chosen lyric size — sampled in the active-line
+   style so the choice is felt without leaving settings. */
+.size-preview {
+  margin: 2px 0 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--amethyst);
+  font-size: var(--lyrics-size);
+  font-weight: var(--w-semibold);
+  line-height: 1.3;
+  text-align: center;
+  transition: font-size var(--dur) var(--ease);
+}
+
 .switch {
   position: relative;
   width: 32px;
@@ -546,19 +668,20 @@ input:focus-visible {
   transform: translateX(14px);
 }
 
-.set-footer {
-  margin-top: 10px;
+.settings-foot {
+  margin-top: auto;
   padding-top: 10px;
   border-top: 1px solid var(--panel-border);
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-text-danger {
   font-size: var(--text-xs);
   font-weight: var(--w-medium);
   color: var(--garnet);
-  padding: 4px 8px;
+  padding: 5px 10px;
   border-radius: var(--radius-sm);
 }
 
@@ -571,11 +694,11 @@ input:focus-visible {
    ------------------------------------------------------------ */
 .toast {
   position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 12px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 20;
-  padding: 8px 12px;
+  padding: 7px 11px;
   border-radius: var(--radius-md);
   background: var(--surface-raised);
   border: 1px solid var(--panel-border);
@@ -583,5 +706,138 @@ input:focus-visible {
   font-size: var(--text-xs);
   color: var(--text-body);
   text-align: center;
-  animation: pop-in var(--dur) var(--ease-out);
+  animation: fade-in var(--dur) var(--ease-out);
+}
+
+/* ------------------------------------------------------------
+   Resize grips + corner affordances
+   ------------------------------------------------------------ */
+.grip {
+  position: absolute;
+  z-index: 5;
+  -webkit-app-region: no-drag;
+}
+
+.grip-n {
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 9px;
+  cursor: ns-resize;
+}
+.grip-s {
+  bottom: 0;
+  left: 16px;
+  right: 16px;
+  height: 9px;
+  cursor: ns-resize;
+}
+.grip-e {
+  right: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 9px;
+  cursor: ew-resize;
+}
+.grip-w {
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 9px;
+  cursor: ew-resize;
+}
+.grip-ne {
+  top: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nesw-resize;
+}
+.grip-nw {
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+}
+.grip-se {
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+}
+.grip-sw {
+  bottom: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nesw-resize;
+}
+
+/* Corner ticks trace the panel's own rounded corner (concentric):
+   inset 6px inside an 18px outer radius → a 12px arc. Opacity and a
+   magnetic transform are driven from JS by pointer proximity, so only
+   the nearest corner reacts and it glides toward the cursor. */
+.corner {
+  position: absolute;
+  z-index: 4;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  opacity: 0;
+  border: 1.5px solid var(--accent);
+  transition:
+    transform 110ms var(--ease-out),
+    opacity 120ms var(--ease);
+}
+
+.corner-nw {
+  top: 6px;
+  left: 6px;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 12px;
+  transform-origin: top left;
+}
+.corner-ne {
+  top: 6px;
+  right: 6px;
+  border-left: 0;
+  border-bottom: 0;
+  border-top-right-radius: 12px;
+  transform-origin: top right;
+}
+.corner-se {
+  bottom: 6px;
+  right: 6px;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 12px;
+  transform-origin: bottom right;
+}
+.corner-sw {
+  bottom: 6px;
+  left: 6px;
+  border-right: 0;
+  border-top: 0;
+  border-bottom-left-radius: 12px;
+  transform-origin: bottom left;
+}
+
+/* One-shot pulse when a corner first comes into range (glow, not
+   transform — so it never fights the magnetic pull). */
+@media (prefers-reduced-motion: no-preference) {
+  .corner.pulse {
+    animation: corner-pulse 520ms var(--ease-out);
+  }
+}
+
+@keyframes corner-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 7px transparent;
+  }
 }

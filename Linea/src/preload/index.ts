@@ -29,6 +29,16 @@ contextBridge.exposeInMainWorld('linea', {
   setPinned: (pinned: boolean): Promise<void> => ipcRenderer.invoke(IPC.SET_PINNED, pinned),
   setLyricsExpanded: (expanded: boolean): Promise<void> =>
     ipcRenderer.invoke(IPC.SET_LYRICS_EXPANDED, expanded),
+  resizeTo: (height: number): Promise<void> => ipcRenderer.invoke(IPC.RESIZE_WINDOW, height),
+  getWindowBounds: (): Promise<{ x: number; y: number; width: number; height: number }> =>
+    ipcRenderer.invoke(IPC.GET_WINDOW_BOUNDS),
+  setWindowBounds: (bounds: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }): Promise<void> => ipcRenderer.invoke(IPC.SET_WINDOW_BOUNDS, bounds),
+  closeWindow: (): Promise<void> => ipcRenderer.invoke(IPC.CLOSE_WINDOW),
   onNowPlaying: subscribe<PlayerState | null>(IPC.NOW_PLAYING),
   onLyricsUpdate: subscribe<LyricLine[]>(IPC.LYRICS_UPDATE),
   onClickThroughChanged: subscribe<boolean>(IPC.CLICK_THROUGH_CHANGED),
