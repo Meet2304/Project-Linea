@@ -22,7 +22,8 @@ describe('clampPrefs', () => {
       lyricsSize: 'medium',
       theme: 'light',
       pinned: true,
-      lyricsExpanded: true
+      lyricsExpanded: true,
+      showTimestamps: false
     })
   })
 

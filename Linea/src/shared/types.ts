@@ -55,4 +55,6 @@ export interface Prefs {
   theme: Theme
   pinned: boolean
   lyricsExpanded: boolean
+  /** When true, each lyric line shows its start timestamp. */
+  showTimestamps: boolean
 }

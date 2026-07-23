@@ -37,10 +37,10 @@ test('window opens at panel size', async () => {
     if (!win) throw new Error('No BrowserWindow open')
     return win.getBounds()
   })
-  // 480 wide (landscape) by default; freely resizable. DPI scaling can
+  // 560 wide (landscape) by default; freely resizable. DPI scaling can
   // nudge getBounds() by a few pixels.
-  expect(bounds.width).toBeGreaterThanOrEqual(460)
-  expect(bounds.width).toBeLessThanOrEqual(500)
+  expect(bounds.width).toBeGreaterThanOrEqual(540)
+  expect(bounds.width).toBeLessThanOrEqual(580)
   expect(bounds.height).toBeGreaterThanOrEqual(100)
   expect(bounds.height).toBeLessThanOrEqual(700)
 })

@@ -32,8 +32,8 @@ import { initAutoUpdater } from './updater'
 // The panel fills the window minus a 30px shadow gutter per side. The
 // window is freely resizable (custom grips in the renderer drive
 // SET_WINDOW_BOUNDS); these are the launch and floor sizes.
-const INITIAL_WIDTH = 480
-const INITIAL_HEIGHT = 264
+const INITIAL_WIDTH = 560
+const INITIAL_HEIGHT = 300
 const MIN_WIDTH = 372
 const MIN_HEIGHT = 150
 

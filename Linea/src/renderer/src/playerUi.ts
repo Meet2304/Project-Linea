@@ -11,9 +11,9 @@ function byId<T extends HTMLElement>(id: string): T {
 
 /** Each size preset pairs a font size with a default visible-line count. */
 export const LYRICS_PRESETS: Record<LyricsSize, { px: number; lines: number }> = {
-  small: { px: 13, lines: 6 },
-  medium: { px: 15, lines: 4 },
-  large: { px: 18, lines: 3 }
+  small: { px: 13, lines: 8 },
+  medium: { px: 15, lines: 6 },
+  large: { px: 18, lines: 4 }
 }
 
 export const el = {
@@ -96,6 +96,7 @@ export function renderScrubber(positionMs: number, durationMs: number): void {
   const ratio = durationMs > 0 ? Math.min(1, Math.max(0, positionMs / durationMs)) : 0
   el.seek.value = String(Math.round(ratio * 1000))
   el.seek.style.setProperty('--fill', String(ratio * 100))
+  el.app.style.setProperty('--song-progress', String(ratio))
   el.timeElapsed.textContent = formatTime(positionMs)
   el.timeRemaining.textContent = formatRemaining(durationMs, positionMs)
 }
@@ -112,7 +113,16 @@ export function renderAllLyrics(lines: LyricLine[]): void {
     row.className = 'lyric-row'
     row.dataset.index = String(i)
     row.dataset.pos = 'next'
-    row.textContent = line.text || '…'
+
+    const time = document.createElement('span')
+    time.className = 'lyric-time mono'
+    time.textContent = formatTime(line.timeMs)
+
+    const text = document.createElement('span')
+    text.className = 'lyric-text'
+    text.textContent = line.text || '…'
+
+    row.append(time, text)
     return row
   })
   el.lyricsList.replaceChildren(...rows)
@@ -135,6 +145,8 @@ function emptyMessage(text: string): HTMLElement {
 
 export function setLyricsVisible(visible: boolean): void {
   el.lyricsPanel.hidden = !visible
+  // Drives hover-reveal controls CSS (`#app[data-lyrics='true']`).
+  el.app.dataset.lyrics = String(visible)
 }
 
 export function applyPrefsToDom(prefs: Prefs): void {
@@ -144,6 +156,7 @@ export function applyPrefsToDom(prefs: Prefs): void {
     '--lyrics-size',
     `${LYRICS_PRESETS[prefs.lyricsSize].px}px`
   )
+  el.app.dataset.timestamps = String(prefs.showTimestamps)
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null

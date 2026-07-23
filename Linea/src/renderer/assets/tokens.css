@@ -36,6 +36,9 @@
   /* --- Semantic --- */
   --accent: var(--sapphire);
   --accent-wash: var(--sapphire-wash);
+  /* Per-track jewel — JS sets this from the dither hue so lyrics +
+     progress stay matched. Falls back to amethyst before first track. */
+  --lyric-accent: var(--amethyst);
 
   /* Panel translucency lives in one variable so text never
      inherits it. JS drives --panel-alpha from the opacity pref. */
@@ -94,6 +97,9 @@
   --dur-fast: 120ms;
   --dur: 220ms;
   --dur-slow: 420ms;
+  /* Chrome reveal (controls + topbar actions on hover) */
+  --chrome-dur: 520ms;
+  --chrome-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   --blur-panel: 18px;
 
@@ -127,7 +133,7 @@
   --garnet-wash: #2a1a1f;
   --citrine-wash: #29231a;
 
-  --panel-alpha: 0.97;
+  /* Panel alpha is owned by JS (opacity pref) — do not set it here. */
   --panel-bg-base: #0a0b0d;
   --panel-border: #212329;
 

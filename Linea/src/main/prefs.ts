@@ -10,7 +10,8 @@ const DEFAULT_PREFS: Prefs = {
   lyricsSize: 'medium',
   theme: 'light',
   pinned: true,
-  lyricsExpanded: true
+  lyricsExpanded: true,
+  showTimestamps: false
 }
 
 function clampTheme(value: unknown): Theme {
@@ -36,7 +37,8 @@ export function clampPrefs(input: Partial<Prefs>): Prefs {
     lyricsSize: clampLyricsSize(input.lyricsSize),
     theme: clampTheme(input.theme),
     pinned: clampBoolean(input.pinned, DEFAULT_PREFS.pinned),
-    lyricsExpanded: clampBoolean(input.lyricsExpanded, DEFAULT_PREFS.lyricsExpanded)
+    lyricsExpanded: clampBoolean(input.lyricsExpanded, DEFAULT_PREFS.lyricsExpanded),
+    showTimestamps: clampBoolean(input.showTimestamps, DEFAULT_PREFS.showTimestamps)
   }
 }
 

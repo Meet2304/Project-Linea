@@ -4,7 +4,7 @@
    LINEA — MINIMAL OVERLAY
    A small landscape panel that FILLS the window minus a shadow
    gutter, so custom resize grips sit on the panel's own edge.
-   Lyrics are the hero; the transport is a quiet strip beneath.
+   Lyrics are the hero; transport overlays on hover (collapsed: always on).
    A small evolving cymatic thumbnail sits beside the track title.
    ============================================================ */
 
@@ -37,9 +37,10 @@ body {
   flex-direction: column;
   padding: 14px 16px;
   overflow: hidden; /* clip the ambient wash to the rounded corners */
+  /* JS drives --panel-alpha from the opacity pref (unitless 0–1). */
   background: color-mix(
-    in oklch,
-    var(--panel-bg-base) calc(var(--panel-alpha) * 100%),
+    in srgb,
+    var(--panel-bg-base) calc(var(--panel-alpha, 0.92) * 100%),
     transparent
   );
   border: 1px solid var(--panel-border);
@@ -53,6 +54,47 @@ body {
 
 #app[data-clickthrough='true'] {
   opacity: 0.55;
+}
+
+/* Minimal progress hairline on the panel's bottom edge (lyrics mode).
+   On hover it rises and dissolves into the main scrubber. */
+.edge-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
+  height: 2px;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
+  opacity: 0;
+  transform: translateY(0) scaleY(1);
+  transform-origin: bottom center;
+  transition:
+    opacity var(--chrome-dur) var(--chrome-ease),
+    transform var(--chrome-dur) var(--chrome-ease),
+    height var(--chrome-dur) var(--chrome-ease);
+}
+
+#app[data-lyrics='true']:not([data-settings='true']) .edge-progress {
+  opacity: 1;
+}
+
+#app[data-lyrics='true']:not([data-settings='true']):hover .edge-progress,
+#app[data-lyrics='true']:not([data-settings='true']):focus-within .edge-progress {
+  opacity: 0;
+  height: 3px;
+  transform: translateY(-56px) scaleY(1.5);
+}
+
+.edge-progress-fill {
+  height: 100%;
+  width: 100%;
+  transform: scaleX(var(--song-progress, 0));
+  transform-origin: left center;
+  background: var(--lyric-accent);
+  opacity: 0.85;
 }
 
 .stack {
@@ -182,6 +224,7 @@ input:focus-visible {
 }
 
 #now-view {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -237,6 +280,29 @@ input:focus-visible {
   align-items: center;
   gap: 1px;
   flex-shrink: 0;
+}
+
+/* Lyrics mode: pin / settings / close stay quiet until hover.
+   While settings is open, keep chrome visible (no fade-in). */
+#app[data-lyrics='true'] .topbar-actions {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    opacity var(--chrome-dur) var(--chrome-ease),
+    transform var(--chrome-dur) var(--chrome-ease);
+}
+
+#app[data-lyrics='true']:hover .topbar-actions,
+#app[data-lyrics='true']:focus-within .topbar-actions,
+#app[data-settings='true'] .topbar-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+#app[data-settings='true'] .topbar-actions {
+  transition: none;
 }
 
 /* ------------------------------------------------------------
@@ -309,15 +375,122 @@ input:focus-visible {
   --feature: var(--sapphire);
 }
 
-/* Pin — the whole icon changes color + gets a wash when active */
+/* Pin — louder, eased selected state when the window is always-on-top */
+.btn-pin {
+  transition:
+    background var(--chrome-dur) var(--chrome-ease),
+    color var(--chrome-dur) var(--chrome-ease),
+    box-shadow var(--chrome-dur) var(--chrome-ease),
+    transform var(--dur-fast) var(--ease);
+}
+
 .btn-pin[data-active='true'] {
   color: var(--accent);
-  background: var(--accent-wash);
+  background: color-mix(in oklch, var(--accent) 28%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent),
+    0 0 12px color-mix(in oklch, var(--accent) 22%, transparent);
+}
+
+.btn-pin[data-active='true']:hover {
+  background: color-mix(in oklch, var(--accent) 36%, transparent);
 }
 
 .btn-close:hover {
   color: var(--garnet);
   background: var(--garnet-wash);
+}
+
+/* ------------------------------------------------------------
+   Animate UI–style icon hover (ported to vanilla SVG/CSS)
+   Settings: rotate 0 → 90 → 180.
+   Pin: lift + wiggle from the tip.
+   X: each stroke rotates 90° (staggered).
+   ------------------------------------------------------------ */
+.icon-anim-settings,
+.icon-anim-pin,
+.icon-anim-x-a,
+.icon-anim-x-b {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.icon-anim-pin {
+  transform-origin: bottom center;
+}
+
+#btn-settings:hover .icon-anim-settings,
+#btn-settings:focus-visible .icon-anim-settings {
+  animation: icon-settings-spin 1.25s ease-in-out forwards;
+}
+
+#btn-pin:hover .icon-anim-pin,
+#btn-pin:focus-visible .icon-anim-pin {
+  animation: icon-pin-wiggle 1s ease-in-out forwards;
+}
+
+#btn-close:hover .icon-anim-x-a,
+#btn-close:focus-visible .icon-anim-x-a {
+  animation: icon-x-spin 0.4s ease-in-out forwards;
+}
+
+#btn-close:hover .icon-anim-x-b,
+#btn-close:focus-visible .icon-anim-x-b {
+  animation: icon-x-spin 0.4s ease-in-out 0.1s forwards;
+}
+
+@keyframes icon-settings-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(90deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes icon-pin-wiggle {
+  0% {
+    transform: scale(1) rotate(0deg) translateY(0);
+  }
+  25% {
+    transform: scale(0.75) rotate(30deg) translateY(-6px);
+  }
+  50% {
+    transform: scale(1) rotate(-15deg) translateY(0);
+  }
+  75%,
+  100% {
+    transform: scale(1) rotate(0deg) translateY(0);
+  }
+}
+
+@keyframes icon-x-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(90deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #btn-settings:hover .icon-anim-settings,
+  #btn-settings:focus-visible .icon-anim-settings,
+  #btn-pin:hover .icon-anim-pin,
+  #btn-pin:focus-visible .icon-anim-pin,
+  #btn-close:hover .icon-anim-x-a,
+  #btn-close:hover .icon-anim-x-b,
+  #btn-close:focus-visible .icon-anim-x-a,
+  #btn-close:focus-visible .icon-anim-x-b {
+    animation: none;
+  }
+
+  .btn-pin {
+    transition-duration: var(--dur-fast);
+  }
 }
 
 /* ------------------------------------------------------------
@@ -336,11 +509,23 @@ input:focus-visible {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: none; /* clean edge; the jump button handles wayfinding */
+  /* Thin themed scrollbar — fades still cue overflow; the bar helps aim. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  overscroll-behavior: contain;
 }
 
 .lyrics-scroll::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+}
+
+.lyrics-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lyrics-scroll::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: var(--radius-round);
 }
 
 .lyrics-list {
@@ -350,6 +535,9 @@ input:focus-visible {
 }
 
 .lyric-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
   font-size: var(--lyrics-size);
   line-height: 1.32;
   color: var(--text-body);
@@ -359,14 +547,47 @@ input:focus-visible {
     color var(--dur) var(--ease);
 }
 
+.lyric-time {
+  flex-shrink: 0;
+  width: 0;
+  margin-right: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--text-faint);
+  font-size: var(--text-2xs);
+  line-height: inherit;
+  white-space: nowrap;
+  transition:
+    width var(--dur) var(--ease),
+    margin-right var(--dur) var(--ease),
+    opacity var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+#app[data-timestamps='true'] .lyric-time {
+  width: 2.75em;
+  margin-right: 8px;
+  opacity: 0.75;
+}
+
+.lyric-text {
+  min-width: 0;
+  flex: 1;
+}
+
 .lyric-row[data-pos='past'] {
   opacity: 0.32;
 }
 
 .lyric-row[data-pos='active'] {
   opacity: 1;
-  color: var(--amethyst);
+  color: var(--lyric-accent);
   font-weight: var(--w-semibold);
+}
+
+#app[data-timestamps='true'] .lyric-row[data-pos='active'] .lyric-time {
+  color: var(--lyric-accent);
+  opacity: 1;
 }
 
 .lyrics-empty {
@@ -406,13 +627,14 @@ input:focus-visible {
   opacity: 1;
 }
 
-/* Jump-to-current — a minimal round icon button at the bottom center. */
+/* Jump-to-current — a minimal round icon button at the bottom center.
+   Sits above the hover control strip so it stays pressable. */
 .jump-btn {
   position: absolute;
   bottom: 3px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 3;
+  z-index: 5;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -421,9 +643,12 @@ input:focus-visible {
   border-radius: 50%;
   background: var(--surface-raised);
   border: 1px solid var(--panel-border);
-  color: var(--accent);
+  color: var(--lyric-accent);
   box-shadow: var(--shadow-sm);
   animation: fade-in var(--dur) var(--ease-out);
+  transition:
+    opacity var(--chrome-dur) var(--chrome-ease),
+    bottom var(--chrome-dur) var(--chrome-ease);
 }
 
 .jump-btn svg {
@@ -435,16 +660,108 @@ input:focus-visible {
   background: var(--surface-sunken);
 }
 
+/* Lift above the transport when chrome is revealed. */
+#app[data-lyrics='true']:hover .jump-btn,
+#app[data-lyrics='true']:focus-within .jump-btn {
+  bottom: 72px;
+}
+
 /* ------------------------------------------------------------
-   Controls (quiet strip below the lyrics)
+   Controls (secondary — scrub + transport)
+   When lyrics are showing, the strip overlays the bottom of the
+   lyrics and only appears on hover/focus so the panel stays lyrics-first.
+   When lyrics are collapsed, it stays in flow and always visible.
    ------------------------------------------------------------ */
 .controls {
   flex-shrink: 0;
   margin-top: 12px;
 }
 
+#app[data-lyrics='true'] .controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  margin-top: 0;
+  padding-top: 28px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklch, var(--panel-bg-base) 80%, transparent) 40%,
+    var(--panel-bg-base) 78%
+  );
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition:
+    opacity var(--chrome-dur) var(--chrome-ease),
+    transform var(--chrome-dur) var(--chrome-ease);
+}
+
+#app[data-lyrics='true']:hover .controls,
+#app[data-lyrics='true']:focus-within .controls {
+  opacity: 1;
+  transform: translateY(0);
+  /* Keep the shell pass-through so wheel scroll reaches lyrics;
+     only the interactive strip captures pointer. */
+  pointer-events: none;
+  /* Enter a beat after the topbar so chrome cascades in. */
+  transition-delay: 50ms;
+}
+
+#app[data-lyrics='true']:hover .controls .scrub,
+#app[data-lyrics='true']:hover .controls .transport,
+#app[data-lyrics='true']:focus-within .controls .scrub,
+#app[data-lyrics='true']:focus-within .controls .transport {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app[data-lyrics='true'] .controls,
+  #app[data-lyrics='true'] .topbar-actions {
+    transform: none;
+    transition: opacity var(--dur-fast) linear;
+  }
+
+  #app[data-lyrics='true']:hover .controls,
+  #app[data-lyrics='true']:focus-within .controls {
+    transition-delay: 0ms;
+  }
+
+  .edge-progress {
+    transition: opacity var(--dur-fast) linear;
+  }
+
+  #app[data-lyrics='true']:not([data-settings='true']):hover .edge-progress,
+  #app[data-lyrics='true']:not([data-settings='true']):focus-within .edge-progress {
+    transform: none;
+    height: 2px;
+  }
+
+  #app[data-lyrics='true'] .scrub {
+    transform: none;
+    transition: none;
+  }
+}
+
 .scrub {
   margin-bottom: 2px;
+}
+
+/* Continuity with the edge hairline — same lyric accent. */
+#app[data-lyrics='true'] #seek {
+  --slider-color: var(--lyric-accent);
+}
+
+#app[data-lyrics='true'] .scrub {
+  transform: translateY(6px);
+  transition: transform var(--chrome-dur) var(--chrome-ease);
+}
+
+#app[data-lyrics='true']:hover .scrub,
+#app[data-lyrics='true']:focus-within .scrub {
+  transform: translateY(0);
 }
 
 .slider {
@@ -453,18 +770,28 @@ input:focus-visible {
   display: block;
   width: 100%;
   height: 14px;
-  background: transparent;
+  margin: 0;
+  /* Track is painted on the input (3px centered) so Chromium doesn't
+     stretch a gradient across the full 14px hit area. */
+  background: linear-gradient(
+    to right,
+    var(--slider-color, var(--accent)) 0,
+    var(--slider-color, var(--accent)) calc(var(--fill, 0) * 1%),
+    var(--track) calc(var(--fill, 0) * 1%),
+    var(--track) 100%
+  );
+  background-size: 100% 3px;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: var(--radius-round);
   cursor: pointer;
 }
 
 .slider::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
   height: 3px;
-  border-radius: var(--radius-round);
-  background: linear-gradient(
-    to right,
-    var(--slider-color, var(--accent)) calc(var(--fill, 0) * 1%),
-    var(--track) calc(var(--fill, 0) * 1%)
-  );
+  background: transparent;
+  border: none;
 }
 
 .slider::-webkit-slider-thumb {
@@ -489,6 +816,11 @@ input:focus-visible {
 .slider:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+/* Settings opacity — always show the thumb so the control is obvious. */
+#set-opacity::-webkit-slider-thumb {
+  opacity: 1;
 }
 
 .timecodes {
@@ -518,25 +850,8 @@ input:focus-visible {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   -webkit-app-region: no-drag;
   animation: fade-in var(--dur) var(--ease-out);
-  /* Thin, themed scrollbar (the default is a jarring white in dark mode). */
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
-}
-
-#settings-view::-webkit-scrollbar {
-  width: 5px;
-}
-
-#settings-view::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#settings-view::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
-  border-radius: var(--radius-round);
 }
 
 @keyframes fade-in {
@@ -550,18 +865,58 @@ input:focus-visible {
   }
 }
 
-.settings-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Scroll viewport — fades sit on the wrap; content scrolls inside. */
+.settings-scroll-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   margin-top: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--panel-border);
-  flex-shrink: 0;
+  display: flex;
 }
 
-.settings-title {
-  color: var(--text-secondary);
+.settings-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: none; /* fades handle wayfinding, like lyrics */
+}
+
+.settings-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scroll cues — soft fade at whichever edge has more content. */
+.settings-scroll-wrap::before,
+.settings-scroll-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.settings-scroll-wrap::before {
+  top: 0;
+  background: linear-gradient(var(--panel-bg-base), transparent);
+}
+
+.settings-scroll-wrap::after {
+  bottom: 0;
+  background: linear-gradient(transparent, var(--panel-bg-base));
+}
+
+.settings-scroll-wrap[data-up='true']::before {
+  opacity: 1;
+}
+
+.settings-scroll-wrap[data-down='true']::after {
+  opacity: 1;
 }
 
 .settings-body {
@@ -629,7 +984,7 @@ input:focus-visible {
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: var(--surface-sunken);
-  color: var(--amethyst);
+  color: var(--lyric-accent);
   font-size: var(--lyrics-size);
   font-weight: var(--w-semibold);
   line-height: 1.3;
@@ -668,25 +1023,98 @@ input:focus-visible {
   transform: translateX(14px);
 }
 
+/* Animated theme toggle (Skiper ThemeToggleButton2 / toggles.dev) */
+.theme-toggle {
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  border-radius: var(--radius-round);
+  flex-shrink: 0;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid var(--panel-border);
+  transition:
+    background 350ms ease-in-out,
+    color 350ms ease-in-out,
+    border-color 350ms ease-in-out,
+    transform var(--dur-fast) var(--ease);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+.theme-toggle[aria-checked='true'] {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+
+.theme-toggle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.theme-toggle-mask {
+  transition: transform 350ms ease-in-out;
+}
+
+.theme-toggle[aria-checked='true'] .theme-toggle-mask {
+  transform: translate(-12px, 10px);
+}
+
+.theme-toggle-core {
+  transition: r 350ms ease-in-out;
+}
+
+.theme-toggle[aria-checked='true'] .theme-toggle-core {
+  r: 10;
+}
+
+.theme-toggle-rays {
+  transform-origin: 16px 16px;
+  transition:
+    transform 350ms ease-in-out,
+    opacity 350ms ease-in-out;
+}
+
+.theme-toggle[aria-checked='true'] .theme-toggle-rays {
+  transform: rotate(-100deg) scale(0.5);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle,
+  .theme-toggle-mask,
+  .theme-toggle-core,
+  .theme-toggle-rays {
+    transition: none;
+  }
+}
+
 .settings-foot {
   margin-top: auto;
   padding-top: 10px;
-  border-top: 1px solid var(--panel-border);
-  display: flex;
-  justify-content: center;
   flex-shrink: 0;
 }
 
 .btn-text-danger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
   font-size: var(--text-xs);
   font-weight: var(--w-medium);
   color: var(--garnet);
-  padding: 5px 10px;
+  background: var(--garnet-wash);
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
 }
 
 .btn-text-danger:hover {
-  background: var(--garnet-wash);
+  background: color-mix(in oklch, var(--garnet) 16%, var(--garnet-wash));
 }
 
 /* ------------------------------------------------------------
@@ -775,69 +1203,41 @@ input:focus-visible {
   cursor: nesw-resize;
 }
 
-/* Corner ticks trace the panel's own rounded corner (concentric):
-   inset 6px inside an 18px outer radius → a 12px arc. Opacity and a
-   magnetic transform are driven from JS by pointer proximity, so only
-   the nearest corner reacts and it glides toward the cursor. */
+/* Corner ticks — SVG quarter-arcs. Opacity + epoch (curve apex) are
+   driven from JS by pointer proximity; the nearest corner stretches
+   toward the cursor with smoothed physics (no pulse flash). */
 .corner {
   position: absolute;
   z-index: 4;
-  width: 14px;
-  height: 14px;
+  width: 22px;
+  height: 22px;
   pointer-events: none;
   opacity: 0;
-  border: 1.5px solid var(--accent);
-  transition:
-    transform 110ms var(--ease-out),
-    opacity 120ms var(--ease);
+  overflow: visible;
+  color: var(--accent);
+}
+
+.corner-arc {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .corner-nw {
-  top: 6px;
-  left: 6px;
-  border-right: 0;
-  border-bottom: 0;
-  border-top-left-radius: 12px;
-  transform-origin: top left;
+  top: 4px;
+  left: 4px;
 }
 .corner-ne {
-  top: 6px;
-  right: 6px;
-  border-left: 0;
-  border-bottom: 0;
-  border-top-right-radius: 12px;
-  transform-origin: top right;
+  top: 4px;
+  right: 4px;
 }
 .corner-se {
-  bottom: 6px;
-  right: 6px;
-  border-left: 0;
-  border-top: 0;
-  border-bottom-right-radius: 12px;
-  transform-origin: bottom right;
+  bottom: 4px;
+  right: 4px;
 }
 .corner-sw {
-  bottom: 6px;
-  left: 6px;
-  border-right: 0;
-  border-top: 0;
-  border-bottom-left-radius: 12px;
-  transform-origin: bottom left;
-}
-
-/* One-shot pulse when a corner first comes into range (glow, not
-   transform — so it never fights the magnetic pull). */
-@media (prefers-reduced-motion: no-preference) {
-  .corner.pulse {
-    animation: corner-pulse 520ms var(--ease-out);
-  }
-}
-
-@keyframes corner-pulse {
-  from {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 45%, transparent);
-  }
-  to {
-    box-shadow: 0 0 0 7px transparent;
-  }
+  bottom: 4px;
+  left: 4px;
 }
