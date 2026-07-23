@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld('linea', {
   onNowPlaying: subscribe<PlayerState | null>(IPC.NOW_PLAYING),
   onLyricsUpdate: subscribe<LyricLine[]>(IPC.LYRICS_UPDATE),
   onClickThroughChanged: subscribe<boolean>(IPC.CLICK_THROUGH_CHANGED),
+  onWindowFocusChanged: subscribe<boolean>(IPC.WINDOW_FOCUS_CHANGED),
   onPlayerError: subscribe<PlayerErrorEvent>(IPC.PLAYER_ERROR),
   getPrefs: (): Promise<Prefs> => ipcRenderer.invoke(IPC.GET_PREFS),
   setPrefs: (partial: Partial<Prefs>): Promise<Prefs> => ipcRenderer.invoke(IPC.SET_PREFS, partial)

@@ -32,7 +32,7 @@ import { initAutoUpdater } from './updater'
 // The panel fills the window minus a 30px shadow gutter per side. The
 // window is freely resizable (custom grips in the renderer drive
 // SET_WINDOW_BOUNDS); these are the launch and floor sizes.
-const INITIAL_WIDTH = 560
+const INITIAL_WIDTH = 620
 const INITIAL_HEIGHT = 300
 const MIN_WIDTH = 372
 const MIN_HEIGHT = 150
@@ -111,6 +111,11 @@ function createWindow(): void {
   win.on('ready-to-show', () => {
     win.show()
   })
+
+  // Hover chrome can stick while the cursor stays over the always-on-top
+  // panel after Alt-Tabbing away — drive an explicit focus flag from main.
+  win.on('focus', () => sendToRenderer(IPC.WINDOW_FOCUS_CHANGED, true))
+  win.on('blur', () => sendToRenderer(IPC.WINDOW_FOCUS_CHANGED, false))
 
   // Null the reference so poll/lyrics callbacks never touch a destroyed
   // window (a silent crash source once the widget can be closed).

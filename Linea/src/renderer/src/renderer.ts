@@ -225,12 +225,13 @@ const cornerEls = Object.fromEntries(
   CORNER_KEYS.map((k) => [k, document.querySelector<SVGSVGElement>(`.corner-${k}`)])
 ) as Record<CornerKey, SVGSVGElement | null>
 
-/** Resting quadratic control point (epoch) per corner, viewBox 0–28. */
+/** Resting quadratic control point (epoch) per corner, viewBox 0–24.
+ *  Arcs are 20px radius (2px inset) to match --panel-radius. */
 const CORNER_REST: Record<CornerKey, [number, number]> = {
-  nw: [3, 3],
-  ne: [25, 3],
-  se: [25, 25],
-  sw: [3, 25]
+  nw: [2, 2],
+  ne: [22, 2],
+  se: [22, 22],
+  sw: [2, 22]
 }
 
 /** Unit vector from panel center through each corner (outward bend). */
@@ -244,20 +245,20 @@ const CORNER_OUT: Record<CornerKey, [number, number]> = {
 /** Endpoints of the quarter-arc for each corner. */
 const CORNER_ENDS: Record<CornerKey, [[number, number], [number, number]]> = {
   nw: [
-    [3, 22],
-    [22, 3]
+    [2, 22],
+    [22, 2]
   ],
   ne: [
-    [6, 3],
-    [25, 22]
+    [2, 2],
+    [22, 22]
   ],
   se: [
-    [25, 6],
-    [6, 25]
+    [22, 2],
+    [2, 22]
   ],
   sw: [
-    [22, 25],
-    [3, 6]
+    [22, 22],
+    [2, 2]
   ]
 }
 
@@ -277,7 +278,7 @@ function cornerPath(key: CornerKey, epochX: number, epochY: number): string {
 
 function wireCornerHints(): void {
   const REACH = 110
-  const PULL = 5.5 // max epoch travel in viewBox units
+  const PULL = 4 // max epoch travel — keep stretch inside the inset corners
   const SMOOTH = 0.22 // lerp factor per frame (~smooth spring)
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const ease = reduced ? 1 : SMOOTH
@@ -738,10 +739,6 @@ async function init(): Promise<void> {
   initSettings({
     onTheme: applyTheme,
     onClickThrough: () => void window.linea.toggleClickThrough(),
-    onOpacity: (opacity) => {
-      queuePrefs({ opacity })
-      applyPrefsToDom(prefs)
-    },
     onLyricsSize: applyLyricsSize,
     onLyricsExpanded: (expanded) => void setLyricsExpanded(expanded),
     onShowTimestamps: (show) => {
@@ -783,6 +780,15 @@ async function init(): Promise<void> {
     el.app.dataset.clickthrough = String(on)
   })
 
+  window.linea.onWindowFocusChanged(setWindowFocused)
+  window.addEventListener('blur', () => setWindowFocused(false))
+  window.addEventListener('focus', () => setWindowFocused(true))
+
+  // Drive chrome from real pointer enter/leave (not CSS :hover), so controls
+  // appear on hover without a click, and clear cleanly when focus leaves.
+  el.app.addEventListener('pointerenter', () => setPointerInside(true))
+  el.app.addEventListener('pointerleave', () => setPointerInside(false))
+
   window.linea.onPlayerError((event) => toastForReason(event.reason))
 
   const [loadedPrefs, authState, clickThrough] = await Promise.all([
@@ -798,8 +804,27 @@ async function init(): Promise<void> {
   setLyricsVisible(prefs.lyricsExpanded)
   reflectClickThrough(clickThrough)
   el.app.dataset.clickthrough = String(clickThrough)
+  setWindowFocused(document.hasFocus())
+  setPointerInside(el.app.matches(':hover'))
   setConnected(authState)
   refreshPlayerUi()
+}
+
+/** Hover chrome — explicit flag so we can clear stuck :hover on blur. */
+function setPointerInside(inside: boolean): void {
+  el.app.dataset.pointerInside = String(inside)
+}
+
+/** When focus leaves Linea, drop hover chrome even if the cursor still rests here. */
+function setWindowFocused(focused: boolean): void {
+  el.app.dataset.windowFocus = String(focused)
+  if (!focused) {
+    setPointerInside(false)
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active !== document.body) active.blur()
+  } else if (el.app.matches(':hover')) {
+    setPointerInside(true)
+  }
 }
 
 // Keep the overlay alive: log stray errors instead of letting them

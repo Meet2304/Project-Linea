@@ -152,6 +152,8 @@ export function setLyricsVisible(visible: boolean): void {
 export function applyPrefsToDom(prefs: Prefs): void {
   document.documentElement.dataset.theme = prefs.theme
   document.documentElement.style.setProperty('--panel-alpha', String(prefs.opacity))
+  // How “clear” the shell is — drives readable text/glass treatments.
+  document.documentElement.style.setProperty('--panel-clearance', String(1 - prefs.opacity))
   document.documentElement.style.setProperty(
     '--lyrics-size',
     `${LYRICS_PRESETS[prefs.lyricsSize].px}px`

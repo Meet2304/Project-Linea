@@ -4,7 +4,6 @@ import { el } from './playerUi'
 export interface SettingsCallbacks {
   onTheme: (theme: Theme) => void
   onClickThrough: () => void
-  onOpacity: (value: number) => void
   onLyricsSize: (size: LyricsSize) => void
   onLyricsExpanded: (expanded: boolean) => void
   onShowTimestamps: (show: boolean) => void
@@ -19,7 +18,6 @@ function byId<T extends HTMLElement>(id: string): T {
 
 const themeSwitch = byId<HTMLButtonElement>('set-theme')
 const clickThroughSwitch = byId<HTMLButtonElement>('set-clickthrough')
-const opacitySlider = byId<HTMLInputElement>('set-opacity')
 const sizeSegs = Array.from(document.querySelectorAll<HTMLButtonElement>('.seg'))
 const lyricsSwitch = byId<HTMLButtonElement>('set-lyrics')
 const timestampsSwitch = byId<HTMLButtonElement>('set-timestamps')
@@ -43,13 +41,6 @@ function setOn(node: HTMLElement, on: boolean): void {
   node.setAttribute('aria-checked', String(on))
 }
 
-function updateSliderFill(slider: HTMLInputElement): void {
-  const min = Number(slider.min)
-  const max = Number(slider.max)
-  const ratio = max > min ? (Number(slider.value) - min) / (max - min) : 0
-  slider.style.setProperty('--fill', String(ratio * 100))
-}
-
 /** Top/bottom fade cues so it's obvious settings scroll (mirrors lyrics). */
 function updateSettingsScrollFades(): void {
   const s = settingsScroll
@@ -69,10 +60,6 @@ export function initSettings(cb: SettingsCallbacks): void {
     // State is owned by main (global shortcut can also toggle it);
     // reflectClickThrough() applies the authoritative value.
     cb.onClickThrough()
-  })
-  opacitySlider.addEventListener('input', () => {
-    updateSliderFill(opacitySlider)
-    cb.onOpacity(Number(opacitySlider.value))
   })
   sizeSegs.forEach((seg) => {
     seg.addEventListener('click', () => {
@@ -108,8 +95,6 @@ export function reflectPrefs(prefs: Prefs): void {
   setOn(themeSwitch, prefs.theme === 'dark')
   setOn(lyricsSwitch, prefs.lyricsExpanded)
   setOn(timestampsSwitch, prefs.showTimestamps)
-  opacitySlider.value = String(prefs.opacity)
-  updateSliderFill(opacitySlider)
   reflectSize(prefs.lyricsSize)
 }
 
@@ -121,6 +106,7 @@ function setSettingsOpen(open: boolean): void {
   el.settingsView.hidden = !open
   el.nowView.hidden = open
   el.btnSettings.dataset.active = String(open)
+  el.btnSettings.setAttribute('aria-pressed', String(open))
   el.app.dataset.settings = String(open)
   onViewChange()
   if (open) {

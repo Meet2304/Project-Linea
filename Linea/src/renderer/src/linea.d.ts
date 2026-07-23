@@ -29,6 +29,7 @@ interface LineaAPI {
   onNowPlaying: (callback: (data: PlayerState | null) => void) => () => void
   onLyricsUpdate: (callback: (lines: LyricLine[]) => void) => () => void
   onClickThroughChanged: (callback: (on: boolean) => void) => () => void
+  onWindowFocusChanged: (callback: (focused: boolean) => void) => () => void
   onPlayerError: (callback: (event: PlayerErrorEvent) => void) => () => void
   getPrefs: () => Promise<Prefs>
   setPrefs: (partial: Partial<Prefs>) => Promise<Prefs>

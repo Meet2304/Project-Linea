@@ -17,5 +17,6 @@ export const IPC = {
   SET_WINDOW_BOUNDS: 'linea:set-window-bounds',
   CLOSE_WINDOW: 'linea:close-window',
   CLICK_THROUGH_CHANGED: 'linea:click-through-changed',
+  WINDOW_FOCUS_CHANGED: 'linea:window-focus-changed',
   PLAYER_ERROR: 'linea:player-error'
 } as const

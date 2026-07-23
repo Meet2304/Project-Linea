@@ -40,11 +40,22 @@
      progress stay matched. Falls back to amethyst before first track. */
   --lyric-accent: var(--amethyst);
 
-  /* Panel translucency lives in one variable so text never
-     inherits it. JS drives --panel-alpha from the opacity pref. */
-  --panel-alpha: 0.92;
+  /* Panel chrome alpha — locked to a solid default until an opacity
+     control ships again. JS still mirrors Prefs.opacity → --panel-alpha. */
+  --panel-alpha: 0.95;
+  /* 1 - panel-alpha; how much “glass” treatments should kick in. */
+  --panel-clearance: 0.05;
   --panel-bg-base: var(--white);
   --panel-border: var(--line);
+  /* Dual halo so type stays readable on light or dark desktop content.
+     Strength scales with --panel-clearance; punched up for full-clear. */
+  --text-halo:
+    0 0 1px rgb(0 0 0 / calc(var(--panel-clearance, 0) * 0.9)),
+    0 0 3px rgb(0 0 0 / calc(var(--panel-clearance, 0) * 0.7)),
+    0 1px 5px rgb(0 0 0 / calc(var(--panel-clearance, 0) * 0.55)),
+    0 0 1.5px rgb(255 255 255 / calc(var(--panel-clearance, 0) * 1)),
+    0 0 5px rgb(255 255 255 / calc(var(--panel-clearance, 0) * 0.85)),
+    0 0 16px rgb(255 255 255 / calc(var(--panel-clearance, 0) * 0.6));
 
   --surface-raised: var(--white);
   --surface-sunken: var(--mist);
@@ -76,8 +87,10 @@
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 28px;
+  --radius-lg: 20px;
+  /* Panel + resize-corner arcs share this — keep them in lockstep. */
+  --panel-radius: 20px;
+  --radius-xl: var(--panel-radius);
   --radius-round: 999px;
 
   /* --- Shadows (diffuse, cool — light through water) ---
@@ -97,9 +110,11 @@
   --dur-fast: 120ms;
   --dur: 220ms;
   --dur-slow: 420ms;
-  /* Chrome reveal (controls + topbar actions on hover) */
-  --chrome-dur: 520ms;
-  --chrome-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Chrome reveal (controls + topbar actions on hover).
+     Enter is felt (~280ms); leave is snappier so it never lingers. */
+  --chrome-dur: 280ms;
+  --chrome-dur-out: 160ms;
+  --chrome-ease: cubic-bezier(0.22, 0.85, 0.32, 1);
 
   --blur-panel: 18px;
 
