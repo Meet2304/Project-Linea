@@ -1,4 +1,14 @@
-import { app, shell, BrowserWindow, globalShortcut, screen, ipcMain } from 'electron'
+import {
+  app,
+  shell,
+  BrowserWindow,
+  globalShortcut,
+  screen,
+  ipcMain,
+  Tray,
+  Menu,
+  nativeImage
+} from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -38,6 +48,7 @@ const MIN_WIDTH = 372
 const MIN_HEIGHT = 150
 
 let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
 let clickThrough = false
 let lastState: PlayerState | null = null
 let pollTimer: ReturnType<typeof setTimeout> | null = null
@@ -155,6 +166,44 @@ function sendToRenderer(channel: string, payload: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, payload)
   }
+}
+
+/**
+ * Bring the overlay back to the foreground. Because the window skips the
+ * taskbar, an unpinned panel can sink behind other apps with no way to
+ * click it back — this is the reliable escape hatch (tray + shortcut).
+ * We briefly force always-on-top so it pops above the focused app, then
+ * restore the user's pin preference so it doesn't stay stuck on top.
+ */
+function summonWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow()
+    return
+  }
+  const win = mainWindow
+  if (win.isMinimized()) win.restore()
+  win.show()
+  const { pinned } = loadPrefs()
+  win.setAlwaysOnTop(true, 'screen-saver')
+  win.moveTop()
+  win.focus()
+  if (process.platform === 'darwin') app.focus({ steal: true })
+  if (!pinned) win.setAlwaysOnTop(false)
+}
+
+/** System-tray fallback so the panel is always reachable when unpinned. */
+function createTray(): void {
+  if (tray) return
+  const image = nativeImage.createFromPath(icon)
+  tray = new Tray(image.isEmpty() ? icon : image)
+  tray.setToolTip('Linea')
+  tray.on('click', () => summonWindow())
+  const menu = Menu.buildFromTemplate([
+    { label: 'Show Linea', click: () => summonWindow() },
+    { type: 'separator' },
+    { label: 'Quit Linea', click: () => app.quit() }
+  ])
+  tray.setContextMenu(menu)
 }
 
 function toggleClickThrough(): void {
@@ -409,6 +458,7 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+  createTray()
   startPolling()
   initAutoUpdater()
 
@@ -466,6 +516,17 @@ app.whenReady().then(() => {
     }
   } catch (error) {
     console.error('Global shortcut registration threw:', error)
+  }
+
+  // Summon the panel back to the foreground (works even when unpinned and
+  // buried behind other windows — the main reason it could feel "lost").
+  try {
+    const registered = globalShortcut.register('CommandOrControl+Shift+L', summonWindow)
+    if (!registered) {
+      console.error('Summon shortcut registration failed — another app may own Ctrl+Shift+L')
+    }
+  } catch (error) {
+    console.error('Summon shortcut registration threw:', error)
   }
 
   app.on('activate', function () {

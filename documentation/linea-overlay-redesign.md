@@ -63,6 +63,15 @@ Polish layered on the redesign:
 - **Settings plate** — translucent backing when needed, without a hard border at high shell opacity.
 - **Panel opacity setting** — **removed from settings for this PR**. `Prefs.opacity` remains on the schema for a future control, but `clampPrefs()` always writes the solid default (`0.95`) so experimental clear-shell work does not ship. Re-adding a polished opacity control is an explicit follow-up.
 - **Lyrics show/hide** — **removed entirely** (transport chevron + settings row). Lyrics are always visible; `Prefs.lyricsExpanded` stays on the schema but is locked to `true`.
+- **Uniform shell inset** — one shared padding on every side (`12px`, mirrored by `APP_PAD` in the renderer's height math and the `calc(--panel-radius - 12px)` inner radii) so the cymatic thumb sits equidistant from the top and left edges. The old `data-timestamps` left-padding bump (which pushed the thumb inward) was removed.
+- **One uniform surface** — flattened the nested "card-in-card" look: the top-bar action cluster no longer sits on a frosted glass plate, and the cymatic thumb and the "Now" jump chip dropped their sunken fills / borders / shadows so nothing reads as a second shade against the panel.
+- **Monochrome accent** — the blue (sapphire) brand accent is replaced by `--ink` (**black in light, white in dark**), so pin/settings latched states, seek/segmented fills, and focus rings match the theme. Latched action buttons lost the glow + inset ring for a flat, quiet fill; per-track lyric color (`--lyric-accent`) is unchanged.
+- **Lyrics-size preview** — the ambiguous floating `the shape of sound` line became a captioned **Preview** box sampling a recognizable lyric (*"Is this the real life? Is this just fantasy?"*), so the S/M/L control clearly demonstrates font size.
+
+### Window recovery (tray + summon shortcut)
+- **Problem:** the window sets `skipTaskbar: true` and had no tray; while **unpinned**, switching apps let it sink behind other windows with no taskbar entry to click it back.
+- **System tray icon** — click (or right-click → **Show Linea**) brings the panel back; the menu also offers **Quit Linea**.
+- **Global summon shortcut** — `Ctrl/Cmd+Shift+L` foregrounds the panel from anywhere. Both paths call `summonWindow()`, which un-minimizes, shows, briefly forces always-on-top to pop above the focused app, then restores the user's pin preference.
 
 ---
 
@@ -90,7 +99,18 @@ Polish layered on the redesign:
 | `CLOSE_WINDOW` | renderer → main | Dismiss the overlay |
 | `WINDOW_FOCUS_CHANGED` | main → renderer | Notify focus/blur so chrome can hide |
 
-Existing now-playing / lyrics / prefs / transport channels are unchanged.
+Existing now-playing / lyrics / prefs / transport channels are unchanged. The removed `SET_LYRICS_EXPANDED` channel (and its preload/`linea.d.ts` binding) went away with the lyrics show/hide feature.
+
+---
+
+## Global shortcuts & tray
+
+| Trigger | Action |
+|---|---|
+| `Ctrl/Cmd+Shift+.` | Toggle click-through (mouse events pass through the overlay) |
+| `Ctrl/Cmd+Shift+L` | Summon the panel to the foreground (recover an unpinned, buried window) |
+| Tray icon click / **Show Linea** | Summon the panel |
+| Tray **Quit Linea** | Quit the app |
 
 ---
 
@@ -99,13 +119,13 @@ Existing now-playing / lyrics / prefs / transport channels are unchanged.
 | File | Role in the redesign |
 |---|---|
 | `src/renderer/index.html` | Landscape structure: top-bar thumbnail, scrollable lyrics + jump button, in-panel settings, resize grips + corner ticks |
-| `src/renderer/assets/tokens.css` | Near-black dark ramp, soft shadow, cymatic/ambient tokens, chrome timing + panel radius |
-| `src/renderer/assets/main.css` | Fill layout, ghost controls, lyrics scroll + fades, hover chrome, parent wash, segmented size control |
+| `src/renderer/assets/tokens.css` | Near-black dark ramp, soft shadow, cymatic/ambient tokens, chrome timing + panel radius; monochrome `--accent` (`--ink`) |
+| `src/renderer/assets/main.css` | Fill layout, ghost controls, lyrics scroll + fades, hover chrome, parent wash, segmented size control; uniform inset + flat surfaces + captioned size preview |
 | `src/renderer/src/renderer.ts` | Lyrics follow/scroll logic, thumbnail animation, pointer/focus chrome, window sizing, prefs wiring |
 | `src/renderer/src/playerUi.ts` | Element map, `LYRICS_PRESETS`, `renderAllLyrics` / `setActiveLyric`, per-track accent |
 | `src/renderer/src/settingsUi.ts` | Inline settings view, segmented size control, timestamps toggle |
 | `src/renderer/src/cymatics.ts` | `phase` animation parameter, `renderThumb()` |
-| `src/main/index.ts` | Window config, custom-resize + close IPC, focus events, crash-recovery + guards |
+| `src/main/index.ts` | Window config, custom-resize + close IPC, focus events, crash-recovery + guards; tray + `summonWindow()` + summon shortcut |
 | `src/main/prefs.ts` | `lyricsSize` preset + legacy `fontSize` migration; opacity + lyricsExpanded locked |
 | `src/shared/types.ts`, `ipcChannels.ts` | `LyricsSize` type, new IPC channels |
 
@@ -131,7 +151,8 @@ E2e window-size and resize assertions were updated for the new dimensions and th
 - The thumbnail renders at CSS pixel size (no devicePixelRatio scaling) and is intentionally softened — crisp enough at ~30px, cheap to animate.
 - Manual window size is not persisted across restarts (only the size preset and other prefs are).
 - **Panel opacity control** is deferred: shell stays at the solid default until a polished clear→solid slider ships.
-- Signing / notarization and Spotify Extended Quota remain out of scope (see Stage 3 record).
+- Closing the window (top-bar ✕) still quits the app; the tray keeps the panel reachable only while it is running. "Close hides to tray / background running" is a possible follow-up.
+- Signing / notarization and Spotify Extended Quota remain out of scope (see Stage 3 record). Distribution builds (`dist:win` / `dist:mac`) run unsigned today, so downloaders hit SmartScreen / Gatekeeper warnings until certs + a CI signing pipeline are added.
 
 ---
 
