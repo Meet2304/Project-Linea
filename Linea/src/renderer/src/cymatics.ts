@@ -110,11 +110,14 @@ function fieldFlow(x: number, y: number, p: FlowPhases, warp: number, phase: num
 
 /**
  * Render the dithered field to a raw RGBA buffer (canvas-free).
+ * Pass `out` to reuse a buffer across frames (animation paths) instead
+ * of allocating a fresh one per call.
  */
 export function renderPixels(
   width: number,
   height: number,
-  opts: CymaticOptions
+  opts: CymaticOptions,
+  out?: Uint8ClampedArray<ArrayBuffer>
 ): Uint8ClampedArray<ArrayBuffer> {
   const color = hexToRgb(opts.color)
   const density = opts.density ?? 6
@@ -124,7 +127,10 @@ export function renderPixels(
   const fade = opts.fade ?? true
   const phase = opts.phase ?? 0
 
-  const data = new Uint8ClampedArray(new ArrayBuffer(width * height * 4))
+  const data =
+    out && out.length === width * height * 4
+      ? out
+      : new Uint8ClampedArray(new ArrayBuffer(width * height * 4))
   const rand = mulberry32(seed)
   const phases: FlowPhases = {
     p1: rand() * 6.28,
@@ -243,6 +249,11 @@ export function clearArtCache(): void {
  * jewel, so every song looks distinct; `phase` animates it so it evolves
  * while the song plays. Cheap enough (small canvas) to redraw per frame.
  */
+// Reused across frames — the thumb redraws continuously while playing,
+// so per-frame buffer/ImageData allocation would just be GC churn.
+let thumbBuf: Uint8ClampedArray<ArrayBuffer> | null = null
+let thumbImage: ImageData | null = null
+
 export function renderThumb(
   canvas: HTMLCanvasElement,
   seedKey: string,
@@ -252,16 +263,25 @@ export function renderThumb(
   const ctx = canvas.getContext('2d')
   if (!ctx || canvas.width === 0 || canvas.height === 0) return
   const seed = hashSeed(seedKey || 'linea')
-  const pixels = renderPixels(canvas.width, canvas.height, {
-    style: styleForSeed(seed),
-    color,
-    seed: seed % 100000,
-    density: 4 + (seed % 4),
-    dither: 0.28,
-    scale: 1.5,
-    fade: true,
-    phase
-  })
+  if (!thumbBuf || !thumbImage || thumbImage.width !== canvas.width || thumbImage.height !== canvas.height) {
+    thumbBuf = new Uint8ClampedArray(new ArrayBuffer(canvas.width * canvas.height * 4))
+    thumbImage = new ImageData(thumbBuf, canvas.width, canvas.height)
+  }
+  renderPixels(
+    canvas.width,
+    canvas.height,
+    {
+      style: styleForSeed(seed),
+      color,
+      seed: seed % 100000,
+      density: 4 + (seed % 4),
+      dither: 0.28,
+      scale: 1.5,
+      fade: true,
+      phase
+    },
+    thumbBuf
+  )
   ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.putImageData(new ImageData(pixels, canvas.width, canvas.height), 0, 0)
+  ctx.putImageData(thumbImage, 0, 0)
 }

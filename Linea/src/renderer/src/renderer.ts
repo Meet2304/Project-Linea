@@ -163,6 +163,9 @@ function onLyricsScroll(): void {
 // ------------------------------------------------------------------
 const JEWELS = ['--sapphire', '--amethyst', '--teal', '--emerald', '--garnet', '--citrine'] as const
 const THUMB_SPEED = 1.7 // radians/sec — evolves visibly while playing
+// The thumb is per-pixel math on the CPU — ~30fps reads identically to
+// 60 for a slow standing wave at half the cost.
+const THUMB_FRAME_MS = 33
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 let thumbPhase = 0
@@ -186,11 +189,13 @@ function drawThumb(): void {
 }
 
 function thumbFrame(ts: number): void {
+  thumbRaf = requestAnimationFrame(thumbFrame)
   if (!thumbLast) thumbLast = ts
-  thumbPhase += Math.min(0.1, (ts - thumbLast) / 1000) * THUMB_SPEED
+  const dt = ts - thumbLast
+  if (dt < THUMB_FRAME_MS) return
+  thumbPhase += Math.min(0.1, dt / 1000) * THUMB_SPEED
   thumbLast = ts
   drawThumb()
-  thumbRaf = requestAnimationFrame(thumbFrame)
 }
 
 /** Animate only while a track is playing; otherwise hold a still frame. */
