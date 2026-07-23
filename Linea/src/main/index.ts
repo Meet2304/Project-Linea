@@ -35,7 +35,7 @@ import { initAutoUpdater } from './updater'
 const INITIAL_WIDTH = 480
 const INITIAL_HEIGHT = 264
 const MIN_WIDTH = 372
-const MIN_HEIGHT = 200
+const MIN_HEIGHT = 150
 
 let mainWindow: BrowserWindow | null = null
 let clickThrough = false

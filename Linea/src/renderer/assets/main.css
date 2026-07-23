@@ -5,7 +5,7 @@
    A small landscape panel that FILLS the window minus a shadow
    gutter, so custom resize grips sit on the panel's own edge.
    Lyrics are the hero; the transport is a quiet strip beneath.
-   A faint jewel-wash gradient sits behind everything.
+   A small evolving cymatic thumbnail sits beside the track title.
    ============================================================ */
 
 * {
@@ -45,34 +45,14 @@ body {
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-overlay);
-  -webkit-app-region: drag;
+  /* The panel is NOT a drag region — only the top bar and connect view
+     are (below). A blanket drag region intercepts clicks/scroll on the
+     lyrics and controls. */
   transition: opacity var(--dur) var(--ease);
 }
 
 #app[data-clickthrough='true'] {
   opacity: 0.55;
-}
-
-/* Ambient jewel wash — a soft, static sapphire→amethyst gradient
-   from opposite corners. Calm and elegant; no canvas, no animation. */
-#app::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: var(--ambient-alpha);
-  background:
-    radial-gradient(
-      135% 100% at 6% -8%,
-      var(--accent) 0%,
-      transparent 42%
-    ),
-    radial-gradient(
-      130% 100% at 104% 108%,
-      var(--amethyst) 0%,
-      transparent 46%
-    );
 }
 
 .stack {
@@ -129,6 +109,8 @@ input:focus-visible {
   justify-content: center;
   gap: 10px;
   text-align: center;
+  /* Only drag handle while disconnected (there's no top bar here). */
+  -webkit-app-region: drag;
 }
 
 .wordmark {
@@ -206,13 +188,23 @@ input:focus-visible {
   flex-direction: column;
 }
 
-/* Top bar: track · pin · settings · close */
+/* Top bar: thumb · track · pin · settings · close — the drag handle. */
 .topbar {
   display: flex;
   align-items: center;
   gap: 9px;
   min-height: 22px;
   flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  border: 1px solid var(--panel-border);
 }
 
 .track {
@@ -329,16 +321,26 @@ input:focus-visible {
 }
 
 /* ------------------------------------------------------------
-   Lyrics panel (the hero) — fills the free vertical space
+   Lyrics panel (the hero) — a scrollable viewport with a
+   jump-to-current button pinned to it.
    ------------------------------------------------------------ */
 .lyrics {
+  position: relative;
   flex: 1;
   min-height: 0;
   margin-top: 12px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
+}
+
+.lyrics-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none; /* clean edge; the jump button handles wayfinding */
+}
+
+.lyrics-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .lyrics-list {
@@ -370,6 +372,67 @@ input:focus-visible {
 .lyrics-empty {
   font-size: var(--text-xs);
   color: var(--text-faint);
+}
+
+/* Scroll cues — a soft fade at whichever edge has more lines. */
+.lyrics::before,
+.lyrics::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.lyrics::before {
+  top: 0;
+  background: linear-gradient(var(--panel-bg-base), transparent);
+}
+
+.lyrics::after {
+  bottom: 0;
+  background: linear-gradient(transparent, var(--panel-bg-base));
+}
+
+.lyrics[data-up='true']::before {
+  opacity: 1;
+}
+
+.lyrics[data-down='true']::after {
+  opacity: 1;
+}
+
+/* Jump-to-current — a minimal round icon button at the bottom center. */
+.jump-btn {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  border: 1px solid var(--panel-border);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  animation: fade-in var(--dur) var(--ease-out);
+}
+
+.jump-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.jump-btn:hover {
+  background: var(--surface-sunken);
 }
 
 /* ------------------------------------------------------------
@@ -456,10 +519,24 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  /* The panel is a drag region; a drag region eats wheel events, so the
-     scrollable settings must opt out to scroll. */
   -webkit-app-region: no-drag;
   animation: fade-in var(--dur) var(--ease-out);
+  /* Thin, themed scrollbar (the default is a jarring white in dark mode). */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+#settings-view::-webkit-scrollbar {
+  width: 5px;
+}
+
+#settings-view::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#settings-view::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: var(--radius-round);
 }
 
 @keyframes fade-in {
@@ -513,6 +590,51 @@ input:focus-visible {
 .set-row .slider {
   width: 120px;
   --slider-color: var(--slate);
+}
+
+/* Segmented control (lyrics size) */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  border: 1px solid var(--panel-border);
+}
+
+.seg {
+  min-width: 30px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--w-medium);
+  color: var(--text-secondary);
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.seg:hover {
+  color: var(--text-primary);
+}
+
+.seg[data-active='true'] {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+/* Live preview of the chosen lyric size — sampled in the active-line
+   style so the choice is felt without leaving settings. */
+.size-preview {
+  margin: 2px 0 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--amethyst);
+  font-size: var(--lyrics-size);
+  font-weight: var(--w-semibold);
+  line-height: 1.3;
+  text-align: center;
+  transition: font-size var(--dur) var(--ease);
 }
 
 .switch {
@@ -654,7 +776,9 @@ input:focus-visible {
 }
 
 /* Corner ticks trace the panel's own rounded corner (concentric):
-   inset 6px inside an 18px outer radius → a 12px arc. */
+   inset 6px inside an 18px outer radius → a 12px arc. Opacity and a
+   magnetic transform are driven from JS by pointer proximity, so only
+   the nearest corner reacts and it glides toward the cursor. */
 .corner {
   position: absolute;
   z-index: 4;
@@ -662,8 +786,10 @@ input:focus-visible {
   height: 14px;
   pointer-events: none;
   opacity: 0;
-  border: 1.5px solid var(--text-faint);
-  transition: opacity var(--dur) var(--ease);
+  border: 1.5px solid var(--accent);
+  transition:
+    transform 110ms var(--ease-out),
+    opacity 120ms var(--ease);
 }
 
 .corner-nw {
@@ -672,6 +798,7 @@ input:focus-visible {
   border-right: 0;
   border-bottom: 0;
   border-top-left-radius: 12px;
+  transform-origin: top left;
 }
 .corner-ne {
   top: 6px;
@@ -679,6 +806,7 @@ input:focus-visible {
   border-left: 0;
   border-bottom: 0;
   border-top-right-radius: 12px;
+  transform-origin: top right;
 }
 .corner-se {
   bottom: 6px;
@@ -686,6 +814,7 @@ input:focus-visible {
   border-left: 0;
   border-top: 0;
   border-bottom-right-radius: 12px;
+  transform-origin: bottom right;
 }
 .corner-sw {
   bottom: 6px;
@@ -693,28 +822,22 @@ input:focus-visible {
   border-right: 0;
   border-top: 0;
   border-bottom-left-radius: 12px;
+  transform-origin: bottom left;
 }
 
-#app:hover .corner {
-  opacity: 0.5;
-}
-
-/* A gentle "breathing" tug that invites the user to pull — hover-only
-   (never idle) so a transparent, always-on-top window is not
-   continuously composited. Opacity-only keeps the arc aligned to the
-   panel corner. */
+/* One-shot pulse when a corner first comes into range (glow, not
+   transform — so it never fights the magnetic pull). */
 @media (prefers-reduced-motion: no-preference) {
-  #app:hover .corner {
-    animation: tug 1.9s var(--ease) infinite;
+  .corner.pulse {
+    animation: corner-pulse 520ms var(--ease-out);
   }
 }
 
-@keyframes tug {
-  0%,
-  100% {
-    opacity: 0.35;
+@keyframes corner-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 45%, transparent);
   }
-  50% {
-    opacity: 0.7;
+  to {
+    box-shadow: 0 0 0 7px transparent;
   }
 }

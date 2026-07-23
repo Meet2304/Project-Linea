@@ -23,8 +23,9 @@
 
         <!-- Player -->
         <div id="player-view" hidden>
-          <!-- Top bar: track · pin · settings · close -->
+          <!-- Top bar: cymatic thumb · track · pin · settings · close -->
           <header class="topbar">
+            <canvas id="thumb" class="thumb" width="64" height="64" aria-hidden="true"></canvas>
             <div class="track">
               <span id="track-title" class="track-title">Nothing playing</span>
               <span id="track-artist" class="track-artist">Play a song on Spotify</span>
@@ -55,7 +56,16 @@
           <!-- Now playing: lyrics (hero) + quiet controls -->
           <div id="now-view">
             <section id="lyrics-panel" class="lyrics">
-              <div id="lyrics-list" class="lyrics-list"></div>
+              <div id="lyrics-scroll" class="lyrics-scroll">
+                <div id="lyrics-list" class="lyrics-list"></div>
+              </div>
+              <button
+                id="btn-jump"
+                class="jump-btn"
+                type="button"
+                hidden
+                aria-label="Jump to current line"
+              ></button>
             </section>
 
             <div class="controls">
@@ -162,17 +172,15 @@
                 />
               </div>
               <div class="set-row">
-                <span class="set-label">Text size</span>
-                <input
-                  id="set-fontsize"
-                  class="slider"
-                  type="range"
-                  min="12"
-                  max="22"
-                  step="1"
-                  value="15"
-                  aria-label="Lyrics text size"
-                />
+                <span class="set-label">Lyrics size</span>
+                <div class="segmented" role="group" aria-label="Lyrics size">
+                  <button class="seg" type="button" data-size="small">S</button>
+                  <button class="seg" type="button" data-size="medium">M</button>
+                  <button class="seg" type="button" data-size="large">L</button>
+                </div>
+              </div>
+              <div id="size-preview" class="size-preview" aria-hidden="true">
+                the shape of sound
               </div>
             </div>
             <div class="settings-foot">

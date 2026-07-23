@@ -46,9 +46,12 @@ export interface PlayerErrorEvent {
 
 export type Theme = 'light' | 'dark'
 
+/** Lyrics size preset — drives both font size and how many lines show. */
+export type LyricsSize = 'small' | 'medium' | 'large'
+
 export interface Prefs {
   opacity: number
-  fontSize: number
+  lyricsSize: LyricsSize
   theme: Theme
   pinned: boolean
   lyricsExpanded: boolean

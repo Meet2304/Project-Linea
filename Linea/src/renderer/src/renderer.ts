@@ -8,15 +8,24 @@ import '@fontsource/space-mono/700.css'
 
 import { estimatePositionMs } from '../../shared/lyrics'
 import type { LyricLine } from '../../shared/lyrics'
-import type { PlayerCommand, PlayerErrorReason, PlayerState, Prefs } from '../../shared/types'
+import type {
+  LyricsSize,
+  PlayerCommand,
+  PlayerErrorReason,
+  PlayerState,
+  Prefs
+} from '../../shared/types'
+import { renderThumb, hashSeed } from './cymatics'
 import {
   el,
+  LYRICS_PRESETS,
   injectStaticIcons,
   showView,
   renderHeader,
   renderTransport,
   renderScrubber,
-  renderLyrics,
+  renderAllLyrics,
+  setActiveLyric,
   setLyricsVisible,
   reflectPin,
   applyPrefsToDom,
@@ -39,7 +48,7 @@ let player: PlayerState | null = null
 let lines: LyricLine[] = []
 let prefs: Prefs = {
   opacity: 0.95,
-  fontSize: 15,
+  lyricsSize: 'medium',
   theme: 'light',
   pinned: true,
   lyricsExpanded: true
@@ -49,26 +58,23 @@ let seekHoldUntil = 0
 let ticker: ReturnType<typeof setInterval> | null = null
 /** Window height (px) while lyrics are shown — restored when re-expanding. */
 let lastExpandedHeight = 0
+/** Whether the lyrics view auto-follows the current line (vs. free reading). */
+let following = true
+let autoScrolling = false
+let autoScrollTimer: ReturnType<typeof setTimeout> | null = null
 
 // Keep in sync with main's minWidth/minHeight so clamped drags don't drift.
 const MIN_W = 372
-const MIN_H = 200
+const MIN_H = 150
 
 const scheduler = new LyricScheduler((index) => {
-  if (prefs.lyricsExpanded) renderLyrics(lines, index, lyricWindowSize())
+  setActiveLyric(index)
+  if (following) centerActiveLyric(false)
 })
 
 // ------------------------------------------------------------------
-// Sizing — the panel fills the window (minus the shadow gutter); the
-// lyrics area shows as many lines as fit the current height.
+// Sizing — the panel fills the window (minus the shadow gutter).
 // ------------------------------------------------------------------
-/** How many lyric lines fit the current (resizable) lyrics area. */
-function lyricWindowSize(): number {
-  const perLine = prefs.fontSize * 1.32 + 9
-  const available = el.lyricsPanel.clientHeight
-  return Math.max(3, Math.min(11, Math.floor((available + 9) / perLine)))
-}
-
 const GUTTER = 30
 const APP_PAD = 14
 
@@ -76,36 +82,188 @@ function topbarHeight(): number {
   return el.playerView.querySelector<HTMLElement>('.topbar')?.getBoundingClientRect().height ?? 22
 }
 
-/** Collapsed window height: everything except the lyrics area. */
-function collapsedHeight(): number {
-  const controls = el.playerView.querySelector<HTMLElement>('.controls')
-  const ctrl = controls?.getBoundingClientRect().height ?? 60
-  // GUTTER*2 (body) + APP_PAD*2 + topbar + controls margin-top + controls
-  return Math.ceil(GUTTER * 2 + APP_PAD * 2 + topbarHeight() + 12 + ctrl + 4)
+function controlsHeight(): number {
+  return el.playerView.querySelector<HTMLElement>('.controls')?.getBoundingClientRect().height ?? 60
 }
 
-// Grow the window to fit the settings when it opens; restore on close.
-let heightBeforeSettings = 0
-function onSettingsToggle(): void {
-  const open = !el.settingsView.hidden
-  if (open) {
-    void window.linea.getWindowBounds().then((b) => {
-      heightBeforeSettings = b.height
-      const needed = Math.ceil(
-        GUTTER * 2 + APP_PAD * 2 + topbarHeight() + el.settingsView.scrollHeight
-      )
-      if (needed > b.height) void window.linea.resizeTo(needed)
-    })
-  } else if (heightBeforeSettings) {
-    void window.linea.resizeTo(heightBeforeSettings)
-    heightBeforeSettings = 0
+/** Collapsed window height: everything except the lyrics area. */
+function collapsedHeight(): number {
+  // GUTTER*2 (body) + APP_PAD*2 + topbar + controls margin-top + controls
+  return Math.ceil(GUTTER * 2 + APP_PAD * 2 + topbarHeight() + 12 + controlsHeight() + 4)
+}
+
+/** Window height that shows exactly the preset's line count. */
+function presetWindowHeight(size: LyricsSize): number {
+  const { px, lines: n } = LYRICS_PRESETS[size]
+  const lineBlock = px * 1.32
+  const viewport = n * lineBlock + (n - 1) * 9
+  return Math.ceil(
+    GUTTER * 2 + APP_PAD * 2 + topbarHeight() + 12 + viewport + 12 + controlsHeight()
+  )
+}
+
+// ------------------------------------------------------------------
+// Lyrics scrolling — the list is fully scrollable; while "following"
+// the active line stays centered, and a jump button re-centers it.
+// ------------------------------------------------------------------
+/** Pad the list top/bottom so any line (including the first/last) can
+ *  scroll to the vertical center. */
+function updateLyricPadding(): void {
+  const pad = Math.max(24, Math.round(el.lyricsScroll.clientHeight / 2 - 16))
+  el.lyricsList.style.paddingTop = `${pad}px`
+  el.lyricsList.style.paddingBottom = `${pad}px`
+}
+
+function centerActiveLyric(smooth: boolean): void {
+  const active = el.lyricsList.querySelector<HTMLElement>('.lyric-row[data-pos="active"]')
+  if (!active) return
+  const panel = el.lyricsScroll.getBoundingClientRect()
+  const row = active.getBoundingClientRect()
+  const delta = row.top - panel.top - (panel.height - row.height) / 2
+  autoScrolling = true
+  el.lyricsScroll.scrollTo({
+    top: el.lyricsScroll.scrollTop + delta,
+    behavior: smooth ? 'smooth' : 'auto'
+  })
+  if (autoScrollTimer) clearTimeout(autoScrollTimer)
+  autoScrollTimer = setTimeout(() => (autoScrolling = false), smooth ? 450 : 60)
+}
+
+/** Top/bottom fade cues so it's obvious the lyrics scroll. */
+function updateScrollFades(): void {
+  const s = el.lyricsScroll
+  el.lyricsPanel.dataset.up = String(s.scrollTop > 2)
+  el.lyricsPanel.dataset.down = String(s.scrollTop + s.clientHeight < s.scrollHeight - 2)
+}
+
+function onLyricsScroll(): void {
+  updateScrollFades()
+  if (autoScrolling) return
+  const active = el.lyricsList.querySelector<HTMLElement>('.lyric-row[data-pos="active"]')
+  if (!active) {
+    el.btnJump.hidden = true
+    return
+  }
+  const panel = el.lyricsScroll.getBoundingClientRect()
+  const row = active.getBoundingClientRect()
+  const rowCenter = row.top + row.height / 2
+  // Following again once the current line is back near the middle.
+  following = Math.abs(rowCenter - (panel.top + panel.height / 2)) < panel.height * 0.3
+  el.btnJump.hidden = following
+}
+
+// ------------------------------------------------------------------
+// Cymatic thumbnail — a small evolving standing-wave beside the title;
+// pattern seeded from the track, hue a per-track jewel.
+// ------------------------------------------------------------------
+const JEWELS = ['--sapphire', '--amethyst', '--teal', '--emerald', '--garnet', '--citrine']
+const THUMB_SPEED = 1.7 // radians/sec — evolves visibly while playing
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+let thumbPhase = 0
+let thumbRaf = 0
+let thumbLast = 0
+let thumbColor = '#3a6098'
+let thumbSeed = 'linea'
+
+function refreshThumbMeta(): void {
+  thumbSeed = player?.trackId ?? 'linea'
+  const name = JEWELS[hashSeed(thumbSeed) % JEWELS.length]
+  thumbColor = getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#3a6098'
+}
+
+function drawThumb(): void {
+  renderThumb(el.thumb, thumbSeed, thumbColor, thumbPhase)
+}
+
+function thumbFrame(ts: number): void {
+  if (!thumbLast) thumbLast = ts
+  thumbPhase += Math.min(0.1, (ts - thumbLast) / 1000) * THUMB_SPEED
+  thumbLast = ts
+  drawThumb()
+  thumbRaf = requestAnimationFrame(thumbFrame)
+}
+
+/** Animate only while a track is playing; otherwise hold a still frame. */
+function updateThumb(): void {
+  refreshThumbMeta()
+  const playing = connected && (player?.isPlaying ?? false)
+  if (playing && !reducedMotion) {
+    if (!thumbRaf) {
+      thumbLast = 0
+      thumbRaf = requestAnimationFrame(thumbFrame)
+    }
+  } else {
+    if (thumbRaf) {
+      cancelAnimationFrame(thumbRaf)
+      thumbRaf = 0
+    }
+    drawThumb()
   }
 }
 
-// Re-fit the lyric window as the panel is resized.
 window.addEventListener('resize', () => {
-  if (prefs.lyricsExpanded && lines.length > 0) scheduler.sync(lines, player)
+  updateLyricPadding()
+  updateScrollFades()
+  if (following) centerActiveLyric(false)
 })
+
+// ------------------------------------------------------------------
+// Resize-corner indicators — the nearest corner reacts to the pointer:
+// it fades in by proximity, is magnetically pulled toward the cursor,
+// and pulses once on approach.
+// ------------------------------------------------------------------
+const CORNER_KEYS = ['nw', 'ne', 'se', 'sw'] as const
+const cornerEls = Object.fromEntries(
+  CORNER_KEYS.map((k) => [k, document.querySelector<HTMLElement>(`.corner-${k}`)])
+) as Record<(typeof CORNER_KEYS)[number], HTMLElement>
+
+function wireCornerHints(): void {
+  const R = 100
+  el.app.addEventListener('pointermove', (e) => {
+    const rect = el.app.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const pos: Record<string, [number, number]> = {
+      nw: [0, 0],
+      ne: [rect.width, 0],
+      se: [rect.width, rect.height],
+      sw: [0, rect.height]
+    }
+    for (const key of CORNER_KEYS) {
+      const node = cornerEls[key]
+      if (!node) continue
+      const [cx, cy] = pos[key]
+      const dx = x - cx
+      const dy = y - cy
+      const d = Math.hypot(dx, dy)
+      const t = Math.max(0, 1 - d / R)
+      if (t <= 0.02) {
+        node.style.opacity = '0'
+        node.dataset.near = 'false'
+        continue
+      }
+      const nx = d > 0 ? dx / d : 0
+      const ny = d > 0 ? dy / d : 0
+      node.style.opacity = String(0.2 + t * 0.6)
+      node.style.transform = `translate(${nx * t * 3}px, ${ny * t * 3}px) scale(${0.82 + t * 0.5})`
+      if (node.dataset.near !== 'true') {
+        node.dataset.near = 'true'
+        node.classList.remove('pulse')
+        void node.offsetWidth // restart the one-shot pulse
+        node.classList.add('pulse')
+      }
+    }
+  })
+  el.app.addEventListener('pointerleave', () => {
+    for (const key of CORNER_KEYS) {
+      const node = cornerEls[key]
+      if (!node) continue
+      node.style.opacity = '0'
+      node.dataset.near = 'false'
+    }
+  })
+}
 
 // ------------------------------------------------------------------
 // Custom edge/corner resize (grips sit on the panel edge, not the
@@ -169,6 +327,7 @@ function refreshPlayerUi(): void {
   el.seek.disabled = !player
   scheduler.sync(lines, player)
   updateTicker()
+  updateThumb()
 }
 
 function tick(): void {
@@ -280,6 +439,13 @@ function wireTransport(): void {
   el.btnSettings.addEventListener('click', () => toggleSettings())
 
   el.btnClose.addEventListener('click', () => void window.linea.closeWindow())
+
+  el.lyricsScroll.addEventListener('scroll', onLyricsScroll)
+  el.btnJump.addEventListener('click', () => {
+    following = true
+    el.btnJump.hidden = true
+    centerActiveLyric(true)
+  })
 }
 
 function wireSeek(): void {
@@ -323,23 +489,53 @@ function queuePrefs(partial: Partial<Prefs>): void {
 async function setLyricsExpanded(expanded: boolean): Promise<void> {
   prefs = { ...prefs, lyricsExpanded: expanded }
   if (!expanded) {
-    // Remember the expanded height, then shrink to just the chrome.
+    // Remember the current (expanded) height so re-expanding restores it.
     const bounds = await window.linea.getWindowBounds()
     lastExpandedHeight = bounds.height
   }
   setLyricsVisible(expanded)
   renderTransport(player, expanded)
   reflectPrefs(prefs)
-  await window.linea.resizeTo(expanded ? lastExpandedHeight || 260 : collapsedHeight())
+  void window.linea.setLyricsExpanded(expanded)
+  // Resize AFTER the layout reflects the new visibility, so the collapsed
+  // measurement is exact and the window hugs the chrome (no empty gap).
   requestAnimationFrame(() => {
-    if (expanded) scheduler.sync(lines, player)
+    const target = expanded
+      ? lastExpandedHeight || presetWindowHeight(prefs.lyricsSize)
+      : collapsedHeight()
+    void window.linea.resizeTo(target)
+    requestAnimationFrame(() => {
+      updateLyricPadding()
+      updateScrollFades()
+      if (expanded) {
+        following = true
+        el.btnJump.hidden = true
+        scheduler.sync(lines, player)
+        centerActiveLyric(false)
+      }
+    })
   })
-  await window.linea.setLyricsExpanded(expanded)
 }
 
 function applyTheme(theme: Prefs['theme']): void {
   queuePrefs({ theme })
   applyPrefsToDom(prefs)
+  updateThumb()
+}
+
+function applyLyricsSize(size: LyricsSize): void {
+  queuePrefs({ lyricsSize: size })
+  applyPrefsToDom(prefs)
+  if (prefs.lyricsExpanded) {
+    const h = presetWindowHeight(size)
+    lastExpandedHeight = h
+    void window.linea.resizeTo(h)
+  }
+  requestAnimationFrame(() => {
+    updateLyricPadding()
+    updateScrollFades()
+    if (following) centerActiveLyric(false)
+  })
 }
 
 // ------------------------------------------------------------------
@@ -354,6 +550,21 @@ function setConnected(isConnected: boolean): void {
     closeSettings()
     scheduler.stop()
     updateTicker()
+  }
+  if (isConnected) {
+    // Player view is now visible and measurable — size to the preset.
+    requestAnimationFrame(() => {
+      lastExpandedHeight = presetWindowHeight(prefs.lyricsSize)
+      void window.linea.resizeTo(prefs.lyricsExpanded ? lastExpandedHeight : collapsedHeight())
+      requestAnimationFrame(() => {
+        updateLyricPadding()
+        updateScrollFades()
+        centerActiveLyric(false)
+        updateThumb()
+      })
+    })
+  } else {
+    updateThumb()
   }
 }
 
@@ -379,6 +590,7 @@ async function init(): Promise<void> {
   wireTransport()
   wireSeek()
   wireResizeGrips()
+  wireCornerHints()
 
   el.connectBtn.addEventListener('click', () => void connect())
 
@@ -389,13 +601,9 @@ async function init(): Promise<void> {
       queuePrefs({ opacity })
       applyPrefsToDom(prefs)
     },
-    onFontSize: (fontSize) => {
-      queuePrefs({ fontSize })
-      applyPrefsToDom(prefs)
-      if (prefs.lyricsExpanded) scheduler.sync(lines, player)
-    },
+    onLyricsSize: applyLyricsSize,
     onLyricsExpanded: (expanded) => void setLyricsExpanded(expanded),
-    onViewChange: onSettingsToggle,
+    onViewChange: () => {},
     onDisconnect: () => {
       void window.linea.logout().then(() => setConnected(false))
     }
@@ -414,8 +622,15 @@ async function init(): Promise<void> {
 
   window.linea.onLyricsUpdate((newLines) => {
     lines = newLines
-    if (newLines.length === 0) renderLyrics([], -1)
+    renderAllLyrics(newLines)
+    following = true
+    el.btnJump.hidden = true
     scheduler.sync(lines, player)
+    requestAnimationFrame(() => {
+      updateLyricPadding()
+      updateScrollFades()
+      centerActiveLyric(false)
+    })
   })
 
   window.linea.onClickThroughChanged((on) => {
@@ -440,11 +655,6 @@ async function init(): Promise<void> {
   el.app.dataset.clickthrough = String(clickThrough)
   setConnected(authState)
   refreshPlayerUi()
-
-  const bounds = await window.linea.getWindowBounds()
-  lastExpandedHeight = bounds.height
-  // Honor a persisted collapsed state on launch.
-  if (!prefs.lyricsExpanded) await window.linea.resizeTo(collapsedHeight())
 }
 
 // Keep the overlay alive: log stray errors instead of letting them

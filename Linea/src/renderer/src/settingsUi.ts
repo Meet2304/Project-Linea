@@ -1,4 +1,4 @@
-import type { Prefs, Theme } from '../../shared/types'
+import type { LyricsSize, Prefs, Theme } from '../../shared/types'
 import { el } from './playerUi'
 import { icons } from './icons'
 
@@ -6,10 +6,10 @@ export interface SettingsCallbacks {
   onTheme: (theme: Theme) => void
   onClickThrough: () => void
   onOpacity: (value: number) => void
-  onFontSize: (value: number) => void
+  onLyricsSize: (size: LyricsSize) => void
   onLyricsExpanded: (expanded: boolean) => void
   onDisconnect: () => void
-  /** Fires after the now/settings view swaps so the host can resize. */
+  /** Fires after the now/settings view swaps. */
   onViewChange: () => void
 }
 
@@ -20,12 +20,18 @@ function byId<T extends HTMLElement>(id: string): T {
 const themeSwitch = byId<HTMLButtonElement>('set-theme')
 const clickThroughSwitch = byId<HTMLButtonElement>('set-clickthrough')
 const opacitySlider = byId<HTMLInputElement>('set-opacity')
-const fontSlider = byId<HTMLInputElement>('set-fontsize')
+const sizeSegs = Array.from(document.querySelectorAll<HTMLButtonElement>('.seg'))
 const lyricsSwitch = byId<HTMLButtonElement>('set-lyrics')
 const closeBtn = byId<HTMLButtonElement>('set-close')
 const disconnectBtn = byId<HTMLButtonElement>('set-disconnect')
 
 let onViewChange: () => void = () => {}
+
+function reflectSize(size: LyricsSize): void {
+  sizeSegs.forEach((seg) => {
+    seg.dataset.active = String(seg.dataset.size === size)
+  })
+}
 
 function isOn(node: HTMLElement): boolean {
   return node.getAttribute('aria-checked') === 'true'
@@ -61,9 +67,12 @@ export function initSettings(cb: SettingsCallbacks): void {
     updateSliderFill(opacitySlider)
     cb.onOpacity(Number(opacitySlider.value))
   })
-  fontSlider.addEventListener('input', () => {
-    updateSliderFill(fontSlider)
-    cb.onFontSize(Number(fontSlider.value))
+  sizeSegs.forEach((seg) => {
+    seg.addEventListener('click', () => {
+      const size = seg.dataset.size as LyricsSize
+      reflectSize(size)
+      cb.onLyricsSize(size)
+    })
   })
   lyricsSwitch.addEventListener('click', () => {
     const expanded = !isOn(lyricsSwitch)
@@ -85,9 +94,8 @@ export function reflectPrefs(prefs: Prefs): void {
   setOn(themeSwitch, prefs.theme === 'dark')
   setOn(lyricsSwitch, prefs.lyricsExpanded)
   opacitySlider.value = String(prefs.opacity)
-  fontSlider.value = String(prefs.fontSize)
   updateSliderFill(opacitySlider)
-  updateSliderFill(fontSlider)
+  reflectSize(prefs.lyricsSize)
 }
 
 export function reflectClickThrough(on: boolean): void {
