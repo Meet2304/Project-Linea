@@ -22,7 +22,8 @@ Just a minimal, floating window that stays out of your way while keeping you con
 - **Full transport** — play/pause, skip, seek, shuffle, and repeat right from the overlay (playback control requires Spotify Premium)
 - **Cymatic thumbnail** — a small procedurally-generated standing-wave tile beside the title, unique per track and evolving while the song plays
 - **Light & dark themes** — pure-white "quiet layer" or near-black glass, one toggle away
-- **Personalizable** — pin on top and close from the top bar; panel opacity, three lyric-size presets (with a live preview), and show/hide lyrics in settings
+- **Personalizable** — pin on top and close from the top bar; three lyric-size presets (with a live preview), and optional lyric timestamps in settings
 - **Click-through mode** — let clicks pass through the overlay (`Ctrl+Shift+.`)
+- **Always reachable** — a system-tray icon and a summon shortcut (`Ctrl+Shift+L`) bring the window back to the front even when it's unpinned and buried behind other apps
 - **Fast by design** — event-driven lyric scheduling (no always-on loop), adaptive polling that backs off when idle, and crash-resilient main/renderer error handling
 </p>

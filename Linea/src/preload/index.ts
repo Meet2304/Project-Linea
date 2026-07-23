@@ -27,8 +27,6 @@ contextBridge.exposeInMainWorld('linea', {
     ipcRenderer.invoke(IPC.PLAYER_COMMAND, command),
   toggleLike: (): Promise<ApiResult<boolean>> => ipcRenderer.invoke(IPC.TOGGLE_LIKE),
   setPinned: (pinned: boolean): Promise<void> => ipcRenderer.invoke(IPC.SET_PINNED, pinned),
-  setLyricsExpanded: (expanded: boolean): Promise<void> =>
-    ipcRenderer.invoke(IPC.SET_LYRICS_EXPANDED, expanded),
   resizeTo: (height: number): Promise<void> => ipcRenderer.invoke(IPC.RESIZE_WINDOW, height),
   getWindowBounds: (): Promise<{ x: number; y: number; width: number; height: number }> =>
     ipcRenderer.invoke(IPC.GET_WINDOW_BOUNDS),
@@ -42,6 +40,7 @@ contextBridge.exposeInMainWorld('linea', {
   onNowPlaying: subscribe<PlayerState | null>(IPC.NOW_PLAYING),
   onLyricsUpdate: subscribe<LyricLine[]>(IPC.LYRICS_UPDATE),
   onClickThroughChanged: subscribe<boolean>(IPC.CLICK_THROUGH_CHANGED),
+  onWindowFocusChanged: subscribe<boolean>(IPC.WINDOW_FOCUS_CHANGED),
   onPlayerError: subscribe<PlayerErrorEvent>(IPC.PLAYER_ERROR),
   getPrefs: (): Promise<Prefs> => ipcRenderer.invoke(IPC.GET_PREFS),
   setPrefs: (partial: Partial<Prefs>): Promise<Prefs> => ipcRenderer.invoke(IPC.SET_PREFS, partial)

@@ -1,4 +1,14 @@
-import { app, shell, BrowserWindow, globalShortcut, screen, ipcMain } from 'electron'
+import {
+  app,
+  shell,
+  BrowserWindow,
+  globalShortcut,
+  screen,
+  ipcMain,
+  Tray,
+  Menu,
+  nativeImage
+} from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -32,12 +42,13 @@ import { initAutoUpdater } from './updater'
 // The panel fills the window minus a 30px shadow gutter per side. The
 // window is freely resizable (custom grips in the renderer drive
 // SET_WINDOW_BOUNDS); these are the launch and floor sizes.
-const INITIAL_WIDTH = 480
-const INITIAL_HEIGHT = 264
+const INITIAL_WIDTH = 720
+const INITIAL_HEIGHT = 250
 const MIN_WIDTH = 372
 const MIN_HEIGHT = 150
 
 let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
 let clickThrough = false
 let lastState: PlayerState | null = null
 let pollTimer: ReturnType<typeof setTimeout> | null = null
@@ -56,8 +67,8 @@ function rememberLiked(trackId: string, liked: boolean): void {
   likedCache.set(trackId, liked)
 }
 
-/** Set the window height only (used by the lyrics collapse/expand),
- *  keeping the top-right anchor so it grows downward. */
+/** Set the window height only (preset sizing), keeping the top-right
+ *  anchor so it grows downward. */
 function resizeWindowTo(height: number): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
   const { height: availH } = screen.getPrimaryDisplay().workAreaSize
@@ -112,6 +123,11 @@ function createWindow(): void {
     win.show()
   })
 
+  // Hover chrome can stick while the cursor stays over the always-on-top
+  // panel after Alt-Tabbing away — drive an explicit focus flag from main.
+  win.on('focus', () => sendToRenderer(IPC.WINDOW_FOCUS_CHANGED, true))
+  win.on('blur', () => sendToRenderer(IPC.WINDOW_FOCUS_CHANGED, false))
+
   // Null the reference so poll/lyrics callbacks never touch a destroyed
   // window (a silent crash source once the widget can be closed).
   win.on('closed', () => {
@@ -150,6 +166,44 @@ function sendToRenderer(channel: string, payload: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, payload)
   }
+}
+
+/**
+ * Bring the overlay back to the foreground. Because the window skips the
+ * taskbar, an unpinned panel can sink behind other apps with no way to
+ * click it back — this is the reliable escape hatch (tray + shortcut).
+ * We briefly force always-on-top so it pops above the focused app, then
+ * restore the user's pin preference so it doesn't stay stuck on top.
+ */
+function summonWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow()
+    return
+  }
+  const win = mainWindow
+  if (win.isMinimized()) win.restore()
+  win.show()
+  const { pinned } = loadPrefs()
+  win.setAlwaysOnTop(true, 'screen-saver')
+  win.moveTop()
+  win.focus()
+  if (process.platform === 'darwin') app.focus({ steal: true })
+  if (!pinned) win.setAlwaysOnTop(false)
+}
+
+/** System-tray fallback so the panel is always reachable when unpinned. */
+function createTray(): void {
+  if (tray) return
+  const image = nativeImage.createFromPath(icon)
+  tray = new Tray(image.isEmpty() ? icon : image)
+  tray.setToolTip('Linea')
+  tray.on('click', () => summonWindow())
+  const menu = Menu.buildFromTemplate([
+    { label: 'Show Linea', click: () => summonWindow() },
+    { type: 'separator' },
+    { label: 'Quit Linea', click: () => app.quit() }
+  ])
+  tray.setContextMenu(menu)
 }
 
 function toggleClickThrough(): void {
@@ -404,6 +458,7 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+  createTray()
   startPolling()
   initAutoUpdater()
 
@@ -434,12 +489,6 @@ app.whenReady().then(() => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close()
   })
 
-  ipcMain.handle(IPC.SET_LYRICS_EXPANDED, (_event, expanded: boolean) => {
-    // Height follows the renderer's measurement via RESIZE_WINDOW; here
-    // we only persist the pref.
-    savePrefs({ lyricsExpanded: expanded })
-  })
-
   ipcMain.handle(IPC.RESIZE_WINDOW, (_event, height: number) => resizeWindowTo(height))
 
   ipcMain.handle(IPC.GET_WINDOW_BOUNDS, () => {
@@ -467,6 +516,17 @@ app.whenReady().then(() => {
     }
   } catch (error) {
     console.error('Global shortcut registration threw:', error)
+  }
+
+  // Summon the panel back to the foreground (works even when unpinned and
+  // buried behind other windows — the main reason it could feel "lost").
+  try {
+    const registered = globalShortcut.register('CommandOrControl+Shift+L', summonWindow)
+    if (!registered) {
+      console.error('Summon shortcut registration failed — another app may own Ctrl+Shift+L')
+    }
+  } catch (error) {
+    console.error('Summon shortcut registration threw:', error)
   }
 
   app.on('activate', function () {

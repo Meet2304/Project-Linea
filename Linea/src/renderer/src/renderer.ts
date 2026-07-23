@@ -51,7 +51,8 @@ let prefs: Prefs = {
   lyricsSize: 'medium',
   theme: 'light',
   pinned: true,
-  lyricsExpanded: true
+  lyricsExpanded: true,
+  showTimestamps: false
 }
 let dragging = false
 let seekHoldUntil = 0
@@ -70,36 +71,26 @@ const MIN_H = 150
 const scheduler = new LyricScheduler((index) => {
   setActiveLyric(index)
   if (following) centerActiveLyric(false)
+  else updateJumpButton()
 })
 
 // ------------------------------------------------------------------
 // Sizing — the panel fills the window (minus the shadow gutter).
 // ------------------------------------------------------------------
 const GUTTER = 30
-const APP_PAD = 14
+const APP_PAD = 12
 
 function topbarHeight(): number {
   return el.playerView.querySelector<HTMLElement>('.topbar')?.getBoundingClientRect().height ?? 22
 }
 
-function controlsHeight(): number {
-  return el.playerView.querySelector<HTMLElement>('.controls')?.getBoundingClientRect().height ?? 60
-}
-
-/** Collapsed window height: everything except the lyrics area. */
-function collapsedHeight(): number {
-  // GUTTER*2 (body) + APP_PAD*2 + topbar + controls margin-top + controls
-  return Math.ceil(GUTTER * 2 + APP_PAD * 2 + topbarHeight() + 12 + controlsHeight() + 4)
-}
-
-/** Window height that shows exactly the preset's line count. */
+/** Window height that shows exactly the preset's line count.
+ *  Controls overlay on hover (not in layout), so they aren't reserved. */
 function presetWindowHeight(size: LyricsSize): number {
   const { px, lines: n } = LYRICS_PRESETS[size]
   const lineBlock = px * 1.32
   const viewport = n * lineBlock + (n - 1) * 9
-  return Math.ceil(
-    GUTTER * 2 + APP_PAD * 2 + topbarHeight() + 12 + viewport + 12 + controlsHeight()
-  )
+  return Math.ceil(GUTTER * 2 + APP_PAD * 2 + topbarHeight() + 12 + viewport)
 }
 
 // ------------------------------------------------------------------
@@ -136,9 +127,7 @@ function updateScrollFades(): void {
   el.lyricsPanel.dataset.down = String(s.scrollTop + s.clientHeight < s.scrollHeight - 2)
 }
 
-function onLyricsScroll(): void {
-  updateScrollFades()
-  if (autoScrolling) return
+function updateJumpButton(): void {
   const active = el.lyricsList.querySelector<HTMLElement>('.lyric-row[data-pos="active"]')
   if (!active) {
     el.btnJump.hidden = true
@@ -147,16 +136,32 @@ function onLyricsScroll(): void {
   const panel = el.lyricsScroll.getBoundingClientRect()
   const row = active.getBoundingClientRect()
   const rowCenter = row.top + row.height / 2
+  const mid = panel.top + panel.height / 2
   // Following again once the current line is back near the middle.
-  following = Math.abs(rowCenter - (panel.top + panel.height / 2)) < panel.height * 0.3
+  following = Math.abs(rowCenter - mid) < panel.height * 0.3
   el.btnJump.hidden = following
+  if (following) return
+  // Arrow points toward the active line from the user's view.
+  const dir = rowCenter < mid ? 'up' : 'down'
+  el.btnJump.dataset.dir = dir
+  el.btnJump.setAttribute(
+    'aria-label',
+    dir === 'up' ? 'Jump up to current line' : 'Jump down to current line'
+  )
+}
+
+function onLyricsScroll(): void {
+  updateScrollFades()
+  if (autoScrolling) return
+  updateJumpButton()
 }
 
 // ------------------------------------------------------------------
 // Cymatic thumbnail — a small evolving standing-wave beside the title;
-// pattern seeded from the track, hue a per-track jewel.
+// pattern + hue are seeded from the track. The same jewel color drives
+// active lyrics and the progress indicator via --lyric-accent.
 // ------------------------------------------------------------------
-const JEWELS = ['--sapphire', '--amethyst', '--teal', '--emerald', '--garnet', '--citrine']
+const JEWELS = ['--sapphire', '--amethyst', '--teal', '--emerald', '--garnet', '--citrine'] as const
 const THUMB_SPEED = 1.7 // radians/sec — evolves visibly while playing
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -168,8 +173,12 @@ let thumbSeed = 'linea'
 
 function refreshThumbMeta(): void {
   thumbSeed = player?.trackId ?? 'linea'
-  const name = JEWELS[hashSeed(thumbSeed) % JEWELS.length]
-  thumbColor = getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#3a6098'
+  const token = JEWELS[hashSeed(thumbSeed) % JEWELS.length] ?? '--sapphire'
+  const resolved =
+    getComputedStyle(document.documentElement).getPropertyValue(token).trim() || '#3a6098'
+  thumbColor = resolved
+  // Keep lyric text + progress in lockstep with the dither hue.
+  document.documentElement.style.setProperty('--lyric-accent', resolved)
 }
 
 function drawThumb(): void {
@@ -209,59 +218,184 @@ window.addEventListener('resize', () => {
 })
 
 // ------------------------------------------------------------------
-// Resize-corner indicators — the nearest corner reacts to the pointer:
-// it fades in by proximity, is magnetically pulled toward the cursor,
-// and pulses once on approach.
+// Resize-corner indicators — stretchy SVG arcs. The nearest corner
+// fades in by proximity; its curve epoch (quadratic apex) is pulled
+// toward the pointer with spring-smoothed physics. No approach pulse.
 // ------------------------------------------------------------------
 const CORNER_KEYS = ['nw', 'ne', 'se', 'sw'] as const
+type CornerKey = (typeof CORNER_KEYS)[number]
+
 const cornerEls = Object.fromEntries(
-  CORNER_KEYS.map((k) => [k, document.querySelector<HTMLElement>(`.corner-${k}`)])
-) as Record<(typeof CORNER_KEYS)[number], HTMLElement>
+  CORNER_KEYS.map((k) => [k, document.querySelector<SVGSVGElement>(`.corner-${k}`)])
+) as Record<CornerKey, SVGSVGElement | null>
+
+/** Resting quadratic control point (epoch) per corner, viewBox 0–24.
+ *  Arcs are 20px radius (2px inset) to match --panel-radius. */
+const CORNER_REST: Record<CornerKey, [number, number]> = {
+  nw: [2, 2],
+  ne: [22, 2],
+  se: [22, 22],
+  sw: [2, 22]
+}
+
+/** Unit vector from panel center through each corner (outward bend). */
+const CORNER_OUT: Record<CornerKey, [number, number]> = {
+  nw: [-Math.SQRT1_2, -Math.SQRT1_2],
+  ne: [Math.SQRT1_2, -Math.SQRT1_2],
+  se: [Math.SQRT1_2, Math.SQRT1_2],
+  sw: [-Math.SQRT1_2, Math.SQRT1_2]
+}
+
+/** Endpoints of the quarter-arc for each corner. */
+const CORNER_ENDS: Record<CornerKey, [[number, number], [number, number]]> = {
+  nw: [
+    [2, 22],
+    [22, 2]
+  ],
+  ne: [
+    [2, 2],
+    [22, 22]
+  ],
+  se: [
+    [22, 2],
+    [2, 22]
+  ],
+  sw: [
+    [22, 22],
+    [2, 2]
+  ]
+}
+
+interface CornerMotion {
+  opacity: number
+  epochX: number
+  epochY: number
+  targetOpacity: number
+  targetEpochX: number
+  targetEpochY: number
+}
+
+function cornerPath(key: CornerKey, epochX: number, epochY: number): string {
+  const [[x1, y1], [x2, y2]] = CORNER_ENDS[key]
+  return `M ${x1} ${y1} Q ${epochX} ${epochY} ${x2} ${y2}`
+}
 
 function wireCornerHints(): void {
-  const R = 100
+  const REACH = 110
+  const PULL = 4 // max epoch travel — keep stretch inside the inset corners
+  const SMOOTH = 0.22 // lerp factor per frame (~smooth spring)
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const ease = reduced ? 1 : SMOOTH
+
+  const motion = Object.fromEntries(
+    CORNER_KEYS.map((key) => {
+      const [rx, ry] = CORNER_REST[key]
+      return [
+        key,
+        {
+          opacity: 0,
+          epochX: rx,
+          epochY: ry,
+          targetOpacity: 0,
+          targetEpochX: rx,
+          targetEpochY: ry
+        } satisfies CornerMotion
+      ]
+    })
+  ) as Record<CornerKey, CornerMotion>
+
+  let raf = 0
+  let pointerInside = false
+
+  const paint = (): void => {
+    raf = 0
+    let alive = false
+    for (const key of CORNER_KEYS) {
+      const m = motion[key]
+      const node = cornerEls[key]
+      if (!node) continue
+      const arc = node.querySelector('.corner-arc')
+      if (!arc) continue
+
+      m.opacity += (m.targetOpacity - m.opacity) * ease
+      m.epochX += (m.targetEpochX - m.epochX) * ease
+      m.epochY += (m.targetEpochY - m.epochY) * ease
+
+      if (Math.abs(m.targetOpacity - m.opacity) > 0.004 || m.opacity > 0.01) alive = true
+
+      node.style.opacity = String(Math.max(0, m.opacity))
+      arc.setAttribute('d', cornerPath(key, m.epochX, m.epochY))
+    }
+    if (alive || pointerInside) raf = requestAnimationFrame(paint)
+  }
+
+  const kick = (): void => {
+    if (!raf) raf = requestAnimationFrame(paint)
+  }
+
   el.app.addEventListener('pointermove', (e) => {
+    pointerInside = true
     const rect = el.app.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    const pos: Record<string, [number, number]> = {
+    const pos: Record<CornerKey, [number, number]> = {
       nw: [0, 0],
       ne: [rect.width, 0],
       se: [rect.width, rect.height],
       sw: [0, rect.height]
     }
+
+    // Only the nearest corner within reach reacts.
+    let best: CornerKey | null = null
+    let bestDist = Infinity
     for (const key of CORNER_KEYS) {
-      const node = cornerEls[key]
-      if (!node) continue
+      const [cx, cy] = pos[key]
+      const d = Math.hypot(x - cx, y - cy)
+      if (d < bestDist) {
+        bestDist = d
+        best = key
+      }
+    }
+
+    for (const key of CORNER_KEYS) {
+      const m = motion[key]
+      const [rx, ry] = CORNER_REST[key]
+      if (key !== best || bestDist > REACH) {
+        m.targetOpacity = 0
+        m.targetEpochX = rx
+        m.targetEpochY = ry
+        continue
+      }
       const [cx, cy] = pos[key]
       const dx = x - cx
       const dy = y - cy
-      const d = Math.hypot(dx, dy)
-      const t = Math.max(0, 1 - d / R)
-      if (t <= 0.02) {
-        node.style.opacity = '0'
-        node.dataset.near = 'false'
-        continue
-      }
+      const d = bestDist
+      const t = Math.max(0, 1 - d / REACH)
+      // Smoothstep for a gentler fade/stretch curve.
+      const s = t * t * (3 - 2 * t)
       const nx = d > 0 ? dx / d : 0
       const ny = d > 0 ? dy / d : 0
-      node.style.opacity = String(0.2 + t * 0.6)
-      node.style.transform = `translate(${nx * t * 3}px, ${ny * t * 3}px) scale(${0.82 + t * 0.5})`
-      if (node.dataset.near !== 'true') {
-        node.dataset.near = 'true'
-        node.classList.remove('pulse')
-        void node.offsetWidth // restart the one-shot pulse
-        node.classList.add('pulse')
-      }
+      const [ox, oy] = CORNER_OUT[key]
+      // Bend outward (away from center). Lateral steer from the pointer
+      // so the epoch still leans toward where the cursor approaches.
+      const lateral = Math.max(-1, Math.min(1, nx * -oy + ny * ox))
+      m.targetOpacity = 0.15 + s * 0.75
+      m.targetEpochX = rx + (ox * s + -oy * lateral * s * 0.35) * PULL
+      m.targetEpochY = ry + (oy * s + ox * lateral * s * 0.35) * PULL
     }
+    kick()
   })
+
   el.app.addEventListener('pointerleave', () => {
+    pointerInside = false
     for (const key of CORNER_KEYS) {
-      const node = cornerEls[key]
-      if (!node) continue
-      node.style.opacity = '0'
-      node.dataset.near = 'false'
+      const m = motion[key]
+      const [rx, ry] = CORNER_REST[key]
+      m.targetOpacity = 0
+      m.targetEpochX = rx
+      m.targetEpochY = ry
     }
+    kick()
   })
 }
 
@@ -318,7 +452,7 @@ function wireResizeGrips(): void {
 // ------------------------------------------------------------------
 function refreshPlayerUi(): void {
   renderHeader(player)
-  renderTransport(player, prefs.lyricsExpanded)
+  renderTransport(player)
   if (player) {
     renderScrubber(estimatePositionMs(player), player.durationMs)
   } else {
@@ -379,20 +513,28 @@ function anchorPosition(): void {
   player = { ...player, progressMs: estimatePositionMs(player), fetchedAt: Date.now() }
 }
 
+function togglePlayPause(): void {
+  if (!connected || !player || el.playerView.hidden) return
+  // Settings occupies the same surface — don't hijack its clicks.
+  if (!el.settingsView.hidden) return
+  const wasPlaying = player.isPlaying
+  void sendCommand(
+    { type: wasPlaying ? 'pause' : 'play' },
+    () => {
+      if (!player) return
+      anchorPosition()
+      player = { ...player, isPlaying: !wasPlaying }
+    },
+    () => {
+      if (player) player = { ...player, isPlaying: wasPlaying }
+    }
+  )
+}
+
 function wireTransport(): void {
-  el.btnPlay.addEventListener('click', () => {
-    const wasPlaying = player?.isPlaying ?? false
-    void sendCommand(
-      { type: wasPlaying ? 'pause' : 'play' },
-      () => {
-        if (!player) return
-        anchorPosition()
-        player = { ...player!, isPlaying: !wasPlaying }
-      },
-      () => {
-        if (player) player = { ...player, isPlaying: wasPlaying }
-      }
-    )
+  el.btnPlay.addEventListener('click', (event) => {
+    event.stopPropagation()
+    togglePlayPause()
   })
 
   el.btnNext.addEventListener('click', () => void sendCommand({ type: 'next' }))
@@ -425,10 +567,6 @@ function wireTransport(): void {
     )
   })
 
-  el.btnLyrics.addEventListener('click', () => {
-    void setLyricsExpanded(!prefs.lyricsExpanded)
-  })
-
   el.btnPin.addEventListener('click', () => {
     const pinned = !prefs.pinned
     prefs = { ...prefs, pinned }
@@ -440,7 +578,33 @@ function wireTransport(): void {
 
   el.btnClose.addEventListener('click', () => void window.linea.closeWindow())
 
+  // Click empty panel chrome / lyrics to play or pause — skip real controls.
+  el.app.addEventListener('click', (event) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    if (
+      target.closest(
+        'button, input, a, label, .grip, .corner, .switch, .segmented, .theme-toggle, #settings-view, .controls'
+      )
+    ) {
+      return
+    }
+    togglePlayPause()
+  })
+
   el.lyricsScroll.addEventListener('scroll', onLyricsScroll)
+  // Slightly amplify wheel so short flicks move through lyrics more easily
+  // in the compact overlay. Ctrl/pinch-zoom is left alone.
+  el.lyricsScroll.addEventListener(
+    'wheel',
+    (event) => {
+      if (event.ctrlKey || event.deltaY === 0) return
+      event.preventDefault()
+      const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 22 : 1.45
+      el.lyricsScroll.scrollTop += event.deltaY * scale
+    },
+    { passive: false }
+  )
   el.btnJump.addEventListener('click', () => {
     following = true
     el.btnJump.hidden = true
@@ -486,37 +650,6 @@ function queuePrefs(partial: Partial<Prefs>): void {
   }, 300)
 }
 
-async function setLyricsExpanded(expanded: boolean): Promise<void> {
-  prefs = { ...prefs, lyricsExpanded: expanded }
-  if (!expanded) {
-    // Remember the current (expanded) height so re-expanding restores it.
-    const bounds = await window.linea.getWindowBounds()
-    lastExpandedHeight = bounds.height
-  }
-  setLyricsVisible(expanded)
-  renderTransport(player, expanded)
-  reflectPrefs(prefs)
-  void window.linea.setLyricsExpanded(expanded)
-  // Resize AFTER the layout reflects the new visibility, so the collapsed
-  // measurement is exact and the window hugs the chrome (no empty gap).
-  requestAnimationFrame(() => {
-    const target = expanded
-      ? lastExpandedHeight || presetWindowHeight(prefs.lyricsSize)
-      : collapsedHeight()
-    void window.linea.resizeTo(target)
-    requestAnimationFrame(() => {
-      updateLyricPadding()
-      updateScrollFades()
-      if (expanded) {
-        following = true
-        el.btnJump.hidden = true
-        scheduler.sync(lines, player)
-        centerActiveLyric(false)
-      }
-    })
-  })
-}
-
 function applyTheme(theme: Prefs['theme']): void {
   queuePrefs({ theme })
   applyPrefsToDom(prefs)
@@ -526,11 +659,9 @@ function applyTheme(theme: Prefs['theme']): void {
 function applyLyricsSize(size: LyricsSize): void {
   queuePrefs({ lyricsSize: size })
   applyPrefsToDom(prefs)
-  if (prefs.lyricsExpanded) {
-    const h = presetWindowHeight(size)
-    lastExpandedHeight = h
-    void window.linea.resizeTo(h)
-  }
+  const h = presetWindowHeight(size)
+  lastExpandedHeight = h
+  void window.linea.resizeTo(h)
   requestAnimationFrame(() => {
     updateLyricPadding()
     updateScrollFades()
@@ -555,7 +686,7 @@ function setConnected(isConnected: boolean): void {
     // Player view is now visible and measurable — size to the preset.
     requestAnimationFrame(() => {
       lastExpandedHeight = presetWindowHeight(prefs.lyricsSize)
-      void window.linea.resizeTo(prefs.lyricsExpanded ? lastExpandedHeight : collapsedHeight())
+      void window.linea.resizeTo(lastExpandedHeight)
       requestAnimationFrame(() => {
         updateLyricPadding()
         updateScrollFades()
@@ -597,12 +728,11 @@ async function init(): Promise<void> {
   initSettings({
     onTheme: applyTheme,
     onClickThrough: () => void window.linea.toggleClickThrough(),
-    onOpacity: (opacity) => {
-      queuePrefs({ opacity })
+    onLyricsSize: applyLyricsSize,
+    onShowTimestamps: (show) => {
+      queuePrefs({ showTimestamps: show })
       applyPrefsToDom(prefs)
     },
-    onLyricsSize: applyLyricsSize,
-    onLyricsExpanded: (expanded) => void setLyricsExpanded(expanded),
     onViewChange: () => {},
     onDisconnect: () => {
       void window.linea.logout().then(() => setConnected(false))
@@ -638,6 +768,15 @@ async function init(): Promise<void> {
     el.app.dataset.clickthrough = String(on)
   })
 
+  window.linea.onWindowFocusChanged(setWindowFocused)
+  window.addEventListener('blur', () => setWindowFocused(false))
+  window.addEventListener('focus', () => setWindowFocused(true))
+
+  // Drive chrome from real pointer enter/leave (not CSS :hover), so controls
+  // appear on hover without a click, and clear cleanly when focus leaves.
+  el.app.addEventListener('pointerenter', () => setPointerInside(true))
+  el.app.addEventListener('pointerleave', () => setPointerInside(false))
+
   window.linea.onPlayerError((event) => toastForReason(event.reason))
 
   const [loadedPrefs, authState, clickThrough] = await Promise.all([
@@ -650,11 +789,30 @@ async function init(): Promise<void> {
   applyPrefsToDom(prefs)
   reflectPrefs(prefs)
   reflectPin(prefs.pinned)
-  setLyricsVisible(prefs.lyricsExpanded)
+  setLyricsVisible()
   reflectClickThrough(clickThrough)
   el.app.dataset.clickthrough = String(clickThrough)
+  setWindowFocused(document.hasFocus())
+  setPointerInside(el.app.matches(':hover'))
   setConnected(authState)
   refreshPlayerUi()
+}
+
+/** Hover chrome — explicit flag so we can clear stuck :hover on blur. */
+function setPointerInside(inside: boolean): void {
+  el.app.dataset.pointerInside = String(inside)
+}
+
+/** When focus leaves Linea, drop hover chrome even if the cursor still rests here. */
+function setWindowFocused(focused: boolean): void {
+  el.app.dataset.windowFocus = String(focused)
+  if (!focused) {
+    setPointerInside(false)
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active !== document.body) active.blur()
+  } else if (el.app.matches(':hover')) {
+    setPointerInside(true)
+  }
 }
 
 // Keep the overlay alive: log stray errors instead of letting them

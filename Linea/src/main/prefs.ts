@@ -10,7 +10,8 @@ const DEFAULT_PREFS: Prefs = {
   lyricsSize: 'medium',
   theme: 'light',
   pinned: true,
-  lyricsExpanded: true
+  lyricsExpanded: true,
+  showTimestamps: false
 }
 
 function clampTheme(value: unknown): Theme {
@@ -26,17 +27,24 @@ function clampBoolean(value: unknown, fallback: boolean): boolean {
 }
 
 /**
- * Also migrates older prefs.json files: missing fields get defaults, the
- * opacity floor is 0.6 (panel alpha below that is illegible), and a legacy
- * numeric `fontSize` is dropped in favor of the lyricsSize preset.
+ * Also migrates older prefs.json files: missing fields get defaults, and a
+ * legacy numeric `fontSize` is dropped in favor of the lyricsSize preset.
+ *
+ * Opacity is kept on the Prefs schema for a future control, but the setting
+ * UI is deferred — always persist the solid default so experimental clear
+ * values from earlier builds don't ship.
+ *
+ * Lyrics are always shown; `lyricsExpanded` stays on the schema for old
+ * prefs.json files but is locked to true (collapse UI removed).
  */
 export function clampPrefs(input: Partial<Prefs>): Prefs {
   return {
-    opacity: Math.min(1, Math.max(0.6, input.opacity ?? DEFAULT_PREFS.opacity)),
+    opacity: DEFAULT_PREFS.opacity,
     lyricsSize: clampLyricsSize(input.lyricsSize),
     theme: clampTheme(input.theme),
     pinned: clampBoolean(input.pinned, DEFAULT_PREFS.pinned),
-    lyricsExpanded: clampBoolean(input.lyricsExpanded, DEFAULT_PREFS.lyricsExpanded)
+    lyricsExpanded: true,
+    showTimestamps: clampBoolean(input.showTimestamps, DEFAULT_PREFS.showTimestamps)
   }
 }
 

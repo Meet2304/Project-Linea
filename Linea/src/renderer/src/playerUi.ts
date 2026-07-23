@@ -12,7 +12,7 @@ function byId<T extends HTMLElement>(id: string): T {
 /** Each size preset pairs a font size with a default visible-line count. */
 export const LYRICS_PRESETS: Record<LyricsSize, { px: number; lines: number }> = {
   small: { px: 13, lines: 6 },
-  medium: { px: 15, lines: 4 },
+  medium: { px: 15, lines: 5 },
   large: { px: 18, lines: 3 }
 }
 
@@ -33,7 +33,6 @@ export const el = {
   btnPlay: byId<HTMLButtonElement>('btn-play'),
   btnNext: byId<HTMLButtonElement>('btn-next'),
   btnRepeat: byId<HTMLButtonElement>('btn-repeat'),
-  btnLyrics: byId<HTMLButtonElement>('btn-lyrics'),
   btnPin: byId<HTMLButtonElement>('btn-pin'),
   btnSettings: byId<HTMLButtonElement>('btn-settings'),
   btnClose: byId<HTMLButtonElement>('btn-close'),
@@ -53,7 +52,8 @@ export function injectStaticIcons(): void {
   el.btnPin.innerHTML = icons.pin
   el.btnSettings.innerHTML = icons.cog
   el.btnClose.innerHTML = icons.x
-  el.btnJump.insertAdjacentHTML('afterbegin', icons.locate)
+  const jumpDir = el.btnJump.querySelector('.jump-dir')
+  if (jumpDir) jumpDir.innerHTML = icons.chevronDown
 }
 
 /** The pin button lives with the top-bar controls, not in settings. */
@@ -78,7 +78,7 @@ export function renderHeader(player: PlayerState | null): void {
   el.trackArtist.textContent = player.artistName
 }
 
-export function renderTransport(player: PlayerState | null, lyricsExpanded: boolean): void {
+export function renderTransport(player: PlayerState | null): void {
   const playing = player?.isPlaying ?? false
   el.btnPlay.innerHTML = playing ? icons.pause : icons.play
 
@@ -87,15 +87,13 @@ export function renderTransport(player: PlayerState | null, lyricsExpanded: bool
   const repeat = player?.repeat ?? 'off'
   el.btnRepeat.innerHTML = repeat === 'track' ? icons.repeatOne : icons.repeat
   el.btnRepeat.dataset.active = String(repeat !== 'off')
-
-  el.btnLyrics.innerHTML = lyricsExpanded ? icons.chevronDown : icons.mic
-  el.btnLyrics.dataset.active = String(lyricsExpanded)
 }
 
 export function renderScrubber(positionMs: number, durationMs: number): void {
   const ratio = durationMs > 0 ? Math.min(1, Math.max(0, positionMs / durationMs)) : 0
   el.seek.value = String(Math.round(ratio * 1000))
   el.seek.style.setProperty('--fill', String(ratio * 100))
+  el.app.style.setProperty('--song-progress', String(ratio))
   el.timeElapsed.textContent = formatTime(positionMs)
   el.timeRemaining.textContent = formatRemaining(durationMs, positionMs)
 }
@@ -112,7 +110,16 @@ export function renderAllLyrics(lines: LyricLine[]): void {
     row.className = 'lyric-row'
     row.dataset.index = String(i)
     row.dataset.pos = 'next'
-    row.textContent = line.text || '…'
+
+    const time = document.createElement('span')
+    time.className = 'lyric-time mono'
+    time.textContent = formatTime(line.timeMs)
+
+    const text = document.createElement('span')
+    text.className = 'lyric-text'
+    text.textContent = line.text || '…'
+
+    row.append(time, text)
     return row
   })
   el.lyricsList.replaceChildren(...rows)
@@ -133,17 +140,22 @@ function emptyMessage(text: string): HTMLElement {
   return div
 }
 
-export function setLyricsVisible(visible: boolean): void {
-  el.lyricsPanel.hidden = !visible
+export function setLyricsVisible(): void {
+  el.lyricsPanel.hidden = false
+  // Drives hover-reveal controls CSS (`#app[data-lyrics='true']`).
+  el.app.dataset.lyrics = 'true'
 }
 
 export function applyPrefsToDom(prefs: Prefs): void {
   document.documentElement.dataset.theme = prefs.theme
   document.documentElement.style.setProperty('--panel-alpha', String(prefs.opacity))
+  // How “clear” the shell is — drives readable text/glass treatments.
+  document.documentElement.style.setProperty('--panel-clearance', String(1 - prefs.opacity))
   document.documentElement.style.setProperty(
     '--lyrics-size',
     `${LYRICS_PRESETS[prefs.lyricsSize].px}px`
   )
+  el.app.dataset.timestamps = String(prefs.showTimestamps)
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null
