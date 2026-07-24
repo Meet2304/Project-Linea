@@ -115,6 +115,20 @@
   --garnet-wash: #f6ebed;
   --citrine-wash: #f6f0e4;
 
+  /* The demo's fixed lyric color. Deep enough to read on white, bright
+     enough to hold up on near-black. */
+  --indigo: #4a4fa0;
+
+  /* --- Page surfaces ---------------------------------------------------
+     Distinct from --white/--paper, which are literal colors and must stay
+     literal (the field engine and the overlay's own chrome depend on it).
+     These are what page sections paint with, and they are what flips. */
+  --surface-page: #ffffff;
+  --surface-alt: #fbfbfc;
+  /* Channels for the scrims and section fades, so a gradient can follow
+     the theme without every call site branching. */
+  --scrim-rgb: 255 255 255;
+
   /* Mono accent — black in light, white in dark (via --ink). */
   --accent: var(--ink);
   --accent-wash: var(--mist);
@@ -156,10 +170,15 @@
   --lyrics-size: 15px;
 }
 
-/* The overlay demo's dark mode. Scoped to the demo panel rather than the
-   page — the site itself is always the white "quiet layer". Values match
-   the app's [data-theme='dark'] block exactly. */
+/* Dark mode. Applied to the demo panel on its own, and to <html> when the
+   page follows the scroller into the dark-mode feature. Neutral ramp and
+   jewels match the app's [data-theme='dark'] block exactly. */
 [data-theme='dark'] {
+  --surface-page: #0c0d10;
+  --surface-alt: #141519;
+  --scrim-rgb: 12 13 16;
+  --indigo: #9296e8;
+
   --paper: #0c0d10;
   --mist: #141519;
   --fog: #1c1e23;
@@ -208,7 +227,7 @@ html {
 }
 
 body {
-  background: var(--white);
+  background: var(--surface-page);
   color: var(--text-body);
   font-family: var(--font-sans);
   font-size: var(--text-base);
@@ -217,6 +236,23 @@ body {
   text-rendering: optimizeLegibility;
   /* Fields are full-bleed; never let one cause a sideways scroll. */
   overflow-x: hidden;
+}
+
+/* The theme change is a scroll event, not a click, so it has to feel like
+   the page is dimming rather than repainting. Everything that carries a
+   surface or a rule eases; text follows a touch faster so it stays legible
+   through the crossover. */
+html,
+body,
+section,
+header,
+footer,
+article,
+pre {
+  transition:
+    background-color 700ms var(--ease),
+    border-color 700ms var(--ease),
+    color 420ms var(--ease);
 }
 
 h1,
@@ -265,16 +301,17 @@ h3 {
   color: var(--text-faint);
 }
 
-/* The white scrim that keeps copy legible over a live field. */
+/* The scrim that keeps copy legible over a live field. Follows the theme
+   via --scrim-rgb, so it dims the field in dark mode instead of bleaching it. */
 .field-scrim {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background: radial-gradient(
     closest-side at 50% 46%,
-    rgba(255, 255, 255, 0.9) 12%,
-    rgba(255, 255, 255, 0.55) 40%,
-    rgba(255, 255, 255, 0) 68%
+    rgb(var(--scrim-rgb) / 0.9) 12%,
+    rgb(var(--scrim-rgb) / 0.55) 40%,
+    rgb(var(--scrim-rgb) / 0) 68%
   );
 }
 

@@ -3,40 +3,55 @@
 import { useEffect, useState } from 'react'
 import CymaticField from './field/CymaticField'
 import Mono from './ui/Mono'
-import Icon from './ui/Icon'
 import { FIELD_BASE, PALETTES, PATTERNS, type PaletteId } from '@/lib/palettes'
 import { prefersReducedMotion } from './field/cymatics-live'
 
-// The six jewels the app cycles through per track. Closing the loop here.
-const CYCLE: PaletteId[] = ['ink', 'iris', 'tide', 'dusk', 'fern', 'teal']
-
 /**
- * The one section that isn't selling anything: what cymatics actually is,
- * over the largest and most reactive plate on the page.
+ * The stage. Every other section sits on the page's surface and follows
+ * the theme; this one is an instrument — a lit plate in a dark room, the
+ * same near-black in both themes, framed like a piece of lab equipment
+ * with its readouts in the corners. The plate answers the cursor, and the
+ * jewels take turns under the sand.
  */
+
+// The stage is dark, so the ink palette (near-black on black) sits out.
+const CYCLE: PaletteId[] = ['iris', 'tide', 'dusk', 'fern', 'teal']
+
+const STAGE = '#0c0d10'
+const STAGE_TEXT = '#f2f3f6'
+const STAGE_FAINT = 'rgba(242, 243, 246, 0.55)'
+
 export default function Cymatics() {
   const [i, setI] = useState(0)
 
   useEffect(() => {
     if (prefersReducedMotion()) return
-    const id = setInterval(() => setI((v) => (v + 1) % CYCLE.length), 7000)
+    const id = setInterval(() => setI((v) => (v + 1) % CYCLE.length), 8000)
     return () => clearInterval(id)
   }, [])
 
   const pal = PALETTES[CYCLE[i]]
   const pat = PATTERNS.bloom
 
+  const corner = (v: 'top' | 'bottom', h: 'left' | 'right'): React.CSSProperties => ({
+    position: 'absolute',
+    [v]: 'clamp(26px, 4vw, 52px)',
+    [h]: 'clamp(26px, 4.5vw, 60px)',
+    zIndex: 5,
+    pointerEvents: 'none'
+  })
+
   return (
     <section
       id="cymatics"
       style={{
         position: 'relative',
-        minHeight: '92svh',
+        minHeight: '100svh',
         display: 'grid',
         placeItems: 'center',
         overflow: 'hidden',
-        background: 'var(--white)',
-        padding: 'clamp(80px, 10vw, 140px) 0'
+        background: STAGE,
+        padding: 'clamp(110px, 14svh, 170px) 0'
       }}
     >
       <CymaticField
@@ -50,9 +65,59 @@ export default function Cymatics() {
         color2={pal.c2}
         {...FIELD_BASE}
         quality={0.5}
-        opacity={0.62}
+        opacity={0.6}
       />
-      <div className="field-scrim" />
+
+      {/* A quiet middle so the words sit on velvet, not on sand. Dense
+          enough that the type never fights the grain behind it. */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background:
+            'radial-gradient(closest-side at 50% 50%, rgb(12 13 16 / 0.97) 22%, rgb(12 13 16 / 0.72) 48%, rgb(12 13 16 / 0) 78%)'
+        }}
+      />
+
+      {/* The instrument's bezel. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 'clamp(14px, 2vw, 26px)',
+          border: '1px solid rgba(242, 243, 246, 0.14)',
+          borderRadius: 'var(--radius-lg)',
+          pointerEvents: 'none',
+          zIndex: 4
+        }}
+      />
+
+      {/* Corner readouts — the measurements, where a lab would print them. */}
+      <div style={corner('top', 'left')}>
+        <Mono color={STAGE_FAINT} tracking="0.18em">
+          // cymatics
+        </Mono>
+      </div>
+      <div style={corner('top', 'right')}>
+        <span key={pal.id} className="cym-fade" style={{ display: 'inline-block' }}>
+          <Mono color={pal.c1} tracking="0.18em">
+            {pal.name} · {pal.hz}
+          </Mono>
+        </span>
+      </div>
+      <div style={corner('bottom', 'left')}>
+        <Mono color={STAGE_FAINT} tracking="0.18em">
+          {pat.label}
+        </Mono>
+      </div>
+      <div style={corner('bottom', 'right')}>
+        <span key={i} className="cym-fade" style={{ display: 'inline-block' }}>
+          <Mono color={STAGE_FAINT} tracking="0.18em">
+            {`0${i + 1} / 0${CYCLE.length}`}
+          </Mono>
+        </span>
+      </div>
 
       <div
         style={{
@@ -64,76 +129,45 @@ export default function Cymatics() {
           pointerEvents: 'none'
         }}
       >
-        <Mono color={pal.accent} tracking="0.2em">
-          // {pat.label} · {pal.name}
-        </Mono>
-
         <h2
           style={{
-            margin: '24px 0 0',
-            fontSize: 'clamp(30px, 4.4vw, 54px)',
-            letterSpacing: '-0.04em',
-            lineHeight: 1.02
+            margin: 0,
+            fontSize: 'clamp(40px, 7vw, 92px)',
+            letterSpacing: '-0.045em',
+            lineHeight: 0.98,
+            color: STAGE_TEXT,
+            textShadow: '0 2px 24px rgba(12, 13, 16, 0.9)'
           }}
         >
           Sound has a shape.
-          <br />
-          This is it.
         </h2>
 
         <p
           style={{
-            margin: '24px auto 0',
+            margin: '26px auto 0',
             fontSize: 'var(--text-md)',
             lineHeight: 'var(--leading-relaxed)',
-            color: 'var(--ink-2)',
-            maxWidth: 540
+            color: 'rgba(242, 243, 246, 0.72)',
+            maxWidth: 440,
+            textShadow: '0 1px 14px rgba(12, 13, 16, 0.9)'
           }}
         >
-          Scatter sand on a metal plate and play a note through it. The grains flee the parts that
-          move and settle along the lines that don&rsquo;t — the nodes. Change the note and you get
-          a different figure. Ernst Chladni was drawing these in 1787.
+          Sand on a vibrating plate settles where the plate stands still. Chladni drew these
+          figures in 1787 — this one is being computed right now.
         </p>
-
-        <p
-          style={{
-            margin: '18px auto 0',
-            fontSize: 'var(--text-md)',
-            lineHeight: 'var(--leading-relaxed)',
-            color: 'var(--steel)',
-            maxWidth: 540
-          }}
-        >
-          Every pattern on this page is that math, solved per pixel and pushed through an ordered
-          dither so it reads as grain rather than gradient. Nothing here is an image. It is being
-          computed right now, and it answers to your cursor.
-        </p>
-
-        <div
-          style={{
-            marginTop: 34,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 10,
-            pointerEvents: 'auto'
-          }}
-        >
-          <span
-            style={{
-              display: 'grid',
-              placeItems: 'center',
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              border: `1px solid ${pal.accent}`,
-              color: pal.accent
-            }}
-          >
-            <Icon name="mouse-pointer-2" size={11} />
-          </span>
-          <Mono color="var(--steel)">move to disturb the field</Mono>
-        </div>
       </div>
+
+      <style>{`
+        .cym-fade {
+          animation: cym-fade-in 900ms var(--ease-out);
+        }
+        @keyframes cym-fade-in {
+          from { opacity: 0; transform: translateY(6px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .cym-fade { animation: none; }
+        }
+      `}</style>
     </section>
   )
 }

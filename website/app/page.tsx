@@ -1,11 +1,11 @@
 import Nav from '@/components/Nav'
-import Hero from '@/components/Hero'
-import FeatureScroller from '@/components/features/FeatureScroller'
+import Showcase from '@/components/showcase/Showcase'
 import UnderTheHood from '@/components/UnderTheHood'
 import Cymatics from '@/components/Cymatics'
 import OpenSource from '@/components/OpenSource'
 import DownloadCTA from '@/components/DownloadCTA'
 import Footer from '@/components/Footer'
+import ThemeProvider from '@/components/theme/ThemeProvider'
 import { EMPTY_RELEASE, REPO_NAME, REPO_OWNER, type ReleaseInfo } from '@/lib/release'
 
 // Re-render at most every 10 minutes; release info is the only dynamic bit.
@@ -67,17 +67,17 @@ export default async function Page() {
   const release = await getRelease()
 
   return (
-    <>
+    <ThemeProvider>
       <Nav />
       <main>
-        <Hero release={release} />
-        <FeatureScroller />
+        {/* Hero and the feature walkthrough are one pinned sequence. */}
+        <Showcase release={release} />
         <UnderTheHood />
         <Cymatics />
         <OpenSource release={release} />
         <DownloadCTA release={release} />
       </main>
       <Footer />
-    </>
+    </ThemeProvider>
   )
 }

@@ -1,46 +1,42 @@
-import CymaticField from './field/CymaticField'
+import DitherGlyph, { type GlyphShape } from './hood/DitherGlyph'
 import Mono from './ui/Mono'
-import Icon, { type IconName } from './ui/Icon'
-import { FIELD_BASE, PALETTES, PATTERNS, type Palette, type Pattern } from '@/lib/palettes'
+import { PALETTES, type Palette } from '@/lib/palettes'
 
 interface Item {
-  icon: IconName
+  glyph: GlyphShape
   eyebrow: string
   title: string
+  /** One sentence. The glyph and the points carry the rest. */
   body: string
+  /** Three at most, a few words each. */
   points: string[]
   palette: Palette
-  pattern: Pattern
 }
 
 const ITEMS: Item[] = [
   {
-    icon: 'shield',
+    glyph: 'shield',
     eyebrow: '// local-first',
     title: 'Nothing leaves your machine',
-    body: 'Linea talks to Spotify and lrclib and to nothing else. There is no Linea account, no server in the middle, and no analytics.',
+    body: 'No account, no server in the middle, no analytics — Linea talks to Spotify and lrclib, and nothing else.',
     points: [
-      'OAuth with PKCE — no client secret, ever',
-      'The refresh token is encrypted at rest with the OS keychain',
-      'Sandboxed renderer, context isolation on, every permission request denied',
-      'Lyrics cache to your own disk'
+      'OAuth with PKCE, no client secret',
+      'Tokens sealed in the OS keychain',
+      'Lyrics cached on your own disk'
     ],
-    palette: PALETTES.fern,
-    pattern: PATTERNS.lattice
+    palette: PALETTES.fern
   },
   {
-    icon: 'zap',
+    glyph: 'bolt',
     eyebrow: '// fast by design',
-    title: 'It sits still when nothing is happening',
-    body: 'An overlay that runs all day has to earn its place. Linea does the work at the moment it is needed and then goes quiet.',
+    title: 'Still when nothing is happening',
+    body: 'One timer, armed for the next lyric — nothing ticks between lines, and nothing at all while paused.',
     points: [
-      'One timer armed at the next lyric — no per-frame loop',
-      'Zero timers while paused',
-      'Polling backs off from 2s to 10s when you are idle',
-      'Crash-resilient: the window recovers itself instead of vanishing'
+      'No per-frame loops',
+      'Polling backs off when you idle',
+      'Recovers itself after a crash'
     ],
-    palette: PALETTES.teal,
-    pattern: PATTERNS.flow
+    palette: PALETTES.teal
   }
 ]
 
@@ -50,7 +46,7 @@ export default function UnderTheHood() {
       style={{
         borderTop: '1px solid var(--line)',
         borderBottom: '1px solid var(--line)',
-        background: 'var(--paper)'
+        background: 'var(--surface-alt)'
       }}
     >
       <div
@@ -81,48 +77,19 @@ export default function UnderTheHood() {
                 position: 'relative',
                 borderRadius: 'var(--radius-xl)',
                 border: '1px solid var(--line)',
-                background: 'var(--white)',
+                background: 'var(--surface-page)',
                 overflow: 'hidden',
                 boxShadow: 'var(--shadow-sm)'
               }}
             >
-              <div style={{ position: 'relative', height: 120, background: 'var(--white)' }}>
-                <CymaticField
-                  className="absolute inset-0"
-                  style={item.pattern.style}
-                  n={item.pattern.n}
-                  m={item.pattern.m}
-                  scale={item.pattern.scale}
-                  seed={item.pattern.seed}
-                  color={item.palette.c1}
-                  color2={item.palette.c2}
-                  {...FIELD_BASE}
-                  opacity={0.5}
+              {/* The symbol is the illustration: the feature's icon, drawn
+                  as an animated dither field. */}
+              <div style={{ position: 'relative', height: 190 }}>
+                <DitherGlyph
+                  shape={item.glyph}
+                  color={item.palette.accent}
+                  ambient={item.palette.c2}
                 />
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    padding: 16
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 'var(--radius-md)',
-                      background: 'var(--white)',
-                      boxShadow: 'var(--shadow-sm)',
-                      display: 'grid',
-                      placeItems: 'center',
-                      color: item.palette.accent
-                    }}
-                  >
-                    <Icon name={item.icon} size={20} />
-                  </span>
-                </div>
               </div>
 
               <div style={{ padding: 'clamp(20px, 2.4vw, 28px)' }}>

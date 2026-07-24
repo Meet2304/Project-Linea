@@ -4,19 +4,27 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import s from './overlay.module.css'
 import Icon from '../ui/Icon'
 import Thumb from './Thumb'
-import { TRACKS, formatLrcStamp, formatTime } from './lyrics'
-import { jewelForTrack } from './cymatic-thumb'
+import { TRACKS, formatLrcStamp, formatTime, type LyricLine } from './lyrics'
 import { usePlaybackClock } from './usePlaybackClock'
+import { useTheme } from '../theme/ThemeProvider'
+import ThemeToggle from '../theme/ThemeToggle'
 
 export type DemoAct = 'lyrics' | 'transport' | 'tile' | 'yours'
 
-/** Lyric size presets — text size paired with visible line count, as in the app. */
+/**
+ * Lyric size presets, exactly as the app defines them: each text size is
+ * paired with the number of lines the window shows at that size.
+ * See Linea/src/renderer/src/renderer.ts.
+ */
 const SIZES = {
-  small: { px: 13, label: 'S' },
-  medium: { px: 15, label: 'M' },
-  large: { px: 18, label: 'L' }
+  small: { px: 13, lines: 6, label: 'S' },
+  medium: { px: 15, lines: 5, label: 'M' },
+  large: { px: 18, lines: 3, label: 'L' }
 } as const
 type SizeKey = keyof typeof SIZES
+
+/** The demo ships on L — biggest type, three lines, as in the reference. */
+const DEFAULT_SIZE: SizeKey = 'large'
 
 interface Props {
   /** Which feature the demo should be demonstrating. */
@@ -28,10 +36,48 @@ interface Props {
 
 export default function OverlayDemo({ act = 'lyrics', choreograph = true, className }: Props) {
   const [trackIndex, setTrackIndex] = useState(0)
-  const track = TRACKS[trackIndex]
+  const baseTrack = TRACKS[trackIndex]
 
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
-  const [size, setSize] = useState<SizeKey>('medium')
+  /* --- Real lyrics ------------------------------------------------------
+     Fetched from lrclib through /api/lyrics on mount — the same source the
+     desktop app uses, rather than a copy checked into this repo. Until it
+     lands (or if it never does) the track keeps its placeholder lines, so
+     the panel is never empty. */
+  const [fetched, setFetched] = useState<{ lines: LyricLine[]; durationMs?: number } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/lyrics')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { lines?: LyricLine[] | null; durationMs?: number } | null) => {
+        if (cancelled || !data?.lines?.length) return
+        setFetched({ lines: data.lines, durationMs: data.durationMs })
+      })
+      .catch(() => {
+        /* keep the fallback */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const track = useMemo(
+    () =>
+      fetched
+        ? {
+            ...baseTrack,
+            lines: fetched.lines,
+            durationMs: fetched.durationMs ?? baseTrack.durationMs
+          }
+        : baseTrack,
+    [baseTrack, fetched]
+  )
+
+  // The panel does not own a theme of its own — it wears whatever the page
+  // is wearing, so the dark-mode act reads as one continuous change rather
+  // than a panel flipping inside a white page.
+  const { theme } = useTheme()
+  const [size, setSize] = useState<SizeKey>(DEFAULT_SIZE)
   const [timestamps, setTimestamps] = useState(false)
   const [pinned, setPinned] = useState(true)
   const [shuffle, setShuffle] = useState(false)
@@ -57,20 +103,42 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
     durationMs: track.durationMs,
     onEnded: nextTrack
   })
-  const { positionMs, playing, activeIndex, toggle, seek, play } = clock
+  const { positionMs, playing, activeIndex, toggle, seek, play, pause } = clock
 
-  /* --- Per-track jewel -------------------------------------------------
-     One hash picks the pattern and the accent, so the thumbnail, the active
-     lyric, the progress hairline and the seek thumb always agree. */
-  const jewelToken = useMemo(() => jewelForTrack(track.id), [track.id])
-  const [jewelHex, setJewelHex] = useState('#6d5b9e')
+  /* --- Keep the words moving -------------------------------------------
+     Real tracks have instrumental intros and bridges. In a lyrics demo a
+     silent stretch reads as "frozen", so when the current line has held
+     for a moment and the next cue is still far off, slip ahead to just
+     before it. The clock stays honest — this is a seek, and the scrub
+     moves with it. Also jumps a long outro so the loop never stalls. */
+  useEffect(() => {
+    if (!playing) return
+    const cur = activeIndex >= 0 ? track.lines[activeIndex] : undefined
+    const next = track.lines[activeIndex + 1]
+    const from = cur ? cur.t : 0
+    const target = next ? next.t : track.durationMs
+    if (target - from < 7000) return
+    const id = window.setTimeout(() => seek(target - 700), 3200)
+    return () => window.clearTimeout(id)
+  }, [activeIndex, playing, track, seek])
+
+  /* --- Accent ----------------------------------------------------------
+     The app picks a per-track jewel; the demo holds one indigo across every
+     track instead. On a page that already carries six palettes, a lyric
+     color that changes under you reads as noise rather than as a feature.
+     The per-track variation still shows in the thumbnail's *shape*, which
+     is what act 03 is about.
+
+     Read from CSS rather than hardcoded so it re-resolves when the panel
+     flips to dark, where indigo has to lift to stay legible. */
+  const [accentHex, setAccentHex] = useState('#4a4fa0')
 
   useLayoutEffect(() => {
     const panel = panelRef.current
     if (!panel) return
-    const resolved = getComputedStyle(panel).getPropertyValue(jewelToken).trim()
-    if (resolved) setJewelHex(resolved)
-  }, [jewelToken, theme])
+    const resolved = getComputedStyle(panel).getPropertyValue('--indigo').trim()
+    if (resolved) setAccentHex(resolved)
+  }, [theme])
 
   /* --- Choreography ----------------------------------------------------
      Each act nudges the demo into the state that demonstrates it. The
@@ -83,20 +151,61 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
     setTaken(false)
   }, [act])
 
+  // When the walkthrough lets go — scrolled past its end, or not started —
+  // the panel settles back to its resting look. Without this, the size
+  // cycling of the light/dark act keeps resizing the window while it rides
+  // off the screen. Never overrides a visitor who has taken the controls.
+  useEffect(() => {
+    if (choreograph || taken) return
+    setSettingsOpen(false)
+    setTimestamps(false)
+    setPointerInside(false)
+    setSize(DEFAULT_SIZE)
+  }, [choreograph, taken])
+
+  // The panel should never be sitting there stopped. Start the moment it
+  // mounts, whether or not an act is driving it.
+  useEffect(() => {
+    play()
+  }, [play])
+
   useEffect(() => {
     if (!choreograph || taken) return
 
     // Every act starts from the same baseline and then diverges.
     setSettingsOpen(act === 'yours')
     setTimestamps(act === 'lyrics')
-    setTheme(act === 'yours' ? 'dark' : 'light')
     setPointerInside(act === 'transport')
     if (!playing) play()
 
-    if (act !== 'yours') setSize('medium')
+    if (act !== 'yours') setSize(DEFAULT_SIZE)
 
-    // Act 03 walks the playlist so you can watch the accent change.
-    if (act === 'tile') {
+    // Act 02 works its own transport: a short pause, then play again —
+    // the click-anywhere-to-pause the copy promises, demonstrated.
+    if (act === 'transport') {
+      let resume = 0
+      const id = setInterval(() => {
+        pause()
+        resume = window.setTimeout(() => {
+          resume = 0
+          play()
+        }, 1000)
+      }, 5200)
+      return () => {
+        clearInterval(id)
+        // Only un-pause if the choreography itself was mid-pause — never
+        // override a pause the visitor chose.
+        if (resume) {
+          window.clearTimeout(resume)
+          play()
+        }
+      }
+    }
+
+    // Act 03 walks the playlist so you can watch each song draw its own
+    // shape. With a single demo track there is nothing to walk — the
+    // thumbnail still animates on its own.
+    if (act === 'tile' && TRACKS.length > 1) {
       const id = setInterval(nextTrack, 5200)
       return () => clearInterval(id)
     }
@@ -192,22 +301,24 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
 
   return (
     <div className={`${s.demoStage} ${className ?? ''}`}>
-      <div className={s.demoBed}>
-        <div className={s.demoBedLines} />
-
-        <div
-          ref={panelRef}
-          className={s.app}
+      <div
+        ref={panelRef}
+        className={s.app}
           data-theme={theme}
           data-pointer-inside={pointerInside}
           data-settings={settingsOpen}
           data-timestamps={timestamps}
           style={
             {
-              '--lyric-accent': jewelHex,
+              '--lyric-accent': accentHex,
               '--lyrics-size': `${SIZES[size].px}px`,
-              '--song-progress': progress,
-              aspectRatio: size === 'large' ? '720 / 290' : size === 'small' ? '720 / 225' : undefined
+              // Line count is part of the preset, not a separate setting —
+              // the app resizes the window to suit the type size.
+              '--visible-lines': SIZES[size].lines,
+              '--song-progress': progress
+              // No aspect ratio: the panel's height follows the three-line
+              // lyric window, so changing the lyric size resizes it the way
+              // the real window resizes.
             } as React.CSSProperties
           }
           onPointerEnter={() => {
@@ -220,7 +331,7 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
           <div className={s.stack}>
             {/* Top bar */}
             <header className={s.topbar}>
-              <Thumb trackId={track.id} color={jewelHex} playing={playing} size={30} />
+              <Thumb trackId={track.id} color={accentHex} playing={playing} size={30} />
               <div className={s.track}>
                 <span className={s.trackTitle}>{track.title}</span>
                 <span className={s.trackArtist}>{track.artist}</span>
@@ -261,14 +372,10 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
               <div className={s.settingsView}>
                 <div className={s.setRow}>
                   <span className={s.setLabel}>Theme</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={theme === 'dark'}
-                    aria-label="Dark theme"
-                    className={s.switch}
-                    onClick={stop(() => setTheme((t) => (t === 'dark' ? 'light' : 'dark')))}
-                  />
+                  {/* The app's own sun/moon control, at its settings-row
+                      size. Flips the whole page, same as the nav toggle —
+                      here the page stands in for the app. */}
+                  <ThemeToggle small />
                 </div>
                 <div className={s.setRow}>
                   <span className={s.setLabel}>Timestamps</span>
@@ -446,43 +553,11 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
           <svg className={`${s.corner} ${s.cornerSw}`} viewBox="0 0 24 24" aria-hidden="true">
             <path className={s.cornerArc} d="M 22 22 Q 2 22 2 2" />
           </svg>
-        </div>
       </div>
 
-      <div className={s.demoHint}>
-        <span className="mono">
-          <span className={s.demoHintNote}>
-            <span className={s.demoHintDot}>
-              <Icon name="mouse-pointer-2" size={10} />
-            </span>
-            hover to reveal the chrome · click to play · this is the real UI, running
-          </span>
-        </span>
-        <div className={s.demoActions}>
-          <button
-            type="button"
-            className={s.demoChip}
-            data-active={theme === 'dark'}
-            aria-pressed={theme === 'dark'}
-            onClick={() => {
-              takeOver()
-              setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-            }}
-          >
-            {theme === 'dark' ? 'Dark' : 'Light'}
-          </button>
-          <button
-            type="button"
-            className={s.demoChip}
-            onClick={() => {
-              takeOver()
-              nextTrack()
-            }}
-          >
-            Next track
-          </button>
-        </div>
-      </div>
+      {/* No caption and no chips. The panel is self-evidently interactive
+          once you touch it, and the row was setting a min-content width
+          wide enough to push the panel past the card and clip its edge. */}
     </div>
   )
 }

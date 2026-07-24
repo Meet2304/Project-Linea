@@ -9,46 +9,28 @@
 .demoStage {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   container-type: inline-size;
-}
-
-/* The faint "desktop" the panel floats over — enough to read as a layer
-   above something, never enough to compete with the panel. */
-.demoBed {
-  position: relative;
-  border-radius: var(--radius-xl);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  padding: clamp(18px, 4cqw, 40px);
-  overflow: hidden;
-}
-
-.demoBedLines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.55;
-  background-image:
-    linear-gradient(to right, var(--line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(closest-side at 50% 50%, #000 20%, transparent 92%);
 }
 
 /* --- The panel ------------------------------------------------ */
 
 .app {
   position: relative;
-  /* The real window is 720x250 and freely resizable. */
-  aspect-ratio: 720 / 250;
-  min-height: 210px;
+  /* Height comes from the content, not an aspect ratio: the lyric window
+     is pinned to exactly --visible-lines rows (see .lyrics), so the panel
+     is always as tall as three lines and no taller. */
+  --lyric-line-h: calc(var(--lyrics-size) * 1.32);
+  /* 9px between rows, as in the app's .lyrics-list. */
+  --lyric-gap: 9px;
+  --visible-lines: 3;
   padding: 12px;
   border-radius: var(--panel-radius);
   overflow: hidden;
   font-family: var(--font-sans);
   color: var(--text-primary);
   cursor: pointer;
-  transition: aspect-ratio var(--dur-slow) var(--ease);
 }
 
 /* The actual panel surface, drawn behind the content at --panel-alpha. */
@@ -84,7 +66,6 @@
 .stack {
   position: relative;
   z-index: 1;
-  height: 100%;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -202,10 +183,12 @@
 
 .nowView {
   position: relative;
-  flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  /* Room under the last line for the progress hairline, and for the
+     transport strip to sit in on hover instead of covering a lyric. */
+  padding-bottom: 28px;
 }
 
 /* Readability wash beneath the revealed control strip. */
@@ -235,14 +218,19 @@
   transition: opacity var(--chrome-dur) var(--chrome-ease);
 }
 
+/* Exactly three rows tall — three lines of lyrics visible at any moment,
+   which is what the app shows at its largest preset. */
 .lyrics {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  height: calc(
+    var(--visible-lines) * var(--lyric-line-h) + (var(--visible-lines) - 1) * var(--lyric-gap)
+  );
   margin-top: 12px;
   display: flex;
   border-radius: 0 0 calc(var(--panel-radius) - 12px) calc(var(--panel-radius) - 12px);
   overflow: hidden;
+  transition: height var(--dur) var(--ease);
 }
 
 /* Scroll cues — soft fades top and bottom. */
@@ -334,7 +322,7 @@
 .lyricsList {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: var(--lyric-gap);
   transition: mask-image var(--chrome-dur) var(--chrome-ease);
 }
 
@@ -344,6 +332,13 @@
   gap: 0;
   font-size: var(--lyrics-size);
   line-height: 1.32;
+  /* One row, always — a long lyric truncates rather than wrapping and
+     breaking the three-line window. */
+  height: var(--lyric-line-h);
+  flex: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--text-body);
   opacity: 0.51;
   text-align: left;
@@ -400,6 +395,9 @@
 .lyricText {
   min-width: 0;
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* --- Jump-to-current chip -------------------------------------- */
@@ -627,7 +625,10 @@
 /* --- Settings view --------------------------------------------- */
 
 .settingsView {
-  flex: 1;
+  /* Matches the lyric window so opening settings doesn't resize the panel. */
+  height: calc(
+    var(--visible-lines) * var(--lyric-line-h) + (var(--visible-lines) - 1) * var(--lyric-gap) + 28px
+  );
   min-height: 0;
   margin-top: 12px;
   display: flex;
@@ -743,66 +744,3 @@
   line-height: 1.32;
 }
 
-/* --- Caption under the stage ----------------------------------- */
-
-.demoHint {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-}
-
-.demoHintNote {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.demoHintDot {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1px solid currentColor;
-  flex-shrink: 0;
-}
-
-.demoActions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.demoChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: var(--radius-round);
-  border: 1px solid var(--line);
-  background: var(--white);
-  color: var(--steel);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    border-color var(--dur-fast) var(--ease),
-    color var(--dur-fast) var(--ease),
-    background var(--dur-fast) var(--ease);
-}
-
-.demoChip:hover {
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
-
-.demoChip[data-active='true'] {
-  border-color: var(--ink);
-  color: var(--ink);
-}

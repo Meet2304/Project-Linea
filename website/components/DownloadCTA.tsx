@@ -4,6 +4,11 @@ import Mono from './ui/Mono'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
 import type { ReleaseInfo } from '@/lib/release'
 
+/**
+ * The landing. After a page of motion, this one is nearly still: the plate
+ * runs at a fraction of its usual speed, and the only movement left is a
+ * slow ring breathing out of the download button.
+ */
 export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
   const pal = PALETTES.ink
   const pat = PATTERNS.star
@@ -14,7 +19,7 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
         position: 'relative',
         overflow: 'hidden',
         borderTop: '1px solid var(--line)',
-        background: 'var(--white)'
+        background: 'var(--surface-page)'
       }}
     >
       <CymaticField
@@ -27,7 +32,9 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
         color={pal.c1}
         color2={pal.c2}
         {...FIELD_BASE}
-        opacity={0.42}
+        speed={2}
+        ringSpeed={0.35}
+        opacity={0.38}
       />
       <div className="field-scrim" />
 
@@ -37,7 +44,7 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
           zIndex: 2,
           maxWidth: 'var(--container-text)',
           margin: '0 auto',
-          padding: 'clamp(80px, 10vw, 140px) clamp(20px, 4vw, 56px)',
+          padding: 'clamp(88px, 11vw, 150px) clamp(20px, 4vw, 56px)',
           textAlign: 'center',
           pointerEvents: 'none'
         }}
@@ -69,27 +76,61 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
 
         <div
           style={{
-            marginTop: 34,
+            marginTop: 36,
             display: 'flex',
             justifyContent: 'center',
             pointerEvents: 'auto'
           }}
         >
-          <DownloadButton release={release} />
+          <span className="cta-halo">
+            <DownloadButton release={release} />
+          </span>
         </div>
 
         <p
           style={{
-            margin: '28px auto 0',
+            margin: '30px auto 0',
             maxWidth: 460,
             fontSize: 'var(--text-sm)',
             lineHeight: 'var(--leading-relaxed)',
             color: 'var(--slate)'
           }}
         >
-          Needs a Spotify account. Playback control requires Premium; lyrics work on any plan.
+          Needs Spotify — Premium to control playback, lyrics on any plan.
         </p>
       </div>
+
+      <style>{`
+        .cta-halo {
+          position: relative;
+          display: inline-flex;
+        }
+        .cta-halo::before,
+        .cta-halo::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: var(--radius-round);
+          border: 1px solid var(--ink);
+          opacity: 0;
+          pointer-events: none;
+          animation: cta-breathe 4.2s var(--ease-out) infinite;
+        }
+        .cta-halo::after {
+          animation-delay: 2.1s;
+        }
+        @keyframes cta-breathe {
+          0% { transform: scale(1); opacity: 0.4; }
+          70% { transform: scale(1.45); opacity: 0; }
+          100% { transform: scale(1.45); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .cta-halo::before,
+          .cta-halo::after {
+            animation: none;
+          }
+        }
+      `}</style>
     </section>
   )
 }
