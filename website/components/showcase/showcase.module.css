@@ -1,0 +1,524 @@
+/* ============================================================
+   SHOWCASE — the hero and the feature walkthrough as one shot.
+
+   Three stacked layers, ordered by z-index rather than by DOM
+   position, because a `position: sticky` element always creates
+   a stacking context: anything nested inside the same sticky
+   box can never sit both behind and in front of the copy.
+
+     .bg       z 0   the full-bleed plate
+     .flow     z 1   hero copy, then the four act sentinels
+     .cardRail z 3   the pinned panel with the act copy beneath it
+
+   The card is a sticky element inside the flow, so its resting
+   place in the hero is just its natural position: no transform
+   maths, and it can never end up half off the bottom edge.
+
+   Act copy never scrolls. It sits in a fixed slot under the card
+   and crossfades in place as invisible sentinel panes pass the
+   middle of the viewport — so nothing travels the height of the
+   screen to reach the reader's eye.
+
+   `--handoff` (0 → 1) is written from a rAF-throttled scroll
+   listener and only handles the card *materialising* — the bed,
+   border and plate assembling around the panel.
+   ============================================================ */
+
+.showcase {
+  position: relative;
+  /* Where the pinned card comes to rest. */
+  --card-top: clamp(84px, 15svh, 150px);
+  /* Space reserved for the panel beneath the hero copy. Generous on
+     purpose: the demo is the hero's proof, so it sits high and fully in
+     view rather than resting on the fold. */
+  --hero-card-space: clamp(280px, 38svh, 400px);
+}
+
+/* --- Layer 0: the plate ---------------------------------------- */
+
+.bg {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Fades out completely as the walkthrough takes over, so the act copy
+   sits on flat page colour rather than a residual plate. */
+.heroField {
+  position: absolute;
+  inset: 0;
+  opacity: calc(1 - var(--handoff));
+  transition: opacity 200ms linear;
+}
+
+/* Fades with the plate it exists to quiet. Left opaque, its radial
+   shading would slide visibly up the screen when the section's end pushes
+   the sticky background out of the viewport. */
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: calc(1 - var(--handoff));
+  transition: opacity 200ms linear;
+  background: radial-gradient(
+    closest-side at 50% 40%,
+    rgb(var(--scrim-rgb) / 0.92) 10%,
+    rgb(var(--scrim-rgb) / 0.6) 38%,
+    rgb(var(--scrim-rgb) / 0) 70%
+  );
+}
+
+/* --- Layer 1: the scrolling flow -------------------------------- */
+
+.flow {
+  position: relative;
+  z-index: 1;
+  /* Ride back over the plate, which is pinned behind everything. */
+  margin-top: -100svh;
+  /* The panel underneath stays reachable; only real content opts in. */
+  pointer-events: none;
+}
+
+/* --- Hero pane -------------------------------------------------- */
+
+/* The card follows this in normal flow, so the pair has to be balanced as
+   one group: the pane claims the viewport minus roughly the card's height,
+   and centres the copy inside that. The result reads as copy-plus-panel
+   sitting centred on the screen, with the card fully visible rather than
+   clipped by the fold. */
+.heroPane {
+  min-height: calc(100svh - var(--hero-card-space, 224px));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  /* Top padding is nav clearance; bottom padding is the gap to the card. */
+  padding: clamp(76px, 11svh, 124px) clamp(24px, 6vw, 80px) clamp(18px, 3svh, 38px);
+}
+
+.heroInner {
+  max-width: 880px;
+  /* Recedes as the panel takes over, rather than simply scrolling off. */
+  opacity: calc(1 - var(--handoff) * 1.6);
+  transform: translateY(calc(var(--handoff) * -30px));
+  transition:
+    opacity 200ms linear,
+    transform 200ms linear;
+}
+
+.heroTitle {
+  margin: 20px 0 0;
+  font-size: clamp(42px, 6.6vw, 92px);
+  font-weight: 700;
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.heroSub {
+  margin: 20px auto 0;
+  max-width: 460px;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--text-body);
+}
+
+.heroCta {
+  display: flex;
+  gap: 16px;
+  margin-top: 30px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+  pointer-events: auto;
+}
+
+.heroSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 26px;
+  border-radius: var(--radius-round);
+  border: 1px solid var(--ink);
+  background: var(--surface-page);
+  color: var(--ink);
+  font-size: var(--text-base);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 160ms var(--ease),
+    background 220ms var(--ease);
+}
+
+.heroSecondary:hover {
+  transform: translateY(-1px);
+  background: var(--mist);
+}
+
+.heroSecondary:active {
+  transform: translateY(0);
+}
+
+/* --- Layer 3: the pinned card ----------------------------------- */
+
+.cardRail {
+  position: sticky;
+  top: var(--card-top);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* A sticky box releases when its bottom edge meets its container's, so
+     padding here *is* the guaranteed space below the final act's copy —
+     the text can never end up closer than this to the section's end. */
+  padding-bottom: clamp(120px, 18svh, 220px);
+  /* Only the card itself is interactive — the rest of the rail must let
+     clicks through to the copy beneath. */
+  pointer-events: none;
+}
+
+.card {
+  position: relative;
+  pointer-events: auto;
+  /* 660px panel plus the bed's own padding. */
+  width: min(708px, 92vw);
+  padding: calc(var(--handoff) * clamp(12px, 1.6vw, 24px));
+  border-radius: var(--radius-xl);
+  /* Nothing at all in the hero — no bed, no border — assembling itself
+     around the panel as the walkthrough begins. */
+  border: 1px solid color-mix(in srgb, var(--line) calc(var(--handoff) * 100%), transparent);
+  background: color-mix(in srgb, var(--surface-alt) calc(var(--handoff) * 100%), transparent);
+  overflow: hidden;
+  transform: scale(calc(0.97 + var(--handoff) * 0.03));
+  transition:
+    transform 160ms linear,
+    padding 200ms linear;
+}
+
+/* Copy passing behind the card needs something to pass behind. Fades in
+   with the rest of the bed so the hero stays clean. */
+.cardBacking {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--surface-alt);
+  opacity: var(--handoff);
+  pointer-events: none;
+}
+
+.cardField {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--handoff);
+}
+
+.fieldLayer {
+  position: absolute;
+  inset: 0;
+  transition: opacity 700ms var(--ease);
+}
+
+/* Quiets the plate directly under the panel so the overlay's own edge
+   still reads, without flattening the field at the margins. */
+.cardVeil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--handoff);
+  background: radial-gradient(
+    ellipse 66% 60% at 50% 50%,
+    rgb(var(--scrim-rgb) / 0.7) 0%,
+    rgb(var(--scrim-rgb) / 0.32) 55%,
+    rgb(var(--scrim-rgb) / 0) 100%
+  );
+}
+
+/* The real window is 720x250 with a 30px body gutter for its drop shadow,
+   which puts the panel itself at 660px wide. Matching that keeps the demo
+   the same object as the app rather than a stretched picture of it.
+   Capped here rather than on the card so the panel is the same width in
+   both phases, whether or not the card's padding has faded in. */
+.panelHolder {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 660px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+/* --- The focus slot --------------------------------------------- */
+
+/* One grid cell under the pinned card; every act's copy stacks in it, so
+   the slot is as tall as the tallest act and never shifts layout. Appears
+   with the card bed as the walkthrough begins. */
+.copySlot {
+  position: relative;
+  display: grid;
+  width: min(708px, 92vw);
+  margin-top: clamp(30px, 5svh, 52px);
+  text-align: center;
+  opacity: var(--handoff);
+  pointer-events: none;
+}
+
+.slotCopy {
+  grid-area: 1 / 1;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* The block never travels the screen — it settles into place from a few
+   pixels below (scrolling forward) or drifts a few pixels up (spent). */
+.slotCopy > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 520ms var(--ease),
+    transform 640ms var(--ease-out);
+}
+
+.slotCopy[data-state='past'] > * {
+  transform: translateY(-16px);
+}
+
+.slotCopy[data-state='active'] {
+  pointer-events: auto;
+}
+
+.slotCopy[data-state='active'] > * {
+  opacity: 1;
+  transform: none;
+}
+
+/* The incoming act cascades: each element lands a beat after the one
+   above it. Outgoing copy clears immediately, so the two never tangle. */
+.slotCopy[data-state='active'] > *:nth-child(1) {
+  transition-delay: 40ms;
+}
+.slotCopy[data-state='active'] > *:nth-child(2) {
+  transition-delay: 90ms;
+}
+.slotCopy[data-state='active'] > *:nth-child(3) {
+  transition-delay: 140ms;
+}
+.slotCopy[data-state='active'] > *:nth-child(4) {
+  transition-delay: 190ms;
+}
+.slotCopy[data-state='active'] > *:nth-child(5) {
+  transition-delay: 240ms;
+}
+
+/* --- Act sentinels ----------------------------------------------- */
+
+/* Desktop: nothing to see — each pane is the scroll distance one act
+   owns. The copy itself sits in the slot above. Short enough that moving
+   between acts is a flick, long enough that one act can't be skipped by
+   an ordinary scroll gesture. */
+.actPane {
+  position: relative;
+  z-index: 1;
+  height: clamp(340px, 58svh, 560px);
+}
+
+/* Mobile-only twin of the slot copy. */
+.paneCopy {
+  display: none;
+}
+
+/* Lets the final act rest under the demo before the rail rides away,
+   and keeps Under the Hood from crowding it. */
+.tail {
+  height: clamp(280px, 42svh, 480px);
+}
+
+.actNum {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.actTitle {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 42px);
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.actBody {
+  margin: 14px auto 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--ink-2);
+  max-width: 48ch;
+}
+
+/* Centred copy makes a bulleted column look lopsided, so the supporting
+   points run inline as one dot-separated row. */
+.points {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 20px;
+}
+
+.point {
+  position: relative;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--steel);
+}
+
+/* Separator between items, never before the first. */
+.point + .point::before {
+  content: '·';
+  position: absolute;
+  left: -12px;
+  opacity: 0.5;
+}
+
+.note {
+  margin: 16px auto 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--slate);
+  max-width: 46ch;
+}
+
+/* --- Progress rail ---------------------------------------------- */
+
+/* Which of the four you are on. Earns its place: the sequence is the
+   navigation, and there is no other cue that it is finite. */
+.rail {
+  position: fixed;
+  left: clamp(16px, 3vw, 40px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: var(--rail-opacity, 0);
+  transition: opacity 400ms var(--ease);
+  pointer-events: none;
+}
+
+.railDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transition:
+    background 420ms var(--ease),
+    transform 420ms var(--ease);
+}
+
+.railDot[data-active='true'] {
+  background: var(--ink);
+  transform: scale(1.7);
+}
+
+/* --- Narrow screens --------------------------------------------- */
+
+@media (max-width: 1023px) {
+  /* No pinning and no scroll-linked assembly: the panel sits once, the
+     copy stacks under it. */
+  .bg {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 78svh;
+  }
+
+  .heroField,
+  .heroScrim {
+    opacity: 1;
+  }
+
+  .flow {
+    margin-top: 0;
+  }
+
+  .heroPane {
+    min-height: 0;
+    padding: clamp(88px, 16svh, 140px) clamp(20px, 6vw, 40px) clamp(20px, 4svh, 40px);
+  }
+
+  .heroTitle {
+    font-size: clamp(38px, 9vw, 62px);
+  }
+
+  .heroInner {
+    opacity: 1;
+    transform: none;
+  }
+
+  .cardRail {
+    position: relative;
+    top: 0;
+    padding: 0 clamp(16px, 5vw, 32px);
+  }
+
+  .card {
+    transform: none;
+    width: 100%;
+    padding: clamp(10px, 3vw, 18px);
+    border-color: var(--line);
+    background: var(--surface-alt);
+  }
+
+  .cardBacking,
+  .cardField,
+  .cardVeil {
+    opacity: 1;
+  }
+
+  /* No pinned slot: the copy stacks in-flow under the panel instead. */
+  .copySlot {
+    display: none;
+  }
+
+  .actPane {
+    height: auto;
+    padding: 28px clamp(20px, 5vw, 40px);
+    text-align: center;
+  }
+
+  .paneCopy {
+    display: block;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  .tail {
+    display: none;
+  }
+
+  .rail {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .heroInner,
+  .heroField,
+  .copySlot,
+  .slotCopy > *,
+  .rail,
+  .fieldLayer {
+    transition: none;
+    animation: none;
+  }
+}

@@ -1,5 +1,6 @@
-import Wordmark from './ui/Wordmark'
+import CymaticField from './field/CymaticField'
 import Mono from './ui/Mono'
+import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
 import { ISSUES_URL, LICENSE_URL, NOTICE_URL, RELEASES_URL, REPO_URL } from '@/lib/release'
 
 const LINKS: { label: string; href: string }[] = [
@@ -11,32 +12,36 @@ const LINKS: { label: string; href: string }[] = [
   { label: 'lrclib', href: 'https://lrclib.net' }
 ]
 
+/**
+ * The sign-off: the name itself, edge to edge, with the live field showing
+ * through the letters. An SVG mask knocks "linea." out of a page-colored
+ * plate laid over the canvas — so the wordmark is not text *over* the
+ * waves, it is a window *into* them, and it answers the cursor like every
+ * other plate on the page.
+ */
 export default function Footer() {
+  const pal = PALETTES.iris
+  const pat = PATTERNS.weave
+
   return (
-    <footer style={{ borderTop: '1px solid var(--line)', background: 'var(--paper)' }}>
+    <footer style={{ borderTop: '1px solid var(--line)', background: 'var(--surface-alt)' }}>
+      <h2 className="sr-only">Linea</h2>
+
       <div
         style={{
           maxWidth: 'var(--container-linea)',
           margin: '0 auto',
-          padding: 'clamp(40px, 5vw, 64px) clamp(20px, 4vw, 56px)',
+          padding: 'clamp(36px, 5vw, 56px) clamp(20px, 4vw, 56px) clamp(10px, 2vw, 20px)',
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 32,
-          alignItems: 'flex-start',
+          gap: '16px 32px',
+          alignItems: 'baseline',
           justifyContent: 'space-between'
         }}
       >
-        <div>
-          <Wordmark size={24} />
-          <p style={{ margin: '14px 0 0', maxWidth: 260 }}>
-            <Mono tracking="0.14em">// see the shape of sound</Mono>
-          </p>
-        </div>
+        <Mono tracking="0.14em">// see the shape of sound</Mono>
 
-        <nav
-          aria-label="Footer"
-          style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 26px', maxWidth: 420 }}
-        >
+        <nav aria-label="Footer" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 26px' }}>
           {LINKS.map((l) => (
             <a
               key={l.label}
@@ -49,6 +54,61 @@ export default function Footer() {
             </a>
           ))}
         </nav>
+      </div>
+
+      {/* The living wordmark. A solid tinted plate sits at the bottom so
+          the letterforms always read as a word; the canvas adds moving
+          grain on top of it; the SVG lays the page color back over both
+          with the letters cut out. */}
+      <div style={{ position: 'relative', overflow: 'hidden' }} aria-hidden="true">
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'color-mix(in srgb, var(--amethyst) 34%, var(--surface-page))'
+          }}
+        />
+        <CymaticField
+          className="absolute inset-0"
+          style={pat.style}
+          n={7}
+          m={5}
+          scale={2.6}
+          seed={pat.seed}
+          color={pal.c1}
+          color2={pal.c2}
+          {...FIELD_BASE}
+          opacity={0.9}
+          ptAmt={0.35}
+        />
+        <svg
+          viewBox="0 0 1200 264"
+          style={{ position: 'relative', display: 'block', width: '100%', height: 'auto' }}
+        >
+          <mask id="linea-knockout">
+            <rect width="1200" height="264" fill="#ffffff" />
+            <text
+              x="600"
+              y="224"
+              textAnchor="middle"
+              textLength="1110"
+              lengthAdjust="spacingAndGlyphs"
+              fontSize="252"
+              fontWeight="700"
+              style={{ fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em' }}
+              fill="#000000"
+            >
+              linea.
+            </text>
+          </mask>
+          <rect
+            width="1200"
+            height="264"
+            fill="var(--surface-alt)"
+            mask="url(#linea-knockout)"
+            style={{ transition: 'fill 700ms var(--ease)' }}
+          />
+        </svg>
       </div>
 
       <div
@@ -68,6 +128,7 @@ export default function Footer() {
           }}
         >
           <Mono>MIT licensed · Lyrics by lrclib.net</Mono>
+          <Mono>Made by humans, on Earth</Mono>
           <Mono>Not affiliated with Spotify AB</Mono>
         </div>
       </div>

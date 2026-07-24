@@ -1,0 +1,83 @@
+/* Ported from `.theme-toggle` in Linea/src/renderer/assets/main.css.
+   Values kept identical so the site's toggle and the app's are the same
+   control. Slightly larger here because it sits in a nav rather than a
+   26px settings row. */
+
+.themeToggle {
+  width: 34px;
+  height: 34px;
+  padding: 6px;
+  border-radius: var(--radius-round);
+  flex-shrink: 0;
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+  transition:
+    background 350ms ease-in-out,
+    color 350ms ease-in-out,
+    box-shadow 350ms ease-in-out,
+    transform var(--dur-fast) var(--ease);
+}
+
+.themeToggle:active {
+  transform: scale(0.95);
+}
+
+/* The 26px settings-row version — the size the control has in the app. */
+.small {
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+}
+
+.themeToggle[aria-checked='true'] {
+  background: #000000;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffffff 12%, transparent);
+}
+
+.themeToggle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mask {
+  transition: transform 350ms ease-in-out;
+}
+
+.themeToggle[aria-checked='true'] .mask {
+  transform: translate(-12px, 10px);
+}
+
+.core {
+  transition: r 350ms ease-in-out;
+}
+
+.themeToggle[aria-checked='true'] .core {
+  r: 10;
+}
+
+.rays {
+  transform-origin: 16px 16px;
+  transition:
+    transform 350ms ease-in-out,
+    opacity 350ms ease-in-out;
+}
+
+.themeToggle[aria-checked='true'] .rays {
+  transform: rotate(-100deg) scale(0.5);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .themeToggle,
+  .mask,
+  .core,
+  .rays {
+    transition: none;
+  }
+}

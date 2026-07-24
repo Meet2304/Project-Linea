@@ -1,6 +1,7 @@
 import Wordmark from './ui/Wordmark'
 import Mono from './ui/Mono'
 import Icon from './ui/Icon'
+import ThemeToggle from './theme/ThemeToggle'
 import { REPO_URL } from '@/lib/release'
 
 const LINKS = [
@@ -27,7 +28,7 @@ export default function Nav() {
         // Extra room below the nav for the gradient to dissolve into.
         paddingBottom: 44,
         background:
-          'linear-gradient(to bottom, rgba(255,255,255,.97) 0%, rgba(255,255,255,.92) 34%, rgba(255,255,255,.6) 62%, rgba(255,255,255,.22) 82%, rgba(255,255,255,0) 100%)',
+          'linear-gradient(to bottom, rgb(var(--scrim-rgb) / .97) 0%, rgb(var(--scrim-rgb) / .92) 34%, rgb(var(--scrim-rgb) / .6) 62%, rgb(var(--scrim-rgb) / .22) 82%, rgb(var(--scrim-rgb) / 0) 100%)',
         pointerEvents: 'none'
       }}
     >
@@ -89,14 +90,18 @@ export default function Nav() {
               GitHub
             </Mono>
           </a>
+
+          <ThemeToggle />
         </div>
       </nav>
 
       <style>{`
-        /* A white halo under the type, so a stray dark node in the field
-           behind can never eat a letterform. */
+        /* A halo in the page color under the type, so a stray node in the
+           field behind can never eat a letterform. Follows the theme. */
         .nav-link span, .nav-wordmark {
-          text-shadow: 0 0 4px rgba(255,255,255,.95), 0 1px 2px rgba(255,255,255,.9);
+          text-shadow:
+            0 0 4px rgb(var(--scrim-rgb) / .95),
+            0 1px 2px rgb(var(--scrim-rgb) / .9);
         }
         .nav-link span { transition: opacity 180ms var(--ease); }
         .nav-link:hover span { opacity: .62; }

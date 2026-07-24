@@ -7,34 +7,37 @@ export interface Act {
   n: string
   eyebrow: string
   title: string
+  /** One or two short sentences. Resist adding a third. */
   body: string
-  /** Short supporting points — the specifics a GitHub audience wants. */
+  /** Three at most, a few words each — these are glanced at, not read. */
   points: string[]
   /** Honest caveat where one exists. Rendered small and quiet. */
   note?: string
   palette: Palette
   pattern: Pattern
+  /**
+   * Invert the whole page while this act is on screen, then hand the
+   * visitor's theme back when it scrolls away.
+   */
+  invertsTheme?: boolean
 }
 
 /**
- * Four acts, each pairing one feature with its own plate and palette. The
- * copy comes from the app's actual behavior — nothing here is aspirational.
- * Click-through and the summon shortcut are deliberately left out; they live
- * in the README rather than on the page.
+ * Four acts, each pairing one feature with its own plate and palette.
+ * Everything here describes what the app actually does.
+ *
+ * Click-through and the summon shortcut are deliberately left out; they
+ * live in the README rather than on the page.
  */
 export const ACTS: Act[] = [
   {
     id: 'lyrics',
     n: '01',
     eyebrow: '// live lyrics',
-    title: 'The words, in time',
-    body: 'Timestamped lyrics from lrclib, lit line by line as the song moves. The current line stays centered, so you can glance down and be exactly where the music is.',
-    points: [
-      'Scroll ahead to read on — the “Now” chip brings you back in one tap',
-      'Optional timestamps beside every line',
-      'Lyrics cache to disk, so a track you have played before loads instantly'
-    ],
-    note: 'Coverage depends on lrclib. Not every track has synced lyrics.',
+    title: 'Never lose your place',
+    body: 'Lyrics move with the song. Your line stays centered.',
+    points: ['Scroll ahead, tap once to return', 'Timestamps if you want them'],
+    note: 'Lyrics come from lrclib — not every track has them.',
     palette: PALETTES.iris,
     pattern: PATTERNS.weave
   },
@@ -42,14 +45,10 @@ export const ACTS: Act[] = [
     id: 'transport',
     n: '02',
     eyebrow: '// playback',
-    title: 'Controls that stay on top',
-    body: 'Play, pause, skip, scrub, shuffle and repeat from a surface that floats above every window. The controls stay invisible until you reach for them.',
-    points: [
-      'The progress hairline along the panel edge becomes the scrubber on hover',
-      'Click anywhere on the panel to play or pause',
-      'Drag the top bar to move it, any edge or corner to resize'
-    ],
-    note: 'Playback control requires Spotify Premium. Lyrics work on any account.',
+    title: 'Skip a track without leaving',
+    body: 'Play, pause and scrub without switching windows.',
+    points: ['Sits above every window', 'Click anywhere to pause'],
+    note: 'Control needs Spotify Premium — lyrics work on any plan.',
     palette: PALETTES.tide,
     pattern: PATTERNS.ripple
   },
@@ -57,28 +56,24 @@ export const ACTS: Act[] = [
     id: 'tile',
     n: '03',
     eyebrow: '// cymatics',
-    title: 'A shape for every song',
-    body: 'Instead of album art, Linea draws a standing wave. The track seeds the pattern and the color, so every song arrives looking like itself — and keeps moving while it plays.',
-    points: [
-      'Pure math on a canvas, run through an ordered dither — never an image',
-      'The track’s color carries through the lyrics, the hairline and the scrubber',
-      'It evolves while playing and holds still when paused'
-    ],
+    title: 'Every song gets a shape',
+    body: 'No album art — each track is drawn live as a standing wave.',
+    points: ['Unique to every song', 'Never an image'],
     palette: PALETTES.ink,
     pattern: PATTERNS.bloom
   },
   {
     id: 'yours',
     n: '04',
-    eyebrow: '// make it yours',
-    title: 'Quiet, the way you want it',
-    body: 'A pure-white layer or near-black glass. Three lyric sizes with a live preview, so you can set it once from across the room and forget about it.',
-    points: [
-      'Light and dark, one toggle away',
-      'Small, medium and large — the window resizes to match',
-      'Pin it on top, or let it fall behind while you work'
-    ],
+    eyebrow: '// light & dark',
+    title: 'Two looks, your call',
+    // The page flips to whichever mode the visitor is *not* in while this
+    // act is on screen, so the copy has to read true in either direction.
+    body: 'You’re looking at the other side right now — Linea wears whichever you pick.',
+    points: ['Three lyric sizes', 'Pin it, or let it fall behind'],
     palette: PALETTES.dusk,
-    pattern: PATTERNS.drift
+    pattern: PATTERNS.drift,
+    // Shows the visitor the mode they are not in, then gives theirs back.
+    invertsTheme: true
   }
 ]

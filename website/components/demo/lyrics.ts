@@ -1,12 +1,14 @@
 /**
- * Canned playlist for the overlay demo.
+ * The demo track.
  *
- * The real app pulls timestamped LRC from lrclib.net. Shipping actual song
- * lyrics on a marketing page would mean redistributing someone else's
- * copyrighted text, so every track and every line below is original writing
- * for this demo — fictional songs by fictional artists, in the brand's voice.
- * The *shape* of the data (ms timestamps, one line per cue) is exactly what
- * the renderer consumes.
+ * The song is "Indigo" by Henry Moodie. Its lyrics are **not** stored here:
+ * they are fetched from lrclib.net at request time by /api/lyrics, which is
+ * exactly what the desktop app does (Linea/src/main/lyrics.ts). Song lyrics
+ * are copyrighted, and committing a full set to a public repo — then serving
+ * it from our own origin — would be redistribution rather than a demo.
+ *
+ * FALLBACK below is original writing, used only when lrclib has no synced
+ * match or the request fails, so the panel is never empty.
  */
 
 export interface LyricLine {
@@ -16,7 +18,7 @@ export interface LyricLine {
 }
 
 export interface DemoTrack {
-  /** Stands in for a Spotify track id — seeds the pattern and jewel accent. */
+  /** Seeds the thumbnail's pattern, standing in for a Spotify track id. */
   id: string
   title: string
   artist: string
@@ -24,70 +26,58 @@ export interface DemoTrack {
   lines: LyricLine[]
 }
 
-export const TRACKS: DemoTrack[] = [
-  {
-    id: 'linea-demo-still-water',
-    title: 'Still Water',
-    artist: 'Hollow Coast',
-    durationMs: 227_000,
-    lines: [
-      { t: 0, text: 'Still water, still morning' },
-      { t: 6_400, text: 'the room has not decided yet' },
-      { t: 12_900, text: 'what kind of day it wants to be' },
-      { t: 19_600, text: 'so I let it stay undecided' },
-      { t: 26_800, text: 'and I put a record on' },
-      { t: 33_200, text: 'Something with a low ceiling' },
-      { t: 39_900, text: 'something that knows how to wait' },
-      { t: 46_700, text: 'The kettle finds the note first' },
-      { t: 53_400, text: 'and everything else agrees' },
-      { t: 60_800, text: 'Sand on a plate, finding the line' },
-      { t: 68_000, text: 'the shape was always there' },
-      { t: 75_100, text: 'we only needed something to sing' },
-      { t: 82_600, text: 'Still water, still morning' },
-      { t: 89_400, text: 'and nothing asking to be solved' },
-      { t: 96_800, text: 'I have the whole thing to myself' },
-      { t: 104_200, text: 'and the whole thing has me' }
-    ]
-  },
-  {
-    id: 'linea-demo-paper-lantern',
-    title: 'Paper Lantern',
-    artist: 'Ivy & the Long Room',
-    durationMs: 198_000,
-    lines: [
-      { t: 0, text: 'You left a light on in the hallway' },
-      { t: 7_200, text: 'a small one, the kind that means come back' },
-      { t: 14_600, text: 'I have been circling the block' },
-      { t: 21_300, text: 'rehearsing what I meant to say' },
-      { t: 28_900, text: 'A paper lantern in the rain' },
-      { t: 35_800, text: 'holding its shape anyway' },
-      { t: 43_100, text: 'That is all I ever wanted to be' },
-      { t: 50_400, text: 'Bright, and not built to last' },
-      { t: 58_200, text: 'and still worth carrying home' },
-      { t: 66_000, text: 'You left a light on in the hallway' },
-      { t: 73_500, text: 'I am taking that as a yes' }
-    ]
-  },
-  {
-    id: 'linea-demo-north-window',
-    title: 'North Window',
-    artist: 'Field Notes',
-    durationMs: 241_000,
-    lines: [
-      { t: 0, text: 'Winter gets in through the north window' },
-      { t: 7_800, text: 'the way an old song gets in' },
-      { t: 15_200, text: 'sideways, and without knocking' },
-      { t: 22_600, text: 'I have stopped trying to close it' },
-      { t: 30_400, text: 'Some cold is worth the view' },
-      { t: 38_100, text: 'Frost writes the same word every night' },
-      { t: 45_900, text: 'and every morning takes it back' },
-      { t: 53_600, text: 'I think that is a kind of patience' },
-      { t: 61_200, text: 'I think that is a kind of love' },
-      { t: 69_400, text: 'Winter gets in through the north window' },
-      { t: 77_000, text: 'and I let it have the chair' }
-    ]
-  }
+/** Original placeholder lines. Not the real song. */
+const FALLBACK: LyricLine[] = [
+  { t: 0, text: 'Loading the words…' },
+  { t: 4_000, text: 'Linea pulls synced lyrics from lrclib' },
+  { t: 9_000, text: 'the same way the app does' },
+  { t: 14_000, text: 'and lines them up with the song' },
+  { t: 19_000, text: 'so you never lose your place' },
+  { t: 24_000, text: 'Open it, and forget it is there' }
 ]
+
+export const DEMO_TRACK: DemoTrack = {
+  id: 'henry-moodie-indigo',
+  title: 'Indigo',
+  artist: 'Henry Moodie',
+  durationMs: 168_000,
+  lines: FALLBACK
+}
+
+/** Every track the demo can show. One, for now. */
+export const TRACKS: DemoTrack[] = [DEMO_TRACK]
+
+/**
+ * Parse an LRC body into timestamped lines.
+ * Mirrors the app's own parser: `[mm:ss.xx]` prefixes, blank cues dropped.
+ */
+export function parseLrc(lrc: string): LyricLine[] {
+  const out: LyricLine[] = []
+  const stamp = /\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g
+
+  for (const raw of lrc.split(/\r?\n/)) {
+    stamp.lastIndex = 0
+    const stamps: number[] = []
+    let match: RegExpExecArray | null
+
+    while ((match = stamp.exec(raw)) !== null) {
+      const min = Number(match[1])
+      const sec = Number(match[2])
+      // A 2-digit fraction is centiseconds, 3 is milliseconds.
+      const frac = match[3] ?? '0'
+      const ms = frac.length === 3 ? Number(frac) : Number(frac) * 10
+      stamps.push(min * 60_000 + sec * 1000 + ms)
+    }
+
+    if (!stamps.length) continue
+    const text = raw.replace(stamp, '').trim()
+    // Instrumental cues carry a timestamp but no words — skip them.
+    if (!text) continue
+    for (const t of stamps) out.push({ t, text })
+  }
+
+  return out.sort((a, b) => a.t - b.t)
+}
 
 /** Index of the line active at `ms`, or -1 before the first cue. */
 export function activeLineIndex(lines: LyricLine[], ms: number): number {
@@ -113,7 +103,7 @@ export function formatTime(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-/** `[mm:ss.cc]` — the LRC timestamp the app can optionally show per line. */
+/** `m:ss` — the timestamp the app can optionally show beside each line. */
 export function formatLrcStamp(ms: number): string {
   const total = Math.max(0, ms)
   const m = Math.floor(total / 60_000)
