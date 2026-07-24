@@ -79,10 +79,12 @@ export default function Nav() {
               padding: '9px 17px',
               borderRadius: 'var(--radius-round)',
               border: '1px solid var(--ink)',
-              color: 'var(--white)',
+              // Ink flips with the theme; on-accent keeps label + icon readable.
+              color: 'var(--text-on-accent)',
               textDecoration: 'none',
               background: 'var(--ink)',
-              transition: 'background 220ms var(--ease), border-color 220ms var(--ease)'
+              transition:
+                'background 220ms var(--ease), border-color 220ms var(--ease), color 220ms var(--ease)'
             }}
           >
             <Icon name="github" size={15} />
