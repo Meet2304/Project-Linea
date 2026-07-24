@@ -7,7 +7,7 @@ import {
   detectPlatform,
   formatSize,
   PLATFORM_LABEL,
-  REPO_URL,
+  RELEASES_URL,
   type Platform,
   type ReleaseInfo
 } from '@/lib/release'
@@ -27,6 +27,11 @@ interface Props {
  * Platform detection has to happen on the client, so the first paint shows
  * the neutral "Download" label and it specialises on mount — that avoids a
  * hydration mismatch and still reads correctly with JS disabled.
+ *
+ * Until a release is tagged there is no asset to point at, so the button
+ * falls back to the Releases page rather than a 404. It stays labelled
+ * "Download": this is the one call to action on the page and swapping it for
+ * something else undersells the product.
  */
 export default function DownloadButton({
   release,
@@ -37,31 +42,28 @@ export default function DownloadButton({
   const [platform, setPlatform] = useState<Platform | null>(null)
   useEffect(() => setPlatform(detectPlatform()), [])
 
-  const hasRelease = release.tag !== null
   const primaryAsset =
     platform === 'win' ? release.assets.win : platform === 'mac' ? release.assets.mac : undefined
   const otherKey = platform === 'win' ? 'mac' : 'win'
   const otherAsset = release.assets[otherKey]
 
-  // No release yet, or we don't build for this OS: send people to the source
-  // rather than to a dead link.
-  const buildFromSource = !hasRelease || !primaryAsset
-
-  const href = buildFromSource ? REPO_URL : primaryAsset!.url
-  const label = buildFromSource
-    ? 'Build from source'
-    : platform
+  const href = primaryAsset?.url ?? RELEASES_URL
+  const label =
+    platform === 'win' || platform === 'mac'
       ? `Download for ${PLATFORM_LABEL[platform]}`
-      : 'Download'
+      : 'Download Linea'
 
-  const pad = size === 'lg' ? '14px 26px' : '10px 20px'
+  const pad = size === 'lg' ? '15px 28px' : '11px 21px'
   const fontSize = size === 'lg' ? 'var(--text-base)' : 'var(--text-sm)'
 
   return (
-    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+    <div
+      style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}
+    >
       <a
+        className="dl-primary"
         href={href}
-        {...(buildFromSource ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
+        {...(primaryAsset ? {} : { target: '_blank', rel: 'noreferrer noopener' })}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -74,36 +76,35 @@ export default function DownloadButton({
           fontWeight: 500,
           letterSpacing: '-0.01em',
           textDecoration: 'none',
-          boxShadow: 'var(--shadow-sm)',
-          transition: 'background 220ms var(--ease), transform 120ms var(--ease)'
+          boxShadow: 'var(--shadow-md)',
+          transition: 'transform 160ms var(--ease), box-shadow 220ms var(--ease)'
         }}
       >
-        <Icon name={buildFromSource ? 'terminal' : 'download'} size={size === 'lg' ? 18 : 16} />
+        <Icon name="download" size={size === 'lg' ? 18 : 16} />
         {label}
       </a>
 
-      {showMeta && (
+      {/* Only render the meta line when it actually says something. With no
+          release there is no version or size to report, and a placeholder
+          there just reads as an apology under the main CTA. */}
+      {showMeta && primaryAsset && (
         <Mono style={{ paddingLeft: 4 }}>
-          {buildFromSource ? (
-            <>Windows &amp; macOS builds coming</>
-          ) : (
+          {release.tag} · {formatSize(primaryAsset.size)}
+          {otherAsset && (
             <>
-              {release.tag} · {formatSize(primaryAsset!.size)}
-              {otherAsset && (
-                <>
-                  {' · '}
-                  <a
-                    href={otherAsset.url}
-                    style={{ color: 'var(--steel)', textDecoration: 'underline' }}
-                  >
-                    also for {PLATFORM_LABEL[otherKey]}
-                  </a>
-                </>
-              )}
+              {' · '}
+              <a href={otherAsset.url} style={{ color: 'var(--steel)', textDecoration: 'underline' }}>
+                also for {PLATFORM_LABEL[otherKey]}
+              </a>
             </>
           )}
         </Mono>
       )}
+
+      <style>{`
+        .dl-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+        .dl-primary:active { transform: translateY(0); }
+      `}</style>
     </div>
   )
 }
