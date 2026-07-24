@@ -1,6 +1,8 @@
 export const IPC = {
   TOGGLE_CLICK_THROUGH: 'linea:toggle-click-through',
   GET_CLICK_THROUGH_STATE: 'linea:get-click-through-state',
+  /** Renderer reports whether the cursor is over the visible panel (not gutter). */
+  SET_POINTER_OVER_PANEL: 'linea:set-pointer-over-panel',
   SPOTIFY_LOGIN: 'linea:spotify-login',
   SPOTIFY_LOGOUT: 'linea:spotify-logout',
   SPOTIFY_AUTH_STATE: 'linea:spotify-auth-state',

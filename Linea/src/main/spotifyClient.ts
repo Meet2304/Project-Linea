@@ -62,16 +62,30 @@ async function parseBody(response: Response): Promise<unknown> {
 
 function mapErrorResult(status: number, body: unknown, retryAfterMs?: number): ApiResult<never> {
   const err = (body as SpotifyErrorBody | null)?.error
+  const reason = err?.reason ?? ''
+  const message = err?.message ?? ''
   if (status === 429) return { ok: false, reason: 'rate_limited', retryAfterMs }
   if (status === 404) return { ok: false, reason: 'no_device' }
   if (status === 403) {
-    if (err?.reason === 'PREMIUM_REQUIRED' || /premium/i.test(err?.message ?? '')) {
+    // Only treat explicit Premium failures as premium_required. Spotify also
+    // returns 403 for missing devices / restrictions, and a blanket default
+    // made Premium users see a false "Premium required" toast.
+    if (reason === 'PREMIUM_REQUIRED' || /premium required/i.test(message)) {
       return { ok: false, reason: 'premium_required' }
     }
-    if (/scope/i.test(err?.message ?? '')) {
+    if (
+      reason === 'NO_ACTIVE_DEVICE' ||
+      /no active device/i.test(message) ||
+      /device not found/i.test(message) ||
+      /restriction/i.test(message) ||
+      /player command failed/i.test(message)
+    ) {
+      return { ok: false, reason: 'no_device' }
+    }
+    if (reason === 'INSUFFICIENT_CLIENT_SCOPE' || /scope/i.test(message)) {
       return { ok: false, reason: 'insufficient_scope' }
     }
-    return { ok: false, reason: 'premium_required' }
+    return { ok: false, reason: 'network' }
   }
   if (status === 401) return { ok: false, reason: 'auth_expired' }
   return { ok: false, reason: 'network' }

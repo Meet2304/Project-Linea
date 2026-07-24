@@ -47,12 +47,13 @@ let connected = false
 let player: PlayerState | null = null
 let lines: LyricLine[] = []
 let prefs: Prefs = {
-  opacity: 0.95,
+  opacity: 0.98,
   lyricsSize: 'medium',
   theme: 'light',
   pinned: true,
   lyricsExpanded: true,
-  showTimestamps: false
+  showTimestamps: false,
+  windowBounds: null
 }
 let dragging = false
 let seekHoldUntil = 0
@@ -400,11 +401,76 @@ function wireCornerHints(): void {
 }
 
 // ------------------------------------------------------------------
+// Custom window drag (top bar / connect view). CSS -webkit-app-region
+// drag breaks under selective setIgnoreMouseEvents for the shadow gutter,
+// so placement is driven through SET_WINDOW_BOUNDS instead.
+// ------------------------------------------------------------------
+function isDragExcluded(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest('button, input, a, .grip, [data-no-drag]'))
+  )
+}
+
+/** Set after a window drag/resize so the trailing `click` doesn't toggle playback. */
+let suppressPlayPauseClick = false
+
+async function beginWindowDrag(event: PointerEvent): Promise<void> {
+  event.preventDefault()
+  // Top bar / connect are move handles — never treat the gesture as play/pause,
+  // even when the pointer barely moves (a plain click on the drag surface).
+  suppressPlayPauseClick = true
+  void window.linea.setPointerOverPanel(true)
+  const b = await window.linea.getWindowBounds()
+  const startX = event.screenX
+  const startY = event.screenY
+  let raf = 0
+  let pending: { x: number; y: number; width: number; height: number } | null = null
+
+  const flush = (): void => {
+    raf = 0
+    if (pending) void window.linea.setWindowBounds(pending)
+  }
+  const onMove = (e: PointerEvent): void => {
+    pending = {
+      x: Math.round(b.x + (e.screenX - startX)),
+      y: Math.round(b.y + (e.screenY - startY)),
+      width: b.width,
+      height: b.height
+    }
+    if (!raf) raf = requestAnimationFrame(flush)
+  }
+  const onUp = (): void => {
+    window.removeEventListener('pointermove', onMove)
+    void window.linea.setPointerOverPanel(el.app.matches(':hover'))
+    // Safety clear so a missed click can't swallow the next lyrics tap.
+    // Long enough that the trailing `click` (if any) still sees the flag.
+    window.setTimeout(() => {
+      suppressPlayPauseClick = false
+    }, 50)
+  }
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', onUp, { once: true })
+}
+
+function wireWindowDrag(handle: HTMLElement): void {
+  handle.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return
+    if (isDragExcluded(event.target)) return
+    void beginWindowDrag(event)
+  })
+}
+
+// ------------------------------------------------------------------
 // Custom edge/corner resize (grips sit on the panel edge, not the
 // shadow — the OS border is out in the transparent gutter).
 // ------------------------------------------------------------------
 async function beginResize(edge: string, event: PointerEvent): Promise<void> {
   event.preventDefault()
+  suppressPlayPauseClick = true
+  // Keep the window capturing mouse for the whole drag, even if the cursor
+  // leaves the panel into the transparent gutter.
+  void window.linea.setPointerOverPanel(true)
   const b = await window.linea.getWindowBounds()
   const startX = event.screenX
   const startY = event.screenY
@@ -434,6 +500,10 @@ async function beginResize(edge: string, event: PointerEvent): Promise<void> {
   }
   const onUp = (): void => {
     window.removeEventListener('pointermove', onMove)
+    void window.linea.setPointerOverPanel(el.app.matches(':hover'))
+    window.setTimeout(() => {
+      suppressPlayPauseClick = false
+    }, 50)
   }
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp, { once: true })
@@ -578,13 +648,18 @@ function wireTransport(): void {
 
   el.btnClose.addEventListener('click', () => void window.linea.closeWindow())
 
-  // Click empty panel chrome / lyrics to play or pause — skip real controls.
+  // Click lyrics / empty chrome to play or pause — never the drag handles
+  // (top bar / connect) or real controls, and never after a move/resize.
   el.app.addEventListener('click', (event) => {
+    if (suppressPlayPauseClick) {
+      suppressPlayPauseClick = false
+      return
+    }
     const target = event.target
     if (!(target instanceof Element)) return
     if (
       target.closest(
-        'button, input, a, label, .grip, .corner, .switch, .segmented, .theme-toggle, #settings-view, .controls'
+        'button, input, a, label, .grip, .corner, .switch, .segmented, .theme-toggle, #settings-view, .controls, .topbar, .connect'
       )
     ) {
       return
@@ -723,6 +798,10 @@ async function init(): Promise<void> {
   wireResizeGrips()
   wireCornerHints()
 
+  const topbar = el.playerView.querySelector<HTMLElement>('.topbar')
+  if (topbar) wireWindowDrag(topbar)
+  wireWindowDrag(el.connectView)
+
   el.connectBtn.addEventListener('click', () => void connect())
 
   initSettings({
@@ -774,8 +853,16 @@ async function init(): Promise<void> {
 
   // Drive chrome from real pointer enter/leave (not CSS :hover), so controls
   // appear on hover without a click, and clear cleanly when focus leaves.
-  el.app.addEventListener('pointerenter', () => setPointerInside(true))
-  el.app.addEventListener('pointerleave', () => setPointerInside(false))
+  // Also tell main whether to capture mouse — the shadow gutter must stay
+  // click-through so desktop items under it remain interactive.
+  el.app.addEventListener('pointerenter', () => {
+    setPointerInside(true)
+    void window.linea.setPointerOverPanel(true)
+  })
+  el.app.addEventListener('pointerleave', () => {
+    setPointerInside(false)
+    void window.linea.setPointerOverPanel(false)
+  })
 
   window.linea.onPlayerError((event) => toastForReason(event.reason))
 
@@ -793,7 +880,9 @@ async function init(): Promise<void> {
   reflectClickThrough(clickThrough)
   el.app.dataset.clickthrough = String(clickThrough)
   setWindowFocused(document.hasFocus())
-  setPointerInside(el.app.matches(':hover'))
+  const hovering = el.app.matches(':hover')
+  setPointerInside(hovering)
+  void window.linea.setPointerOverPanel(hovering)
   setConnected(authState)
   refreshPlayerUi()
 }
@@ -803,7 +892,9 @@ function setPointerInside(inside: boolean): void {
   el.app.dataset.pointerInside = String(inside)
 }
 
-/** When focus leaves Linea, drop hover chrome even if the cursor still rests here. */
+/** When focus leaves Linea, drop hover chrome even if the cursor still rests here.
+ *  Mouse capture stays tied to real pointerenter/leave — not focus — so the
+ *  panel remains interactive while the cursor is over it. */
 function setWindowFocused(focused: boolean): void {
   el.app.dataset.windowFocus = String(focused)
   if (!focused) {
