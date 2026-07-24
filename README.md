@@ -27,3 +27,28 @@ Just a minimal, floating window that stays out of your way while keeping you con
 - **Always reachable** — a system-tray icon and a summon shortcut (`Ctrl+Shift+L`) bring the window back to the front even when it's unpinned and buried behind other apps
 - **Fast by design** — event-driven lyric scheduling (no always-on loop), adaptive polling that backs off when idle, and crash-resilient main/renderer error handling
 </p>
+
+## Repository layout
+
+| Path | What it is |
+| --- | --- |
+| `Linea/` | The Electron app |
+| `website/` | The marketing site (Next.js) — see [`website/README.md`](./website/README.md) |
+| `documentation/` | Internal design and build notes |
+
+## Website
+
+```bash
+cd website
+bun install
+bun run dev        # http://localhost:3000
+```
+
+## License
+
+Linea is [MIT licensed](./LICENSE). Third-party attributions — Electron, the
+Outfit and Space Mono typefaces, Lucide icons, and lyrics from
+[lrclib.net](https://lrclib.net) — are listed in [NOTICE.md](./NOTICE.md).
+
+Linea is an independent project and is not affiliated with, endorsed by, or
+sponsored by Spotify AB.

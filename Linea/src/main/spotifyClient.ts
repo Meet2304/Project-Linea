@@ -108,10 +108,13 @@ export async function spotifyFetch(
   }
   if (!token) return { ok: false, reason: 'auth_expired' }
 
+  // Timeout so a hung request surfaces as 'network' instead of stalling
+  // the poll loop forever (fetch has no default timeout).
   const doFetch = (bearer: string): Promise<Response> =>
     fetch(`${API_BASE}${path}`, {
       ...init,
-      headers: { ...(init.headers ?? {}), Authorization: `Bearer ${bearer}` }
+      headers: { ...(init.headers ?? {}), Authorization: `Bearer ${bearer}` },
+      signal: AbortSignal.timeout(15_000)
     })
 
   let response: Response

@@ -1,0 +1,187 @@
+.section {
+  position: relative;
+  max-width: var(--container-wide);
+  margin: 0 auto;
+  padding: clamp(72px, 10vw, 130px) clamp(20px, 4vw, 56px) clamp(40px, 6vw, 90px);
+}
+
+.intro {
+  max-width: 620px;
+  margin-bottom: clamp(40px, 6vw, 72px);
+}
+
+.introTitle {
+  margin: 14px 0 0;
+  font-size: clamp(30px, 4vw, 48px);
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+
+.introBody {
+  margin: 16px 0 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--text-muted, var(--steel));
+  max-width: 520px;
+}
+
+/* --- Desktop: sticky demo, scrolling copy ---------------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: clamp(40px, 5vw, 80px);
+  align-items: start;
+}
+
+.stickyCol {
+  position: sticky;
+  /* Centre the panel in the viewport rather than pinning it to the top —
+     the copy should scroll past it, not under a top-aligned block. */
+  top: 50%;
+  transform: translateY(-50%);
+  align-self: start;
+}
+
+.fieldWrap {
+  position: relative;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.fieldLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 620ms var(--ease);
+}
+
+.actLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  min-height: 20px;
+}
+
+.actRule {
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.25;
+}
+
+.copyCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.block {
+  min-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 0;
+  opacity: 0.32;
+  transition: opacity 520ms var(--ease);
+}
+
+.block[data-active='true'] {
+  opacity: 1;
+}
+
+.blockNum {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.blockTitle {
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 40px);
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+
+.blockBody {
+  margin: 18px 0 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--ink-2);
+  max-width: 460px;
+}
+
+.points {
+  list-style: none;
+  margin: 26px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 460px;
+}
+
+.point {
+  position: relative;
+  padding-left: 20px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--steel);
+}
+
+/* A filled dot standing in for a wave source — the one bespoke glyph. */
+.point::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.note {
+  margin: 26px 0 0;
+  padding: 12px 14px;
+  border-left: 2px solid var(--line);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--slate);
+  max-width: 440px;
+}
+
+/* --- Mobile: no sticky, no scroll-jacking ---------------------- */
+
+.mobileDemo {
+  display: none;
+  margin-bottom: 48px;
+}
+
+@media (max-width: 1023px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .stickyCol {
+    display: none;
+  }
+
+  .mobileDemo {
+    display: block;
+  }
+
+  .block {
+    min-height: 0;
+    opacity: 1;
+    padding: 30px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .block:first-child {
+    border-top: none;
+  }
+}

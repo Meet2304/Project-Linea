@@ -1,0 +1,287 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   LINEA — DESIGN TOKENS
+   Ported verbatim from the "Linea Design System" Claude Design
+   project and kept in lockstep with the app's
+   Linea/src/renderer/assets/tokens.css. Values must not drift:
+   the overlay demo in this site is a replica of that renderer,
+   and the two are compared side by side.
+   ============================================================ */
+@theme {
+  /* --- Neutrals (cool white → ink) --- */
+  --color-white: #ffffff;
+  --color-paper: #fbfbfc;
+  --color-mist: #f2f3f6;
+  --color-fog: #e7e9ef;
+  --color-line: #dfe2ea;
+  --color-line-strong: #c6cbd7;
+  --color-slate: #9aa1b2;
+  --color-steel: #656d80;
+  --color-ink-2: #3a4051;
+  --color-ink: #1b1e28;
+
+  /* --- Jewel accents — one per feature --- */
+  --color-sapphire: #3a6098;
+  --color-amethyst: #6d5b9e;
+  --color-teal: #2f7d7a;
+  --color-emerald: #3a7a5c;
+  --color-garnet: #9a4552;
+  --color-citrine: #b1873a;
+
+  --color-sapphire-wash: #eaeff6;
+  --color-amethyst-wash: #efecf5;
+  --color-teal-wash: #e7f1f0;
+  --color-emerald-wash: #e9f2ec;
+  --color-garnet-wash: #f6ebed;
+  --color-citrine-wash: #f6f0e4;
+
+  /* --- Type --- */
+  --font-sans: var(--font-outfit), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-outfit), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, 'SFMono-Regular', monospace;
+
+  --text-2xs: 0.6875rem; /* 11 — mono labels */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --text-3xl: 3rem;
+  --text-4xl: 4rem;
+  --text-5xl: 5.5rem;
+
+  --tracking-display: -0.03em;
+  --tracking-tight: -0.015em;
+  --tracking-mono: 0.06em;
+  --tracking-caps: 0.14em;
+
+  --leading-tight: 1.05;
+  --leading-snug: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* --- Radii — soft, never sharp --- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+  --radius-panel: 20px;
+  --radius-round: 999px;
+
+  /* --- Shadows — diffuse, cool (light through water) --- */
+  --shadow-xs: 0 1px 2px rgba(27, 30, 40, 0.05);
+  --shadow-sm: 0 2px 8px rgba(27, 30, 40, 0.06);
+  --shadow-md: 0 8px 24px rgba(27, 30, 40, 0.08);
+  --shadow-lg: 0 18px 48px rgba(27, 30, 40, 0.1);
+
+  /* --- Motion — quiet, water-like. No bounce. --- */
+  --ease-linea: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-linea-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --container-linea: 1180px;
+  --container-wide: 1360px;
+  --container-text: 680px;
+}
+
+/* Raw custom properties — the canvas engine and the overlay replica read
+   these directly, and the demo re-declares the dark ramp on its own root. */
+:root {
+  --white: #ffffff;
+  --paper: #fbfbfc;
+  --mist: #f2f3f6;
+  --fog: #e7e9ef;
+  --line: #dfe2ea;
+  --line-strong: #c6cbd7;
+  --slate: #9aa1b2;
+  --steel: #656d80;
+  --ink-2: #3a4051;
+  --ink: #1b1e28;
+
+  --sapphire: #3a6098;
+  --amethyst: #6d5b9e;
+  --teal: #2f7d7a;
+  --emerald: #3a7a5c;
+  --garnet: #9a4552;
+  --citrine: #b1873a;
+
+  --sapphire-wash: #eaeff6;
+  --amethyst-wash: #efecf5;
+  --teal-wash: #e7f1f0;
+  --emerald-wash: #e9f2ec;
+  --garnet-wash: #f6ebed;
+  --citrine-wash: #f6f0e4;
+
+  /* Mono accent — black in light, white in dark (via --ink). */
+  --accent: var(--ink);
+  --accent-wash: var(--mist);
+  --lyric-accent: var(--amethyst);
+
+  --panel-alpha: 0.95;
+  --panel-clearance: 0.05;
+  --panel-bg-base: var(--white);
+  --panel-border: var(--line);
+
+  --surface-raised: var(--white);
+  --surface-sunken: var(--mist);
+  --track: var(--fog);
+
+  --text-primary: var(--ink);
+  --text-body: var(--ink-2);
+  --text-secondary: var(--steel);
+  --text-faint: var(--slate);
+  --text-on-accent: #ffffff;
+  --focus-ring: var(--ink);
+
+  --panel-radius: 20px;
+  --shadow-sm: 0 2px 8px rgba(27, 30, 40, 0.06);
+  --shadow-md: 0 8px 24px rgba(27, 30, 40, 0.08);
+  --shadow-overlay:
+    0 5px 18px rgba(27, 30, 40, 0.12), 0 2px 7px rgba(27, 30, 40, 0.08);
+  --ring: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 30%, transparent);
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 220ms;
+  --dur-slow: 420ms;
+  --chrome-dur: 280ms;
+  --chrome-dur-out: 160ms;
+  --chrome-ease: cubic-bezier(0.22, 0.85, 0.32, 1);
+
+  --blur-panel: 18px;
+  --lyrics-size: 15px;
+}
+
+/* The overlay demo's dark mode. Scoped to the demo panel rather than the
+   page — the site itself is always the white "quiet layer". Values match
+   the app's [data-theme='dark'] block exactly. */
+[data-theme='dark'] {
+  --paper: #0c0d10;
+  --mist: #141519;
+  --fog: #1c1e23;
+  --line: #22242b;
+  --line-strong: #33363f;
+  --slate: #6a7080;
+  --steel: #969cab;
+  --ink-2: #cbced6;
+  --ink: #f2f3f6;
+
+  --sapphire: #7aa0d4;
+  --amethyst: #a894d8;
+  --teal: #5fada9;
+  --emerald: #6fb08e;
+  --garnet: #d17d89;
+  --citrine: #d3a862;
+
+  --sapphire-wash: #1a2130;
+  --amethyst-wash: #201d2e;
+  --teal-wash: #142826;
+  --emerald-wash: #152720;
+  --garnet-wash: #2a1a1f;
+  --citrine-wash: #29231a;
+
+  --panel-bg-base: #0a0b0d;
+  --panel-border: #212329;
+
+  --surface-raised: #16181d;
+  --surface-sunken: #0d0e11;
+  --track: #23262e;
+
+  --accent-wash: var(--surface-sunken);
+  --text-on-accent: #0a0b0d;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-overlay: 0 5px 18px rgba(0, 0, 0, 0.5), 0 2px 7px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--white);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Fields are full-bleed; never let one cause a sideways scroll. */
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-snug);
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--white);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   SHARED UTILITIES
+   ============================================================ */
+
+/* Mono micro-label: the lab/measurement flourish the brand runs on. */
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* The white scrim that keeps copy legible over a live field. */
+.field-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    closest-side at 50% 46%,
+    rgba(255, 255, 255, 0.9) 12%,
+    rgba(255, 255, 255, 0.55) 40%,
+    rgba(255, 255, 255, 0) 68%
+  );
+}
+
+/* Sticky nav — the one place besides the overlay that uses blur, to say
+   "this floats above your work". */
+.floating-surface {
+  background: color-mix(in oklch, var(--white) 78%, transparent);
+  backdrop-filter: blur(var(--blur-panel));
+  -webkit-backdrop-filter: blur(var(--blur-panel));
+}
