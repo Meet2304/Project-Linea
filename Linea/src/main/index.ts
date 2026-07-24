@@ -18,7 +18,8 @@ import type {
   PlayerCommand,
   PlayerErrorReason,
   PlayerState,
-  Prefs
+  Prefs,
+  WindowBounds
 } from '../shared/types'
 import type { LyricLine } from '../shared/lyrics'
 import { estimatePositionMs } from '../shared/lyrics'
@@ -50,6 +51,8 @@ const MIN_HEIGHT = 150
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let clickThrough = false
+/** True while the cursor is over the visible panel (not the shadow gutter). */
+let pointerOverPanel = false
 let lastState: PlayerState | null = null
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 /** Old refresh tokens lack the transport scopes — degrade to read-only. */
@@ -67,8 +70,8 @@ function rememberLiked(trackId: string, liked: boolean): void {
   likedCache.set(trackId, liked)
 }
 
-/** Set the window height only (preset sizing), keeping the top-right
- *  anchor so it grows downward. */
+/** Set the window height only (preset sizing), keeping the current
+ *  x/y so it grows from its current anchor. */
 function resizeWindowTo(height: number): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
   const { height: availH } = screen.getPrimaryDisplay().workAreaSize
@@ -78,7 +81,7 @@ function resizeWindowTo(height: number): void {
   mainWindow.setBounds({ ...bounds, height: clamped })
 }
 
-/** Apply a full renderer-driven bounds (custom edge/corner resize). */
+/** Apply a full renderer-driven bounds (custom edge/corner resize or drag). */
 function setWindowBounds(bounds: { x: number; y: number; width: number; height: number }): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
   const area = screen.getPrimaryDisplay().workAreaSize
@@ -88,17 +91,78 @@ function setWindowBounds(bounds: { x: number; y: number; width: number; height: 
     width: Math.round(Math.max(MIN_WIDTH, Math.min(bounds.width, area.width))),
     height: Math.round(Math.max(MIN_HEIGHT, Math.min(bounds.height, area.height)))
   })
+  schedulePersistBounds()
+}
+
+/** True when enough of the window still intersects some display work area. */
+function isBoundsVisible(bounds: WindowBounds): boolean {
+  return screen.getAllDisplays().some((display) => {
+    const area = display.workArea
+    const overlapX =
+      Math.max(0, Math.min(bounds.x + bounds.width, area.x + area.width) - Math.max(bounds.x, area.x))
+    const overlapY =
+      Math.max(
+        0,
+        Math.min(bounds.y + bounds.height, area.y + area.height) - Math.max(bounds.y, area.y)
+      )
+    return overlapX >= 80 && overlapY >= 40
+  })
+}
+
+/** Bottom-center default — used only before the user has placed the window. */
+function defaultWindowBounds(): WindowBounds {
+  const workArea = screen.getPrimaryDisplay().workArea
+  return {
+    width: INITIAL_WIDTH,
+    height: INITIAL_HEIGHT,
+    x: workArea.x + Math.round((workArea.width - INITIAL_WIDTH) / 2),
+    y: workArea.y + workArea.height - INITIAL_HEIGHT - 24
+  }
+}
+
+/** Restore the last placement when still on-screen; otherwise first-launch default. */
+function resolveInitialBounds(prefs: Prefs): WindowBounds {
+  const saved = prefs.windowBounds
+  if (!saved) return defaultWindowBounds()
+  const area = screen.getPrimaryDisplay().workAreaSize
+  const bounds: WindowBounds = {
+    x: Math.round(saved.x),
+    y: Math.round(saved.y),
+    width: Math.round(Math.max(MIN_WIDTH, Math.min(saved.width, area.width))),
+    height: Math.round(Math.max(MIN_HEIGHT, Math.min(saved.height, area.height)))
+  }
+  return isBoundsVisible(bounds) ? bounds : defaultWindowBounds()
+}
+
+let persistBoundsTimer: ReturnType<typeof setTimeout> | null = null
+
+function schedulePersistBounds(): void {
+  if (persistBoundsTimer) clearTimeout(persistBoundsTimer)
+  persistBoundsTimer = setTimeout(() => {
+    persistBoundsTimer = null
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    const bounds = mainWindow.getBounds()
+    savePrefs({
+      windowBounds: {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height
+      }
+    })
+  }, 250)
 }
 
 function createWindow(): void {
-  const { width } = screen.getPrimaryDisplay().workAreaSize
   const prefs = loadPrefs()
+  const { x, y, width, height } = resolveInitialBounds(prefs)
+  pointerOverPanel = false
 
   mainWindow = new BrowserWindow({
-    width: INITIAL_WIDTH,
-    height: INITIAL_HEIGHT,
-    x: width - INITIAL_WIDTH - 20,
-    y: 40,
+    width,
+    height,
+    x,
+    y,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
@@ -120,8 +184,15 @@ function createWindow(): void {
   const win = mainWindow
 
   win.on('ready-to-show', () => {
+    // Start click-through on the transparent gutter so desktop items under
+    // the shadow ring stay interactive until the cursor enters the panel.
+    applyMouseIgnore()
     win.show()
   })
+
+  // Remember placement after the user drags or resizes so relaunch restores it.
+  win.on('moved', schedulePersistBounds)
+  win.on('resized', schedulePersistBounds)
 
   // Hover chrome can stick while the cursor stays over the always-on-top
   // panel after Alt-Tabbing away — drive an explicit focus flag from main.
@@ -131,6 +202,10 @@ function createWindow(): void {
   // Null the reference so poll/lyrics callbacks never touch a destroyed
   // window (a silent crash source once the widget can be closed).
   win.on('closed', () => {
+    if (persistBoundsTimer) {
+      clearTimeout(persistBoundsTimer)
+      persistBoundsTimer = null
+    }
     mainWindow = null
   })
 
@@ -206,11 +281,22 @@ function createTray(): void {
   tray.setContextMenu(menu)
 }
 
+/**
+ * Capture mouse only over the visible panel. The 30px shadow gutter is
+ * transparent and must not block clicks on the desktop underneath — unless
+ * the user has enabled full click-through, in which case everything passes.
+ * `{ forward: true }` keeps hover events flowing while ignoring clicks.
+ */
+function applyMouseIgnore(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const ignore = clickThrough || !pointerOverPanel
+  mainWindow.setIgnoreMouseEvents(ignore, { forward: true })
+}
+
 function toggleClickThrough(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
   clickThrough = nextClickThroughState(clickThrough)
-  // forward:true keeps hover events flowing so the panel can dim itself.
-  mainWindow.setIgnoreMouseEvents(clickThrough, { forward: true })
+  applyMouseIgnore()
   sendToRenderer(IPC.CLICK_THROUGH_CHANGED, clickThrough)
 }
 
@@ -468,6 +554,11 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle(IPC.GET_CLICK_THROUGH_STATE, () => clickThrough)
+
+  ipcMain.handle(IPC.SET_POINTER_OVER_PANEL, (_event, over: unknown) => {
+    pointerOverPanel = over === true
+    applyMouseIgnore()
+  })
 
   ipcMain.handle(IPC.SPOTIFY_LOGIN, () => loginToSpotify())
   ipcMain.handle(IPC.SPOTIFY_LOGOUT, () => {
