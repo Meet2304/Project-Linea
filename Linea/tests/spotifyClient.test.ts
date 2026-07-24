@@ -78,7 +78,7 @@ describe('spotifyFetch', () => {
     setAccessToken('token-a', 3600)
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse(403, {
-        error: { status: 403, reason: 'PREMIUM_REQUIRED', message: 'Premium required' }
+        error: { status: 403, reason: 'PREMIUM_REQUIRED', message: 'Player command failed: Premium required' }
       })
     )
 
@@ -96,6 +96,34 @@ describe('spotifyFetch', () => {
     const result = await spotifyFetch('/v1/me/player')
 
     expect(result).toMatchObject({ ok: false, reason: 'insufficient_scope' })
+  })
+
+  it('maps 403 player/device failures to no_device (not premium)', async () => {
+    setAccessToken('token-a', 3600)
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse(403, {
+        error: {
+          status: 403,
+          reason: 'NO_ACTIVE_DEVICE',
+          message: 'Player command failed: No active device found'
+        }
+      })
+    )
+
+    const result = await spotifyFetch('/v1/me/player/play', { method: 'PUT' })
+
+    expect(result).toMatchObject({ ok: false, reason: 'no_device' })
+  })
+
+  it('maps unknown 403s to network instead of assuming Premium', async () => {
+    setAccessToken('token-a', 3600)
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse(403, { error: { status: 403, message: 'Forbidden' } })
+    )
+
+    const result = await spotifyFetch('/v1/me/player/play', { method: 'PUT' })
+
+    expect(result).toMatchObject({ ok: false, reason: 'network' })
   })
 
   it('maps 404 to no_device', async () => {

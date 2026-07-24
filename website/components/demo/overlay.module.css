@@ -1,0 +1,808 @@
+/* ============================================================
+   OVERLAY DEMO
+   A replica of the real overlay's chrome, ported from
+   Linea/src/renderer/assets/main.css. Class names, values and
+   hover choreography are kept identical so the two can be
+   compared side by side without drift.
+   ============================================================ */
+
+.demoStage {
+  position: relative;
+  width: 100%;
+  container-type: inline-size;
+}
+
+/* The faint "desktop" the panel floats over — enough to read as a layer
+   above something, never enough to compete with the panel. */
+.demoBed {
+  position: relative;
+  border-radius: var(--radius-xl);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: clamp(18px, 4cqw, 40px);
+  overflow: hidden;
+}
+
+.demoBedLines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(closest-side at 50% 50%, #000 20%, transparent 92%);
+}
+
+/* --- The panel ------------------------------------------------ */
+
+.app {
+  position: relative;
+  /* The real window is 720x250 and freely resizable. */
+  aspect-ratio: 720 / 250;
+  min-height: 210px;
+  padding: 12px;
+  border-radius: var(--panel-radius);
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: aspect-ratio var(--dur-slow) var(--ease);
+}
+
+/* The actual panel surface, drawn behind the content at --panel-alpha. */
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--panel-bg-base);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow-overlay);
+  opacity: var(--panel-alpha, 0.95);
+  pointer-events: none;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+/* Outer hairline that comes up on hover. */
+.app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--chrome-dur) var(--chrome-ease);
+}
+
+.app[data-pointer-inside='true']::after {
+  opacity: 1;
+}
+
+.stack {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* --- Top bar --------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 30px;
+  flex-shrink: 0;
+}
+
+.track {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.trackTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--w-semibold, 600);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trackArtist {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateY(-3px);
+  pointer-events: none;
+  transition:
+    opacity var(--chrome-dur-out) var(--ease),
+    transform var(--chrome-dur-out) var(--ease);
+}
+
+.app[data-pointer-inside='true'] .topbarActions,
+.app:focus-within .topbarActions,
+.app[data-settings='true'] .topbarActions {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity var(--chrome-dur) var(--chrome-ease),
+    transform var(--chrome-dur) var(--chrome-ease);
+}
+
+/* --- Buttons --------------------------------------------------- */
+
+.ghostBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  padding: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.ghostBtn:hover {
+  color: var(--text-primary);
+  background: var(--surface-sunken);
+}
+
+.ghostBtn:active {
+  transform: scale(0.92);
+}
+
+.ghostBtnSm {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+}
+
+.ghostBtn[data-active='true'] {
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.btnClose:hover {
+  color: var(--garnet);
+  background: var(--garnet-wash);
+}
+
+.playBtn {
+  color: var(--text-primary);
+}
+
+/* --- Lyrics ---------------------------------------------------- */
+
+.nowView {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Readability wash beneath the revealed control strip. */
+.nowView::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: 0 0 calc(var(--panel-radius) - 12px) calc(var(--panel-radius) - 12px);
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--panel-bg-base) 92%, transparent) 0%,
+    color-mix(in srgb, var(--panel-bg-base) 55%, transparent) 55%,
+    transparent 100%
+  );
+  transition: opacity var(--chrome-dur-out) var(--ease);
+}
+
+.app[data-pointer-inside='true'] .nowView::after,
+.app:focus-within .nowView::after {
+  opacity: 1;
+  transition: opacity var(--chrome-dur) var(--chrome-ease);
+}
+
+.lyrics {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-top: 12px;
+  display: flex;
+  border-radius: 0 0 calc(var(--panel-radius) - 12px) calc(var(--panel-radius) - 12px);
+  overflow: hidden;
+}
+
+/* Scroll cues — soft fades top and bottom. */
+.lyrics::before,
+.lyrics::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.lyrics::before {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--panel-bg-base) 28%, transparent) 0%,
+    color-mix(in srgb, var(--panel-bg-base) 10%, transparent) 55%,
+    transparent 100%
+  );
+}
+
+.lyrics::after {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--panel-bg-base) 28%, transparent) 0%,
+    color-mix(in srgb, var(--panel-bg-base) 10%, transparent) 55%,
+    transparent 100%
+  );
+}
+
+.lyrics[data-up='true']::before,
+.lyrics[data-down='true']::after {
+  opacity: 1;
+}
+
+.lyricsScroll {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 2;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Lyrics-first: the scrollbar is chrome, so it hides with the rest. */
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+}
+
+.lyricsScroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.lyricsScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lyricsScroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--radius-round);
+  transition: background 220ms var(--ease-out);
+}
+
+.app[data-pointer-inside='true'] .lyricsScroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--line-strong) 40%, transparent) transparent;
+}
+
+.app[data-pointer-inside='true'] .lyricsScroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--line-strong) 40%, transparent);
+}
+
+/* On chrome reveal, the column dissolves into the wash instead of
+   running under it. */
+.app[data-pointer-inside='true'] .lyricsList,
+.app:focus-within .lyricsList {
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - 58px),
+    transparent calc(100% - 8px)
+  );
+}
+
+.lyricsList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  transition: mask-image var(--chrome-dur) var(--chrome-ease);
+}
+
+.lyricRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  font-size: var(--lyrics-size);
+  line-height: 1.32;
+  color: var(--text-body);
+  opacity: 0.51;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    opacity var(--dur) var(--ease),
+    color var(--dur) var(--ease),
+    font-size var(--dur) var(--ease);
+}
+
+.lyricRow[data-pos='past'] {
+  opacity: 0.33;
+}
+
+.lyricRow[data-pos='active'] {
+  opacity: 1;
+  color: var(--lyric-accent);
+  font-weight: var(--w-semibold, 600);
+}
+
+.lyricTime {
+  flex-shrink: 0;
+  width: 0;
+  margin-right: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: inherit;
+  white-space: nowrap;
+  transition:
+    width var(--dur) var(--ease),
+    margin-right var(--dur) var(--ease),
+    opacity var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.app[data-timestamps='true'] .lyricTime {
+  width: 3.25em;
+  margin-right: 10px;
+  opacity: 0.75;
+}
+
+.app[data-timestamps='true'] .lyricRow[data-pos='active'] .lyricTime {
+  color: var(--lyric-accent);
+  opacity: 1;
+}
+
+.lyricText {
+  min-width: 0;
+  flex: 1;
+}
+
+/* --- Jump-to-current chip -------------------------------------- */
+
+.jumpBtn {
+  position: absolute;
+  right: 12px;
+  bottom: 44px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 8px 0 9px;
+  border-radius: var(--radius-round);
+  background: transparent;
+  border: none;
+  color: var(--lyric-accent);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--w-medium, 500);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.jumpBtn:hover {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+
+.jumpDir {
+  display: inline-flex;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.jumpBtn[data-dir='up'] .jumpDir {
+  transform: rotate(180deg);
+}
+
+/* --- Controls -------------------------------------------------- */
+
+.controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 6px 0 0;
+  opacity: 0;
+  transform: translateY(2px);
+  pointer-events: none;
+  transition:
+    opacity var(--chrome-dur-out) var(--ease),
+    transform var(--chrome-dur-out) var(--ease);
+}
+
+.app[data-pointer-inside='true'] .controls,
+.app:focus-within .controls {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity var(--chrome-dur) var(--chrome-ease),
+    transform var(--chrome-dur) var(--chrome-ease);
+}
+
+.scrub {
+  margin-bottom: 2px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  /* Painted on the input at 3px so Chromium doesn't stretch the gradient
+     across the whole 14px hit area. */
+  background: linear-gradient(
+    to right,
+    var(--lyric-accent) 0,
+    var(--lyric-accent) calc(var(--fill, 0) * 1%),
+    var(--track) calc(var(--fill, 0) * 1%),
+    var(--track) 100%
+  );
+  background-size: 100% 3px;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: var(--radius-round);
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  height: 3px;
+  background: transparent;
+  border: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--lyric-accent);
+  border: 2px solid var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.slider:hover::-webkit-slider-thumb,
+.slider:active::-webkit-slider-thumb,
+.slider:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.slider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--lyric-accent);
+  border: 2px solid var(--surface-raised);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.slider:hover::-moz-range-thumb,
+.slider:active::-moz-range-thumb,
+.slider:focus-visible::-moz-range-thumb {
+  opacity: 1;
+}
+
+.timecodes {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--tracking-mono);
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+/* Inside the strip the buttons tuck in a size. */
+.controls .ghostBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+}
+
+.controls .ghostBtnSm {
+  width: 22px;
+  height: 22px;
+}
+
+/* --- Edge progress hairline ------------------------------------ */
+
+.edgeProgress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  z-index: 5;
+  border-radius: 0 0 var(--panel-radius) var(--panel-radius);
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 180ms var(--ease);
+}
+
+/* The hairline and the scrubber are the same line — one hands off to the
+   other rather than both being visible. */
+.app[data-pointer-inside='true'] .edgeProgress,
+.app:focus-within .edgeProgress {
+  opacity: 0;
+}
+
+.edgeProgressFill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(var(--song-progress, 0));
+  background: var(--lyric-accent);
+  opacity: 0.85;
+}
+
+/* --- Corner arcs ----------------------------------------------- */
+
+.corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  z-index: 6;
+  pointer-events: none;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity var(--chrome-dur) var(--chrome-ease);
+}
+
+.app[data-pointer-inside='true'] .corner {
+  opacity: 0.5;
+}
+
+.cornerNw { top: 5px; left: 5px; }
+.cornerNe { top: 5px; right: 5px; }
+.cornerSe { bottom: 5px; right: 5px; }
+.cornerSw { bottom: 5px; left: 5px; }
+
+.cornerArc {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+/* --- Settings view --------------------------------------------- */
+
+.settingsView {
+  flex: 1;
+  min-height: 0;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  animation: demoFadeIn var(--dur) var(--ease-out);
+}
+
+@keyframes demoFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.setRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 26px;
+}
+
+.setLabel {
+  flex: 1;
+  font-size: var(--text-xs);
+  color: var(--text-body);
+}
+
+.switch {
+  position: relative;
+  width: 34px;
+  height: 19px;
+  flex-shrink: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-round);
+  background: var(--surface-sunken);
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.switch[aria-checked='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur) var(--ease);
+}
+
+.switch[aria-checked='true']::after {
+  transform: translateX(15px);
+}
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.seg {
+  min-width: 26px;
+  height: 21px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-2xs);
+  font-weight: var(--w-medium, 500);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.seg[data-active='true'] {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.previewBox {
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.previewLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.previewText {
+  font-size: var(--lyrics-size);
+  color: var(--lyric-accent);
+  font-weight: var(--w-semibold, 500);
+  line-height: 1.32;
+}
+
+/* --- Caption under the stage ----------------------------------- */
+
+.demoHint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.demoHintNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.demoHintDot {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  flex-shrink: 0;
+}
+
+.demoActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.demoChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-round);
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--steel);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+.demoChip:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.demoChip[data-active='true'] {
+  border-color: var(--ink);
+  color: var(--ink);
+}

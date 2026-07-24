@@ -125,6 +125,12 @@ describe('fetchCurrentlyPlayingLegacy', () => {
   })
 })
 
+const playerInit = (method: 'PUT' | 'POST'): RequestInit => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: '{}'
+})
+
 describe('transport commands', () => {
   beforeEach(() => {
     vi.mocked(spotifyFetch).mockResolvedValue(okBody(204, null))
@@ -135,38 +141,81 @@ describe('transport commands', () => {
     ['pause', pause, 'PUT', '/v1/me/player/pause'],
     ['next', next, 'POST', '/v1/me/player/next'],
     ['previous', previous, 'POST', '/v1/me/player/previous']
-  ] as const)('%s hits %s %s', async (_name, fn, method, path) => {
+  ] as const)('%s hits %s %s with a JSON body', async (_name, fn, method, path) => {
     const result = await fn()
     expect(result).toEqual({ ok: true, data: null })
-    expect(spotifyFetch).toHaveBeenCalledWith(path, { method })
+    expect(spotifyFetch).toHaveBeenCalledWith(path, playerInit(method))
   })
 
   it('seek rounds and clamps the position', async () => {
     await seek(1234.6)
-    expect(spotifyFetch).toHaveBeenCalledWith('/v1/me/player/seek?position_ms=1235', {
-      method: 'PUT'
-    })
+    expect(spotifyFetch).toHaveBeenCalledWith(
+      '/v1/me/player/seek?position_ms=1235',
+      playerInit('PUT')
+    )
     await seek(-50)
-    expect(spotifyFetch).toHaveBeenCalledWith('/v1/me/player/seek?position_ms=0', {
-      method: 'PUT'
-    })
+    expect(spotifyFetch).toHaveBeenCalledWith(
+      '/v1/me/player/seek?position_ms=0',
+      playerInit('PUT')
+    )
   })
 
   it('setShuffle and setRepeat pass their state', async () => {
     await setShuffle(true)
-    expect(spotifyFetch).toHaveBeenCalledWith('/v1/me/player/shuffle?state=true', {
-      method: 'PUT'
-    })
+    expect(spotifyFetch).toHaveBeenCalledWith(
+      '/v1/me/player/shuffle?state=true',
+      playerInit('PUT')
+    )
     await setRepeat('track')
-    expect(spotifyFetch).toHaveBeenCalledWith('/v1/me/player/repeat?state=track', {
-      method: 'PUT'
-    })
+    expect(spotifyFetch).toHaveBeenCalledWith(
+      '/v1/me/player/repeat?state=track',
+      playerInit('PUT')
+    )
   })
 
-  it('propagates premium_required from commands', async () => {
-    vi.mocked(spotifyFetch).mockResolvedValueOnce({ ok: false, reason: 'premium_required' })
+  it('retries play on an available device after a false Premium/no-device failure', async () => {
+    vi.mocked(spotifyFetch)
+      .mockResolvedValueOnce({ ok: false, reason: 'premium_required' })
+      .mockResolvedValueOnce(
+        okBody(200, {
+          devices: [{ id: 'device-1', is_active: true, is_restricted: false }]
+        })
+      )
+      .mockResolvedValueOnce(okBody(204, null))
+
     const result = await play()
-    expect(result).toEqual({ ok: false, reason: 'premium_required' })
+    expect(result).toEqual({ ok: true, data: null })
+    expect(spotifyFetch).toHaveBeenNthCalledWith(1, '/v1/me/player/play', playerInit('PUT'))
+    expect(spotifyFetch).toHaveBeenNthCalledWith(2, '/v1/me/player/devices')
+    expect(spotifyFetch).toHaveBeenNthCalledWith(
+      3,
+      '/v1/me/player/play?device_id=device-1',
+      playerInit('PUT')
+    )
+  })
+
+  it('maps Premium-required with no devices to no_device', async () => {
+    vi.mocked(spotifyFetch)
+      .mockResolvedValueOnce({ ok: false, reason: 'premium_required' })
+      .mockResolvedValueOnce(okBody(200, { devices: [] }))
+
+    const result = await play()
+    expect(result).toEqual({ ok: false, reason: 'no_device' })
+  })
+
+  it('maps repeated Premium-required to no_device when the account is Premium', async () => {
+    vi.mocked(spotifyFetch)
+      .mockResolvedValueOnce({ ok: false, reason: 'premium_required' })
+      .mockResolvedValueOnce(
+        okBody(200, {
+          devices: [{ id: 'device-1', is_active: true, is_restricted: false }]
+        })
+      )
+      .mockResolvedValueOnce({ ok: false, reason: 'premium_required' })
+      .mockResolvedValueOnce(okBody(200, { product: 'premium' }))
+
+    const result = await play()
+    expect(result).toEqual({ ok: false, reason: 'no_device' })
   })
 })
 

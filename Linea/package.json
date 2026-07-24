@@ -4,7 +4,12 @@
   "description": "Always-on-top Spotify lyrics overlay",
   "main": "./out/main/index.js",
   "author": "Meet2304",
+  "license": "MIT",
   "homepage": "https://github.com/Meet2304/Project-Linea",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Meet2304/Project-Linea.git"
+  },
   "scripts": {
     "format": "prettier --write .",
     "format-check": "prettier --check .",

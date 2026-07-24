@@ -10,6 +10,7 @@ import type { LyricLine } from '../../shared/lyrics'
 interface LineaAPI {
   toggleClickThrough: () => Promise<boolean>
   getClickThroughState: () => Promise<boolean>
+  setPointerOverPanel: (over: boolean) => Promise<void>
   login: () => Promise<boolean>
   logout: () => Promise<void>
   getAuthState: () => Promise<boolean>
