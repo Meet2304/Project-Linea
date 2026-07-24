@@ -43,9 +43,9 @@
 
   /* Panel chrome alpha — locked to a solid default until an opacity
      control ships again. JS still mirrors Prefs.opacity → --panel-alpha. */
-  --panel-alpha: 0.95;
+  --panel-alpha: 0.98;
   /* 1 - panel-alpha; how much “glass” treatments should kick in. */
-  --panel-clearance: 0.05;
+  --panel-clearance: 0.02;
   --panel-bg-base: var(--white);
   --panel-border: var(--line);
   /* Dual halo so type stays readable on light or dark desktop content.

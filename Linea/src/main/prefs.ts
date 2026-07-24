@@ -1,17 +1,18 @@
 import { app } from 'electron'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import type { LyricsSize, Prefs, Theme } from '../shared/types'
+import type { LyricsSize, Prefs, Theme, WindowBounds } from '../shared/types'
 
 const prefsFile = (): string => join(app.getPath('userData'), 'prefs.json')
 
 const DEFAULT_PREFS: Prefs = {
-  opacity: 0.95,
+  opacity: 0.98,
   lyricsSize: 'medium',
   theme: 'light',
   pinned: true,
   lyricsExpanded: true,
-  showTimestamps: false
+  showTimestamps: false,
+  windowBounds: null
 }
 
 function clampTheme(value: unknown): Theme {
@@ -24,6 +25,29 @@ function clampLyricsSize(value: unknown): LyricsSize {
 
 function clampBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function clampWindowBounds(value: unknown): WindowBounds | null {
+  if (typeof value !== 'object' || value === null) return null
+  const b = value as Record<string, unknown>
+  if (
+    !isFiniteNumber(b.x) ||
+    !isFiniteNumber(b.y) ||
+    !isFiniteNumber(b.width) ||
+    !isFiniteNumber(b.height)
+  ) {
+    return null
+  }
+  return {
+    x: Math.round(b.x),
+    y: Math.round(b.y),
+    width: Math.round(b.width),
+    height: Math.round(b.height)
+  }
 }
 
 /**
@@ -44,7 +68,8 @@ export function clampPrefs(input: Partial<Prefs>): Prefs {
     theme: clampTheme(input.theme),
     pinned: clampBoolean(input.pinned, DEFAULT_PREFS.pinned),
     lyricsExpanded: true,
-    showTimestamps: clampBoolean(input.showTimestamps, DEFAULT_PREFS.showTimestamps)
+    showTimestamps: clampBoolean(input.showTimestamps, DEFAULT_PREFS.showTimestamps),
+    windowBounds: clampWindowBounds(input.windowBounds)
   }
 }
 

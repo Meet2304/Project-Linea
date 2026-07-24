@@ -49,6 +49,14 @@ export type Theme = 'light' | 'dark'
 /** Lyrics size preset — drives both font size and how many lines show. */
 export type LyricsSize = 'small' | 'medium' | 'large'
 
+/** Last placed window rect — restored across launches after the first move. */
+export interface WindowBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export interface Prefs {
   opacity: number
   lyricsSize: LyricsSize
@@ -57,4 +65,6 @@ export interface Prefs {
   lyricsExpanded: boolean
   /** When true, each lyric line shows its start timestamp. */
   showTimestamps: boolean
+  /** Null until the user has moved or resized the window at least once. */
+  windowBounds: WindowBounds | null
 }

@@ -20,6 +20,8 @@ function subscribe<T>(channel: string): (callback: (data: T) => void) => () => v
 contextBridge.exposeInMainWorld('linea', {
   toggleClickThrough: (): Promise<boolean> => ipcRenderer.invoke(IPC.TOGGLE_CLICK_THROUGH),
   getClickThroughState: (): Promise<boolean> => ipcRenderer.invoke(IPC.GET_CLICK_THROUGH_STATE),
+  setPointerOverPanel: (over: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.SET_POINTER_OVER_PANEL, over),
   login: (): Promise<boolean> => ipcRenderer.invoke(IPC.SPOTIFY_LOGIN),
   logout: (): Promise<void> => ipcRenderer.invoke(IPC.SPOTIFY_LOGOUT),
   getAuthState: (): Promise<boolean> => ipcRenderer.invoke(IPC.SPOTIFY_AUTH_STATE),

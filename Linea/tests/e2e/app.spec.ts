@@ -45,6 +45,20 @@ test('window opens at panel size', async () => {
   expect(bounds.height).toBeLessThanOrEqual(700)
 })
 
+test('window opens bottom-center when no saved placement exists', async () => {
+  // Fresh launches have null windowBounds — bottom-center is the first-run default.
+  // After the user moves the window, that placement is restored instead.
+  const { bounds, workArea } = await app.evaluate(({ BrowserWindow, screen }) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (!win) throw new Error('No BrowserWindow open')
+    return { bounds: win.getBounds(), workArea: screen.getPrimaryDisplay().workArea }
+  })
+  const expectedX = workArea.x + Math.round((workArea.width - bounds.width) / 2)
+  const expectedY = workArea.y + workArea.height - bounds.height - 24
+  expect(Math.abs(bounds.x - expectedX)).toBeLessThanOrEqual(12)
+  expect(Math.abs(bounds.y - expectedY)).toBeLessThanOrEqual(12)
+})
+
 test('renderer exposes window.linea but not window.require', async () => {
   const lineaApi = await page.evaluate(() => typeof window.linea)
   const requireApi = await page.evaluate(
