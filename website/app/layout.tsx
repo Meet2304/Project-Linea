@@ -40,12 +40,21 @@ export const metadata: Metadata = {
     type: 'website',
     title: TITLE,
     description: DESCRIPTION,
-    siteName: 'Linea'
+    siteName: 'Linea',
+    images: [
+      {
+        url: '/social/linea-whatsapp-og.png',
+        width: 1200,
+        height: 630,
+        alt: 'Linea — know every word'
+      }
+    ]
   },
   twitter: {
     card: 'summary_large_image',
     title: TITLE,
-    description: DESCRIPTION
+    description: DESCRIPTION,
+    images: ['/social/linea-x-social.png']
   }
 }
 
