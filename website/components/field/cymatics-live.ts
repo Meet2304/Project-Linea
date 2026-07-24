@@ -38,7 +38,25 @@ export interface FieldOptions {
   m?: number
   /** Pointer influence strength; 0 disables it. */
   ptAmt?: number
+  /**
+   * How fast the plate itself breathes. This is the "music is playing"
+   * clock — raise it to make the field feel alive.
+   */
   speed?: number
+  /**
+   * How fast the ring pulsing out of the cursor travels, as its own clock.
+   * Deliberately independent of `speed`: the field wants to move, the
+   * pointer response wants to stay slow and unhurried.
+   */
+  ringSpeed?: number
+  /** Amplitude of that ring. Low keeps the interaction subtle. */
+  ringAmp?: number
+  /**
+   * How far the pointer retunes the plate's modal numbers. The single
+   * biggest driver of how "grabby" the interaction feels — 1.7 reshapes the
+   * whole field, 0.3 is a lean toward the cursor.
+   */
+  ptWarp?: number
   /** Internal render scale — smaller means coarser grain and less work. */
   quality?: number
   /** Internal buffer width cap. */
@@ -108,6 +126,9 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
   const opacity = opts.opacity ?? 1
   const fade = opts.fade !== false
   const speed = opts.speed ?? 1
+  const ringSpeed = opts.ringSpeed ?? 0.55
+  const ringAmp = opts.ringAmp ?? 0.16
+  const ptWarp = opts.ptWarp ?? 0.3
   const quality = opts.quality ?? 0.42
   const maxW = opts.maxW ?? 560
 
@@ -204,23 +225,34 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
   let pageVisible = typeof document === 'undefined' || !document.hidden
   let paused = false
 
-  function render(t: number): void {
+  function render(elapsed: number): void {
     if (!buf || !imgData) return
 
-    // Ease pointer position and influence toward their targets.
-    pX += (ptTargetX - pX) * 0.08
-    pY += (ptTargetY - pY) * 0.08
-    pAmt += (ptActive - pAmt) * 0.05
+    // Two clocks. `t` drives the plate — turn it up and the field feels
+    // like something is playing. `tp` drives the ring under the cursor and
+    // stays slow, so the interaction reads as a swell rather than a strobe.
+    const t = elapsed * speed
+    const tp = elapsed * ringSpeed
+
+    // Ease pointer position and influence toward their targets. The
+    // influence ramp is deliberately the slowest thing here: the field
+    // should notice you gradually, not snap to attention.
+    pX += (ptTargetX - pX) * 0.06
+    pY += (ptTargetY - pY) * 0.06
+    pAmt += (ptActive - pAmt) * 0.022
     const amt = pAmt * ptAmt
 
     const scaleY = rH > rW ? rH / rW : 1
     const PX = (pX * 2 - 1) * scale * aspect
     const PY = (pY * 2 - 1) * scale * scaleY
 
-    // The modal numbers breathe slowly on their own, and the pointer
-    // nudges them — moving the cursor literally retunes the plate.
-    const n = n0 + 0.55 * Math.sin(t * 0.16) + (pX - 0.5) * 1.7 * amt
-    const m = m0 + 0.55 * Math.sin(t * 0.13 + 1.7) + (pY - 0.5) * 1.7 * amt
+    // The modal numbers breathe on their own, and the pointer nudges them.
+    // This is the loudest pointer effect by far — it retunes the whole
+    // plate, so the entire pattern reorganises as the cursor crosses. Keep
+    // `ptWarp` small: past ~0.4 it stops reading as a response and starts
+    // reading as the field chasing the mouse.
+    const n = n0 + 0.55 * Math.sin(t * 0.16) + (pX - 0.5) * ptWarp * amt
+    const m = m0 + 0.55 * Math.sin(t * 0.13 + 1.7) + (pY - 0.5) * ptWarp * amt
     const PI = Math.PI
 
     const cx = rW / 2
@@ -241,7 +273,7 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
           const dax = X - PX
           const day = Y - PY
           const dd = Math.sqrt(dax * dax + day * day) + 0.0001
-          const push = (amt * 1.15) / (1 + dd * 2.6)
+          const push = (amt * ptWarp * 1.2) / (1 + dd * 2.6)
           X += (dax / dd) * push
           Y += (day / dd) * push
           const wx = X + Math.sin(Y * 2.3 + t * 0.35 + P.p1) * 0.35
@@ -263,11 +295,12 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
             Math.sqrt((X + 0.8) * (X + 0.8) + (Y - 1.0) * (Y - 1.0)) * 6.2 - t * 1.9 + P.p3
           )
           const rpd = Math.sqrt((X - PX) * (X - PX) + (Y - PY) * (Y - PY))
-          const sp = Math.sin(rpd * 7 - t * 3.4) * amt * 1.4
+          const sp = Math.sin(rpd * 6 - tp * 2.4) * amt * ringAmp
           val = ((s1 + s2 + s3 + sp) / 3 + 1) * 0.5
         } else if (style === 'lattice') {
           // Standing-wave grid; the pointer warps the local cell size.
-          const wp = (amt * 0.6) / (1 + ((X - PX) * (X - PX) + (Y - PY) * (Y - PY)) * 1.8)
+          const wp =
+            (amt * ptWarp * 0.7) / (1 + ((X - PX) * (X - PX) + (Y - PY) * (Y - PY)) * 1.8)
           const f = 3.4 + Math.sin(t * 0.12) * 0.4 + wp * 3
           const g1 = Math.cos(X * PI * f + P.p1) * Math.cos(Y * PI * f + P.p2)
           const g2 = Math.cos((X + Y) * PI * f * 0.72 - t * 0.3) * 0.6
@@ -278,14 +311,14 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
           const RR = Math.sqrt(X * X + Y * Y)
           const TH = Math.atan2(Y, X)
           const kr = n0 + 0.4 * Math.sin(t * 0.15)
-          const pth = m0 + (pX - 0.5) * 2 * amt
+          const pth = m0 + (pX - 0.5) * ptWarp * amt
           const ra = Math.cos(kr * RR * 1.5 - t * 0.25) * Math.cos(pth * TH)
           const rb = Math.cos(kr * RR * 1.5 * 0.82 + P.p2) * Math.cos((pth + 1) * TH + t * 0.12)
           val = 1 - Math.min(1, Math.abs(ra - rb) * 2.2)
           const rxr = X - PX
           const ryr = Y - PY
           const rdr = Math.sqrt(rxr * rxr + ryr * ryr)
-          val += (Math.cos(rdr * 9 - t * 4.2) / (1 + rdr * rdr * 5.5)) * amt * 1.1
+          val += (Math.cos(rdr * 8 - tp * 2.4) / (1 + rdr * rdr * 5.5)) * amt * ringAmp
           if (val < 0) val = 0
           else if (val > 1) val = 1
         } else {
@@ -295,11 +328,11 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
           const a = Math.cos(n * PI * hx) * Math.cos(m * PI * hy)
           const b = Math.cos(m * PI * hx) * Math.cos(n * PI * hy)
           val = 1 - Math.min(1, Math.abs(a - b) * 2.2)
-          // Pointer excitation: a live ring pulsing out of the cursor.
+          // Pointer excitation: a slow ring swelling out of the cursor.
           const rx = X - PX
           const ry = Y - PY
           const rd = Math.sqrt(rx * rx + ry * ry)
-          val += (Math.cos(rd * 9 - t * 4.2) / (1 + rd * rd * 5.5)) * amt * 1.1
+          val += (Math.cos(rd * 8 - tp * 2.4) / (1 + rd * rd * 5.5)) * amt * ringAmp
           if (val < 0) val = 0
           else if (val > 1) val = 1
         }
@@ -340,12 +373,12 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
   }
 
   function drawOnce(): void {
-    render(reduced ? 0 : (performance.now() - start) / 1000 * speed)
+    render(reduced ? 0 : (performance.now() - start) / 1000)
   }
 
   function frame(now: number): void {
     if (!running) return
-    render(((now - start) / 1000) * speed)
+    render((now - start) / 1000)
     raf = requestAnimationFrame(frame)
   }
 

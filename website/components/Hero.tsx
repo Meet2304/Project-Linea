@@ -39,6 +39,25 @@ export default function Hero({ release }: { release: ReleaseInfo }) {
       />
       <div className="field-scrim" />
 
+      {/* The plate dissolves into white at the bottom rather than stopping
+          at the section edge, so there is no seam where the hero ends and
+          the features section begins. Tall and mostly transparent — the
+          fade should be felt, not seen. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 'min(34vh, 320px)',
+          zIndex: 4,
+          pointerEvents: 'none',
+          background:
+            'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,.28) 34%, rgba(255,255,255,.68) 62%, rgba(255,255,255,.93) 84%, #fff 100%)'
+        }}
+      />
+
       <div
         style={{
           position: 'relative',
@@ -56,30 +75,26 @@ export default function Hero({ release }: { release: ReleaseInfo }) {
         <h1
           style={{
             margin: '26px 0 0',
-            fontSize: 'clamp(46px, 7vw, 96px)',
+            fontSize: 'clamp(46px, 7.4vw, 100px)',
             fontWeight: 700,
-            lineHeight: 0.95,
+            lineHeight: 0.94,
             letterSpacing: '-0.05em',
             color: 'var(--ink)'
           }}
         >
-          Your music,
-          <br />
-          as a quiet layer.
+          Know every word.
         </h1>
 
         <p
           style={{
-            margin: '28px auto 0',
-            maxWidth: 540,
+            margin: '24px auto 0',
+            maxWidth: 460,
             fontSize: 'var(--text-md)',
             lineHeight: 'var(--leading-relaxed)',
             color: 'var(--text-body)'
           }}
         >
-          Linea floats a thin surface above whatever you&rsquo;re doing and scrolls the lyrics of
-          your Spotify track in time. No switching tabs. No searching. The words settle into place
-          like sand on a singing plate.
+          Live Spotify lyrics, floating over everything you do.
         </p>
 
         <div
@@ -94,18 +109,26 @@ export default function Hero({ release }: { release: ReleaseInfo }) {
           }}
         >
           <DownloadButton release={release} accent={pal.accent} />
+          {/* A bordered, filled pill rather than a bare text link — the
+              ghost version vanished into the field behind it. */}
           <a
+            className="hero-secondary"
             href="#features"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              padding: '14px 22px',
+              padding: '15px 26px',
               borderRadius: 'var(--radius-round)',
+              border: '1px solid var(--ink)',
+              background: 'var(--white)',
               color: 'var(--ink)',
               fontSize: 'var(--text-base)',
               fontWeight: 500,
-              textDecoration: 'none'
+              letterSpacing: '-0.01em',
+              textDecoration: 'none',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'transform 160ms var(--ease), background 220ms var(--ease)'
             }}
           >
             See it work
@@ -114,24 +137,10 @@ export default function Hero({ release }: { release: ReleaseInfo }) {
         </div>
       </div>
 
-      {/* Corner labels — numbers as texture, per the brand's voice guide. */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 30,
-          left: 'clamp(20px, 4vw, 56px)',
-          right: 'clamp(20px, 4vw, 56px)',
-          zIndex: 6,
-          display: 'flex',
-          justifyContent: 'space-between',
-          pointerEvents: 'none'
-        }}
-      >
-        <Mono>
-          {pat.label} · {pal.name.toLowerCase()}
-        </Mono>
-        <Mono>{pal.hz}</Mono>
-      </div>
+      <style>{`
+        .hero-secondary:hover { transform: translateY(-1px); background: var(--mist); }
+        .hero-secondary:active { transform: translateY(0); }
+      `}</style>
     </section>
   )
 }

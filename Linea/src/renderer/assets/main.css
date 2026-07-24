@@ -46,9 +46,8 @@ body {
   border: 1px solid transparent;
   border-radius: var(--panel-radius);
   box-shadow: none;
-  /* The panel is NOT a drag region — only the top bar and connect view
-     are (below). A blanket drag region intercepts clicks/scroll on the
-     lyrics and controls. */
+  /* Drag is handled in JS on the top bar / connect view (not a blanket
+     -webkit-app-region) so lyrics and controls stay clickable/scrollable. */
   transition: opacity var(--dur) var(--ease);
 }
 
@@ -184,8 +183,12 @@ input:focus-visible {
   justify-content: center;
   gap: 10px;
   text-align: center;
-  /* Only drag handle while disconnected (there's no top bar here). */
-  -webkit-app-region: drag;
+  /* Drag handle while disconnected (wired in JS — there's no top bar here). */
+  cursor: grab;
+}
+
+.connect:active {
+  cursor: grabbing;
 }
 
 .wordmark {
@@ -277,7 +280,6 @@ input:focus-visible {
   margin: 0;
   padding: 0;
   flex-shrink: 0;
-  -webkit-app-region: drag;
   cursor: grab;
 }
 

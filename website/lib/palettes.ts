@@ -56,13 +56,23 @@ export const PATTERNS: Record<string, Pattern> = {
   lattice: { style: 'lattice', scale: 1.5, seed: 6, label: 'grid' }
 }
 
-/** Base field settings shared by every plate on the page. */
+/**
+ * Base field settings shared by every plate on the page.
+ *
+ * `speed` and `ringSpeed` are independent on purpose. The plate runs fast
+ * enough that the page always feels like something is playing; the ring
+ * under the cursor stays slow so the interaction reads as a swell you
+ * notice rather than a pulse that grabs at you.
+ */
 export const FIELD_BASE = {
   density: 5,
   dither: 0.5,
   opacity: 0.58,
   fade: false,
-  ptAmt: 1,
-  speed: 3,
+  ptAmt: 0.5,
+  speed: 7,
+  ringSpeed: 0.5,
+  ringAmp: 0.12,
+  ptWarp: 0.25,
   quality: 0.44
 } as const
