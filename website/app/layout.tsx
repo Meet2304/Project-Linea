@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Outfit, Space_Mono } from 'next/font/google'
+import LoadingVeil from '@/components/loader/LoadingVeil'
 import './globals.css'
 
 const outfit = Outfit({
@@ -56,7 +57,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${outfit.variable} ${spaceMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {/* In the first HTML payload on purpose: it covers the page before
+            hydration, while everything beneath it finishes assembling. */}
+        <LoadingVeil />
+        {children}
+      </body>
     </html>
   )
 }
