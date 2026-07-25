@@ -6,20 +6,43 @@ on:
       - 'v*'
 
 jobs:
+  # electron-builder does find-or-create on the draft release, and it uploads
+  # a build's artifacts concurrently. Two uploads starting together both see
+  # "release doesn't exist" and both create one — a classic check-then-act
+  # race, observed 8ms apart within a single job on v0.1.4. The result was two
+  # drafts with the assets split across them, needing manual consolidation on
+  # every release since v0.1.1.
+  #
+  # Serialising the platforms does not help: the race is between concurrent
+  # uploads inside one job, not between jobs. Creating the draft up front does,
+  # because then no uploader ever reaches the create path — a build that finds
+  # an existing draft reuses it, which is why the second platform was always
+  # correct.
+  prepare:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the draft release if it does not already exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Draft for $TAG already exists — reusing it."
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --draft --title "$TAG" --notes ""
+          fi
+
   build:
     name: Build ${{ matrix.name }}
+    needs: prepare
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: Linea
 
     strategy:
-      # electron-builder creates the GitHub draft release on its first publish
-      # and reuses it afterwards. Run the platforms in parallel and both race
-      # to create it, producing two drafts with the assets split between them —
-      # every release so far has needed manual consolidation. Serialising means
-      # the second job always finds the draft the first one made.
-      max-parallel: 1
       # One platform failing should not discard the other's artifacts; the
       # release is a draft either way, so a partial result is still reviewable.
       fail-fast: false
