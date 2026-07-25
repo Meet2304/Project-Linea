@@ -323,7 +323,11 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
               // the real window resizes.
             } as React.CSSProperties
           }
-          onPointerEnter={() => {
+          onPointerEnter={(e) => {
+            // A touch is not a hover. On a phone the chrome is always up
+            // anyway, and a finger crossing the panel on its way to
+            // scrolling the page must not read as taking the controls.
+            if (e.pointerType === 'touch') return
             setPointerInside(true)
             takeOver()
           }}

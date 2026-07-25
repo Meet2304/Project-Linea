@@ -19,6 +19,7 @@ const LINKS = [
 export default function Nav() {
   return (
     <header
+      className="nav-shade"
       style={{
         position: 'fixed',
         top: 0,
@@ -33,6 +34,7 @@ export default function Nav() {
       }}
     >
       <nav
+        className="nav-bar"
         style={{
           maxWidth: 'var(--container-wide)',
           margin: '0 auto',
@@ -108,8 +110,15 @@ export default function Nav() {
         .nav-link span { transition: opacity 180ms var(--ease); }
         .nav-link:hover span { opacity: .62; }
         .nav-gh:hover { background: var(--ink-2) !important; border-color: var(--ink-2) !important; }
+
+        /* On a phone the bar is the wordmark and two controls, so it can
+           sit tighter — and the fade below it is shorter, because a tall
+           gradient over a small screen dims a third of the page. */
         @media (max-width: 720px) {
           .nav-links { display: none !important; }
+          .nav-shade { padding-bottom: 26px !important; }
+          .nav-bar { padding: 14px 18px !important; gap: 12px !important; }
+          .nav-gh { padding: 8px 14px !important; }
         }
       `}</style>
     </header>

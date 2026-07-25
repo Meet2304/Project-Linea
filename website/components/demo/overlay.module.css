@@ -742,5 +742,90 @@
   color: var(--lyric-accent);
   font-weight: var(--w-semibold, 500);
   line-height: 1.32;
+  /* It stands in for a lyric row, so it behaves like one: a narrow panel
+     truncates it rather than wrapping and making the box taller than the
+     view it has to match. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Touch ------------------------------------------------------
+   Two things the replica cannot inherit from a desktop window.
+
+   There is no hover, so every control that waits for a pointer to
+   arrive would be unreachable: the chrome is simply always up, which
+   is also the honest picture of the app — this is what the window
+   looks like when you are using it.
+
+   Because the strip is permanent it gets a row of its own instead of
+   lying over the last lyric behind a wash — on a desktop that overlap
+   lasts as long as the pointer does, here it would last forever.
+
+   And the panel is pinned in the middle of a page the visitor is
+   scrolling with the same finger, so the lyric column must not
+   capture that drag. It keeps its scroll position (follow mode still
+   centres the active line by setting scrollTop) but stops competing
+   with the page for the gesture.
+   ---------------------------------------------------------------- */
+
+@media (hover: none) {
+  .lyricsScroll {
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  .topbarActions,
+  .controls {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  /* Real room for the strip, so no lyric ever sits under it. */
+  .nowView {
+    padding-bottom: 68px;
+  }
+
+  .nowView::after {
+    display: none;
+  }
+
+  .jumpBtn {
+    bottom: 76px;
+  }
+
+  /* Settings still has to be the same height as the lyric view, or
+     opening it resizes the panel — and with no wheel over the panel it
+     also has to *fit*, so the rows and the preview tuck in a little. */
+  .settingsView {
+    height: calc(
+      var(--visible-lines) * var(--lyric-line-h) + (var(--visible-lines) - 1) * var(--lyric-gap) +
+        68px
+    );
+    gap: 8px;
+  }
+
+  .setRow {
+    min-height: 24px;
+  }
+
+  .previewBox {
+    padding: 8px 10px;
+  }
+
+  /* The hairline and the scrubber are one line; with the strip up, the
+     scrubber is the one that shows. */
+  .edgeProgress {
+    opacity: 0;
+  }
+
+  .slider::-webkit-slider-thumb {
+    opacity: 1;
+  }
+
+  .slider::-moz-range-thumb {
+    opacity: 1;
+  }
 }
 

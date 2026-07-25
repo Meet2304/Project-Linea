@@ -19,6 +19,8 @@ interface Props {
   accent?: string
   /** Show the version / size / other-platform line beneath. */
   showMeta?: boolean
+  /** Hook for the caller's own layout — the hero stretches it on a phone. */
+  className?: string
 }
 
 /**
@@ -37,7 +39,8 @@ export default function DownloadButton({
   release,
   size = 'lg',
   accent = 'var(--ink)',
-  showMeta = true
+  showMeta = true,
+  className
 }: Props) {
   const [platform, setPlatform] = useState<Platform | null>(null)
   useEffect(() => setPlatform(detectPlatform()), [])
@@ -61,6 +64,7 @@ export default function DownloadButton({
 
   return (
     <div
+      className={className}
       style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}
     >
       <a
