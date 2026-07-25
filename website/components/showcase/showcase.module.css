@@ -523,11 +523,26 @@
   /* One flick per act — shorter than the desktop's share of scroll,
      because a thumb covers less ground than a wheel. */
   .actPane {
-    height: clamp(290px, 50svh, 440px);
+    height: clamp(250px, 36svh, 340px);
   }
 
+  /* Act 01's share of scroll starts while the rail is still settling into
+     place. Without this the card pins with act 01 up and then *nothing
+     changes for the next 600px* — the sentinels can only begin below a
+     rail that is itself two thirds of a phone screen tall, so the first
+     act ends up owning its own pane plus the whole height of the rail.
+     Pulling the first pane up under the rail (they never draw anything,
+     and the rail sits above them) puts act 02 the same distance away as
+     act 03 is from act 02. */
+  .actPane:first-child {
+    margin-top: -300px;
+  }
+
+  /* What gives the last act its turn: the rail unpins when its bottom
+     reaches the end of the flow, so this is the scroll act 04 gets to be
+     read in before the whole rail starts riding away. */
   .tail {
-    height: clamp(170px, 28svh, 300px);
+    height: clamp(300px, 42svh, 400px);
   }
 
   /* Lying down along the bottom edge: a column in the left margin
