@@ -8,6 +8,10 @@ directories:
 
 files:
   - out/**/*
+  # The main bundle resolves the tray/window icon as out/main/../../resources/
+  # icon.png, so the folder must ship inside the asar — without it Tray()
+  # throws on launch and takes the rest of app-ready down with it.
+  - resources/**
   - package.json
 
 mac:
