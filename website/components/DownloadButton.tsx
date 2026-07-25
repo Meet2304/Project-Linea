@@ -6,6 +6,7 @@ import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { DownloadIcon } from '@/components/animate-ui/icons/download'
 import {
   detectPlatform,
+  downloadHref,
   formatSize,
   PLATFORM_LABEL,
   RELEASES_URL,
@@ -51,7 +52,9 @@ export default function DownloadButton({
   const otherKey = platform === 'win' ? 'mac' : 'win'
   const otherAsset = release.assets[otherKey]
 
-  const href = primaryAsset?.url ?? RELEASES_URL
+  // Never link at primaryAsset.url — that pins the version this page was
+  // rendered with. The redirect resolves the latest release at click time.
+  const href = platform === 'win' || platform === 'mac' ? downloadHref(platform) : RELEASES_URL
   const label =
     platform === 'win' || platform === 'mac'
       ? `Download for ${PLATFORM_LABEL[platform]}`
@@ -74,7 +77,9 @@ export default function DownloadButton({
         <a
           className="dl-primary"
           href={href}
-          {...(primaryAsset ? {} : { target: '_blank', rel: 'noreferrer noopener' })}
+          {...(platform === 'win' || platform === 'mac'
+            ? {}
+            : { target: '_blank', rel: 'noreferrer noopener' })}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -112,7 +117,7 @@ export default function DownloadButton({
             <>
               {' · '}
               <a
-                href={otherAsset.url}
+                href={downloadHref(otherKey)}
                 style={{ color: 'var(--steel)', textDecoration: 'underline' }}
               >
                 also for {PLATFORM_LABEL[otherKey]}
