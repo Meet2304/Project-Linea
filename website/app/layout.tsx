@@ -22,7 +22,7 @@ const DESCRIPTION =
   'Live Spotify lyrics, floating over everything you do. A lightweight, open-source desktop overlay for Windows and macOS.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://linea.vercel.app'),
+  metadataBase: new URL('https://project-linea.vercel.app'),
   title: TITLE,
   description: DESCRIPTION,
   applicationName: 'Linea',
