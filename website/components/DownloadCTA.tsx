@@ -39,6 +39,7 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
       <div className="field-scrim" />
 
       <div
+        className="cta-copy"
         style={{
           position: 'relative',
           zIndex: 2,
@@ -101,6 +102,27 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
       </div>
 
       <style>{`
+        /* A phone's lines run out to where the plate is still busy, so the
+           type carries the same page-colored halo the nav uses rather than
+           the field being washed flat behind it. */
+        @media (max-width: 720px) {
+          /* Direct children only: the halo must not reach the label inside
+             the download button, which sits on its own dark fill. */
+          .cta-copy > h2,
+          .cta-copy > p,
+          .cta-copy > span {
+            text-shadow:
+              0 0 5px rgb(var(--scrim-rgb) / .95),
+              0 1px 3px rgb(var(--scrim-rgb) / .9);
+          }
+          /* The fine print is the quietest type on the busiest part of the
+             plate, so it moves up one step of the ramp to stay readable.
+             !important because the colour it overrides is an inline style. */
+          .cta-copy > p:last-of-type {
+            color: var(--steel) !important;
+          }
+        }
+
         .cta-halo {
           position: relative;
           display: inline-flex;

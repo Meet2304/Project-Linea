@@ -319,19 +319,22 @@
 
 /* --- Act sentinels ----------------------------------------------- */
 
-/* Desktop: nothing to see — each pane is the scroll distance one act
-   owns. The copy itself sits in the slot above. Short enough that moving
-   between acts is a flick, long enough that one act can't be skipped by
-   an ordinary scroll gesture. */
+/* "See it work" jumps here. Landing with the first sentinel's top at the
+   top of the viewport puts the *second* one in the observer's band, so the
+   jump would open on act 02 — this stops it a third of a screen short, in
+   the middle of act 01, where the walkthrough is meant to begin. */
+.actPanes {
+  scroll-margin-top: 34svh;
+}
+
+/* Nothing to see — each pane is the scroll distance one act owns. The
+   copy itself sits in the slot above. Short enough that moving between
+   acts is a flick, long enough that one act can't be skipped by an
+   ordinary scroll gesture. */
 .actPane {
   position: relative;
   z-index: 1;
   height: clamp(340px, 58svh, 560px);
-}
-
-/* Mobile-only twin of the slot copy. */
-.paneCopy {
-  display: none;
 }
 
 /* Lets the final act rest under the demo before the rail rides away,
@@ -430,83 +433,196 @@
   transform: scale(1.7);
 }
 
-/* --- Narrow screens --------------------------------------------- */
+/* --- Narrow screens ---------------------------------------------
+   The walkthrough behaves exactly as it does on a desktop: the demo
+   pins near the top of the viewport and the acts change underneath
+   it, one at a time. Only the measurements move — the card rests
+   under a shorter nav, and the panel plus its copy are tightened so
+   the whole pinned rail still fits inside a small phone viewport
+   rather than running off the bottom of it.
+   ---------------------------------------------------------------- */
 
 @media (max-width: 1023px) {
-  /* No pinning and no scroll-linked assembly: the panel sits once, the
-     copy stacks under it. */
-  .bg {
-    position: absolute;
-    inset: 0 0 auto;
-    height: 78svh;
-  }
-
-  .heroField,
-  .heroScrim {
-    opacity: 1;
-  }
-
-  .flow {
-    margin-top: 0;
+  .showcase {
+    /* The pinned rail is shorter here than on a desktop, so it rests a
+       little lower down: demo and copy read as one block sitting in the
+       middle of the screen rather than hanging off the nav. */
+    --card-top: clamp(72px, 15svh, 140px);
+    /* The panel is 226px tall here whatever the screen, so the space the
+       hero reserves for it has to clear that plus a margin — on a short
+       phone anything less parks the demo on the fold. */
+    --hero-card-space: clamp(252px, 32svh, 320px);
   }
 
   .heroPane {
-    min-height: 0;
-    padding: clamp(88px, 16svh, 140px) clamp(20px, 6vw, 40px) clamp(20px, 4svh, 40px);
+    padding: clamp(70px, 13svh, 112px) clamp(20px, 6vw, 40px) clamp(14px, 3svh, 30px);
   }
 
   .heroTitle {
-    font-size: clamp(38px, 9vw, 62px);
+    font-size: clamp(36px, 9vw, 62px);
   }
 
-  .heroInner {
-    opacity: 1;
-    transform: none;
+  .heroSub {
+    margin-top: 16px;
+    font-size: var(--text-base);
   }
 
-  .cardRail {
-    position: relative;
-    top: 0;
-    padding: 0 clamp(16px, 5vw, 32px);
+  /* Near-full-bleed: the panel inside is the point, and every pixel
+     of width it gets is one less lyric truncated. */
+  .card,
+  .copySlot {
+    width: min(560px, 94vw);
   }
 
   .card {
-    transform: none;
-    width: 100%;
-    padding: clamp(10px, 3vw, 18px);
-    border-color: var(--line);
-    background: var(--surface-alt);
+    padding: calc(var(--handoff) * clamp(8px, 2.4vw, 16px));
   }
 
-  .cardBacking,
-  .cardField,
-  .cardVeil {
-    opacity: 1;
-  }
-
-  /* No pinned slot: the copy stacks in-flow under the panel instead. */
   .copySlot {
-    display: none;
+    margin-top: clamp(18px, 3.2svh, 32px);
   }
 
+  /* The slot is as tall as the longest act, so a short one would sit
+     top-aligned with a hole under it. Centre each act inside it and the
+     demo-plus-copy pair stays one balanced block whichever act is up. */
+  .slotCopy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .actTitle {
+    font-size: clamp(25px, 6.6vw, 34px);
+  }
+
+  /* Narrower measures than the desktop's: a line of copy that runs the
+     full width of a phone is the thing that makes a page feel unmade. */
+  .actBody {
+    margin-top: 12px;
+    max-width: 32ch;
+  }
+
+  .points {
+    margin-top: 14px;
+    gap: 4px 16px;
+  }
+
+  .point + .point::before {
+    left: -10px;
+  }
+
+  .note {
+    margin-top: 14px;
+    max-width: 36ch;
+  }
+
+  .cardRail {
+    padding-bottom: clamp(64px, 11svh, 120px);
+  }
+
+  /* One flick per act — shorter than the desktop's share of scroll,
+     because a thumb covers less ground than a wheel. */
   .actPane {
-    height: auto;
-    padding: 28px clamp(20px, 5vw, 40px);
-    text-align: center;
-  }
-
-  .paneCopy {
-    display: block;
-    max-width: 620px;
-    margin: 0 auto;
+    height: clamp(290px, 50svh, 440px);
   }
 
   .tail {
+    height: clamp(170px, 28svh, 300px);
+  }
+
+  /* Lying down along the bottom edge: a column in the left margin
+     would sit on top of a card that is now nearly full width. */
+  .rail {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    flex-direction: row;
+    justify-content: center;
+    gap: 9px;
+  }
+
+  .railDot[data-active='true'] {
+    transform: scale(1.6);
+  }
+}
+
+/* A short viewport — a phone turned sideways, mostly. Stacked, the
+   panel and its copy are taller than the screen and the last line of
+   an act would be pinned out of reach, so the pair goes side by side
+   and the copy loses its note. */
+@media (max-width: 1023px) and (max-height: 620px) {
+  .showcase {
+    --card-top: clamp(44px, 8svh, 64px);
+  }
+
+  .note {
     display: none;
   }
 
-  .rail {
-    display: none;
+  .actBody {
+    font-size: var(--text-sm);
+  }
+}
+
+@media (max-width: 1023px) and (max-height: 620px) and (min-width: 560px) {
+  .cardRail {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(20px, 4vw, 40px);
+    /* Side padding is on the rail rather than the card, so the card's
+       corners never sit flush against the edge of the screen. */
+    padding: 0 clamp(16px, 4vw, 40px) clamp(24px, 8svh, 48px);
+  }
+
+  .card,
+  .copySlot {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 520px;
+  }
+
+  .copySlot {
+    margin-top: 0;
+    text-align: left;
+  }
+
+  .actNum,
+  .points {
+    justify-content: flex-start;
+  }
+
+  .actBody,
+  .note {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* The two hero buttons read as one block of the same width rather
+   than a ragged pair. */
+@media (max-width: 620px) {
+  .heroCta {
+    flex-direction: column;
+    align-items: stretch;
+    width: min(320px, 100%);
+    margin-left: auto;
+    margin-right: auto;
+    gap: 12px;
+  }
+
+  .heroDownload {
+    width: 100%;
+    align-items: center;
+  }
+
+  .heroDownload > a,
+  .heroSecondary {
+    width: 100%;
+    justify-content: center;
   }
 }
 

@@ -315,6 +315,22 @@ h3 {
   );
 }
 
+/* On a narrow screen the copy runs nearly the full width of the plate —
+   well past where a closest-side radial has already faded out — so the
+   scrim keeps a thin flat wash all the way to the edges. Enough for the
+   quietest line of type to hold; not enough to bleach the field. */
+@media (max-width: 720px) {
+  .field-scrim {
+    background: radial-gradient(
+      closest-side at 50% 46%,
+      rgb(var(--scrim-rgb) / 0.92) 14%,
+      rgb(var(--scrim-rgb) / 0.62) 44%,
+      rgb(var(--scrim-rgb) / 0.38) 74%,
+      rgb(var(--scrim-rgb) / 0.32) 100%
+    );
+  }
+}
+
 /* Sticky nav — the one place besides the overlay that uses blur, to say
    "this floats above your work". */
 .floating-surface {

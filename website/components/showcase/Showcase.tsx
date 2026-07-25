@@ -38,6 +38,10 @@ import type { ReleaseInfo } from '@/lib/release'
  * Scroll drives one custom property, `--handoff` (0 → 1), written straight
  * to the DOM from a rAF-throttled listener; React state would re-render the
  * live canvas panel on every frame.
+ *
+ * A phone runs the same sequence — one act at a time under the pinned demo.
+ * Only the measurements change (see the narrow-screen block in the
+ * stylesheet); nothing here branches on width.
  */
 function ActCopy({ act }: { act: Act }) {
   return (
@@ -212,7 +216,11 @@ export default function Showcase({ release }: { release: ReleaseInfo }) {
             <p className={s.heroSub}>Live Spotify lyrics, floating over everything you do.</p>
 
             <div className={s.heroCta}>
-              <DownloadButton release={release} accent={heroPal.accent} />
+              <DownloadButton
+                release={release}
+                accent={heroPal.accent}
+                className={s.heroDownload}
+              />
               <a className={s.heroSecondary} href="#features">
                 See it work
                 <Icon name="arrow-right" size={17} />
@@ -280,9 +288,9 @@ export default function Showcase({ release }: { release: ReleaseInfo }) {
           </div>
         </div>
 
-        <div id="features">
-          {/* Desktop: invisible sentinels that give each act its share of
-              scroll. Mobile: the same panes render the copy in-flow. */}
+        <div id="features" className={s.actPanes}>
+          {/* Invisible sentinels — each one is the share of scroll that its
+              act owns. The copy they drive lives in the slot above. */}
           {ACTS.map((a, i) => (
             <div
               key={a.id}
@@ -290,11 +298,8 @@ export default function Showcase({ release }: { release: ReleaseInfo }) {
                 actRefs.current[i] = el
               }}
               className={s.actPane}
-            >
-              <div className={s.paneCopy}>
-                <ActCopy act={a} />
-              </div>
-            </div>
+              aria-hidden="true"
+            />
           ))}
 
           {/* Lets the final act rest below the demo before the rail rides
