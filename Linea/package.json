@@ -1,6 +1,6 @@
 {
   "name": "linea",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Always-on-top Spotify lyrics overlay",
   "main": "./out/main/index.js",
   "author": "Meet2304",
