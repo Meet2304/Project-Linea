@@ -6,18 +6,10 @@
  * `currentColor` so icons inherit the surrounding text or feature color.
  * Lucide is ISC licensed — see NOTICE.md.
  *
- * One of them — download — groups the part of the geometry that moves so a
- * button can animate it on hover in CSS. The class is always on the group;
- * it only does anything inside an element carrying `m.trigger`, so the icon
- * anywhere else is untouched. See icon-motion.module.css. The two arrows
- * that also animate are Animate UI components instead, under
+ * These are the still icons. The three that animate on hover — download and
+ * the two arrows — are Animate UI components, under
  * components/animate-ui/icons.
  */
-
-import m from './icon-motion.module.css'
-
-/** Put on the button, not the icon: the whole button is the hover target. */
-export const iconTrigger = m.trigger
 
 export type IconName =
   | 'pin'
@@ -104,10 +96,8 @@ const PATHS: Record<IconName, React.ReactNode> = {
   download: (
     <>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <g className={m.arrowDown}>
-        <polyline points="7 10 12 15 17 10" />
-        <line x1="12" x2="12" y1="15" y2="3" />
-      </g>
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" x2="12" y1="15" y2="3" />
     </>
   ),
   'arrow-right': (

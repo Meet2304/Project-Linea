@@ -29,7 +29,7 @@ through `next/font` on the website.
 Iconography is [Lucide](https://lucide.dev) (ISC License). The app inlines the
 individual paths rather than depending on the package.
 
-Two of the website's icons animate on hover and are
+The website's three icons that animate on hover are
 [Animate UI](https://animate-ui.com) components, vendored into
 `website/components/animate-ui/` as that project distributes them — along with
 the runtime they share (`icons/icon.tsx`, `primitives/animate/slot.tsx`,
