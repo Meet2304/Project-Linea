@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Icon from './ui/Icon'
+import Icon, { iconTrigger } from './ui/Icon'
 import Mono from './ui/Mono'
 import {
   detectPlatform,
@@ -68,7 +68,8 @@ export default function DownloadButton({
       style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}
     >
       <a
-        className="dl-primary"
+        // The whole pill drives the arrow, not the 18px arrow itself.
+        className={`dl-primary ${iconTrigger}`}
         href={href}
         {...(primaryAsset ? {} : { target: '_blank', rel: 'noreferrer noopener' })}
         style={{

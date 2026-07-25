@@ -5,7 +5,18 @@
  * Linea/src/renderer/src/renderer.ts). Default 1.75px stroke and
  * `currentColor` so icons inherit the surrounding text or feature color.
  * Lucide is ISC licensed — see NOTICE.md.
+ *
+ * Three of them — the two arrows and the download tray — group the part of
+ * the geometry that moves so a button can animate it on hover. The class is
+ * always on the group; it only does anything inside an element carrying
+ * `m.trigger`, so an icon anywhere else is untouched. See
+ * icon-motion.module.css.
  */
+
+import m from './icon-motion.module.css'
+
+/** Put on the button, not the icon: the whole button is the hover target. */
+export const iconTrigger = m.trigger
 
 export type IconName =
   | 'pin'
@@ -92,21 +103,23 @@ const PATHS: Record<IconName, React.ReactNode> = {
   download: (
     <>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" x2="12" y1="15" y2="3" />
+      <g className={m.arrowDown}>
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" x2="12" y1="15" y2="3" />
+      </g>
     </>
   ),
   'arrow-right': (
-    <>
+    <g className={m.arrowRight}>
       <path d="M5 12h14" />
       <path d="m12 5 7 7-7 7" />
-    </>
+    </g>
   ),
   'arrow-up-right': (
-    <>
+    <g className={m.arrowUpRight}>
       <path d="M7 7h10v10" />
       <path d="M7 17 17 7" />
-    </>
+    </g>
   ),
   github: (
     <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />

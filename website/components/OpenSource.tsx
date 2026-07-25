@@ -1,7 +1,7 @@
 import CymaticField from './field/CymaticField'
 import CloneTerminal from './oss/CloneTerminal'
 import Mono from './ui/Mono'
-import Icon, { type IconName } from './ui/Icon'
+import Icon, { iconTrigger, type IconName } from './ui/Icon'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
 import { LICENSE_URL, REPO_URL, type ReleaseInfo } from '@/lib/release'
 
@@ -92,6 +92,8 @@ export default function OpenSource({ release }: { release: ReleaseInfo }) {
             href={REPO_URL}
             target="_blank"
             rel="noreferrer noopener"
+            // The whole button drives the corner arrow, not the 14px glyph.
+            className={iconTrigger}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

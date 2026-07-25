@@ -8,7 +8,7 @@ import CymaticField from '../field/CymaticField'
 import { prefersReducedMotion } from '../field/cymatics-live'
 import DownloadButton from '../DownloadButton'
 import Mono from '../ui/Mono'
-import Icon from '../ui/Icon'
+import Icon, { iconTrigger } from '../ui/Icon'
 import { useTheme } from '../theme/ThemeProvider'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
 import type { ReleaseInfo } from '@/lib/release'
@@ -241,7 +241,7 @@ export default function Showcase({ release }: { release: ReleaseInfo }) {
               {/* No accent override: the default is --ink, which is also what
                   the closing call to action uses. */}
               <DownloadButton release={release} className={s.heroDownload} />
-              <a className={s.heroSecondary} href="#features">
+              <a className={`${s.heroSecondary} ${iconTrigger}`} href="#features">
                 See it work
                 <Icon name="arrow-right" size={17} />
               </a>
