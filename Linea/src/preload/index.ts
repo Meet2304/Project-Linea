@@ -7,7 +7,7 @@ import type {
   PlayerState,
   Prefs
 } from '../shared/types'
-import type { LyricLine } from '../shared/lyrics'
+import type { LyricsResult } from '../shared/lyrics'
 
 function subscribe<T>(channel: string): (callback: (data: T) => void) => () => void {
   return (callback) => {
@@ -40,7 +40,7 @@ contextBridge.exposeInMainWorld('linea', {
   }): Promise<void> => ipcRenderer.invoke(IPC.SET_WINDOW_BOUNDS, bounds),
   closeWindow: (): Promise<void> => ipcRenderer.invoke(IPC.CLOSE_WINDOW),
   onNowPlaying: subscribe<PlayerState | null>(IPC.NOW_PLAYING),
-  onLyricsUpdate: subscribe<LyricLine[]>(IPC.LYRICS_UPDATE),
+  onLyricsUpdate: subscribe<LyricsResult>(IPC.LYRICS_UPDATE),
   onClickThroughChanged: subscribe<boolean>(IPC.CLICK_THROUGH_CHANGED),
   onWindowFocusChanged: subscribe<boolean>(IPC.WINDOW_FOCUS_CHANGED),
   onPlayerError: subscribe<PlayerErrorEvent>(IPC.PLAYER_ERROR),

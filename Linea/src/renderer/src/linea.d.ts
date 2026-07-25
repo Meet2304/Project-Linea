@@ -5,7 +5,7 @@ import type {
   PlayerState,
   Prefs
 } from '../../shared/types'
-import type { LyricLine } from '../../shared/lyrics'
+import type { LyricsResult } from '../../shared/lyrics'
 
 interface LineaAPI {
   toggleClickThrough: () => Promise<boolean>
@@ -27,7 +27,7 @@ interface LineaAPI {
   }) => Promise<void>
   closeWindow: () => Promise<void>
   onNowPlaying: (callback: (data: PlayerState | null) => void) => () => void
-  onLyricsUpdate: (callback: (lines: LyricLine[]) => void) => () => void
+  onLyricsUpdate: (callback: (result: LyricsResult) => void) => () => void
   onClickThroughChanged: (callback: (on: boolean) => void) => () => void
   onWindowFocusChanged: (callback: (focused: boolean) => void) => () => void
   onPlayerError: (callback: (event: PlayerErrorEvent) => void) => () => void

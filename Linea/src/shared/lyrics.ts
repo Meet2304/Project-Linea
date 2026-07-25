@@ -3,6 +3,17 @@ export interface LyricLine {
   text: string
 }
 
+/**
+ * `none` — lrclib answered, this track has no synced lyrics.
+ * `unreachable` — we never got an answer, so we know nothing about the track.
+ */
+export type LyricsStatus = 'ok' | 'none' | 'unreachable'
+
+export interface LyricsResult {
+  lines: LyricLine[]
+  status: LyricsStatus
+}
+
 const LRC_LINE = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\](.*)/
 
 export function parseLrc(syncedLyrics: string): LyricLine[] {

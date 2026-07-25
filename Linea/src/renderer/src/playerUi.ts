@@ -1,7 +1,7 @@
 import { icons } from './icons'
 import { formatTime, formatRemaining } from '../../shared/format'
 import type { LyricsSize, PlayerState, Prefs } from '../../shared/types'
-import type { LyricLine } from '../../shared/lyrics'
+import type { LyricLine, LyricsStatus } from '../../shared/lyrics'
 
 function byId<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id)
@@ -103,10 +103,19 @@ let lyricRows: HTMLElement[] = []
 
 /** Build every lyric line once; the container scrolls and the active
  *  line is tracked separately via setActiveLyric(). */
-export function renderAllLyrics(lines: LyricLine[]): void {
+export function renderAllLyrics(lines: LyricLine[], status: LyricsStatus = 'none'): void {
   if (lines.length === 0) {
     lyricRows = []
-    el.lyricsList.replaceChildren(emptyMessage('No synced lyrics for this track'))
+    // Only claim the track has no lyrics when lrclib actually said so.
+    // If the lookup never completed we know nothing about the track, and
+    // saying otherwise sends people hunting for a bug in the app.
+    el.lyricsList.replaceChildren(
+      emptyMessage(
+        status === 'unreachable'
+          ? "Can't reach the lyrics service — check your connection"
+          : 'No synced lyrics for this track'
+      )
+    )
     return
   }
   const rows = lines.map((line, i) => {
