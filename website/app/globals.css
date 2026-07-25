@@ -226,6 +226,22 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Narrow screens only. A flick carries momentum a wheel does not, and one
+   of them coasts through every act of the walkthrough at once — so the four
+   act sentinels become snap points a scroll has to stop at, one per
+   gesture (see .actPane in showcase.module.css; `scroll-snap-stop: always`
+   is the half that does the work).
+
+   `proximity`, never `mandatory`: they are the only snap areas on a long
+   page, and mandatory drags scrolling elsewhere back toward them — tested,
+   and it makes everything past the walkthrough a fight to reach. With
+   proximity, scrolling outside the section behaves exactly as before. */
+@media (max-width: 1023px) {
+  html {
+    scroll-snap-type: y proximity;
+  }
+}
+
 body {
   background: var(--surface-page);
   color: var(--text-body);
