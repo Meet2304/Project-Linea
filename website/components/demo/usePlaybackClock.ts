@@ -6,6 +6,8 @@ import { activeLineIndex, type LyricLine } from './lyrics'
 interface Options {
   lines: LyricLine[]
   durationMs: number
+  /** When true (default), wrap to 0 and keep playing at the end. */
+  loop?: boolean
   onEnded?: () => void
 }
 
@@ -28,7 +30,7 @@ interface Clock {
  * still be smooth without the scheduler waking up for it — the transport
  * strip animates via CSS transition instead.
  */
-export function usePlaybackClock({ lines, durationMs, onEnded }: Options): Clock {
+export function usePlaybackClock({ lines, durationMs, loop = true, onEnded }: Options): Clock {
   const [playing, setPlaying] = useState(false)
   const [positionMs, setPositionMs] = useState(0)
 
@@ -38,6 +40,8 @@ export function usePlaybackClock({ lines, durationMs, onEnded }: Options): Clock
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onEndedRef = useRef(onEnded)
   onEndedRef.current = onEnded
+  const loopRef = useRef(loop)
+  loopRef.current = loop
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -55,14 +59,20 @@ export function usePlaybackClock({ lines, durationMs, onEnded }: Options): Clock
   /** Arm a single timeout for the next boundary (+15ms, as the app does). */
   const schedule = useCallback(() => {
     clearTimer()
-    const now = readPosition()
+    let now = readPosition()
 
     if (now >= durationMs) {
-      setPositionMs(durationMs)
-      setPlaying(false)
-      anchorRef.current = { position: durationMs, at: 0 }
       onEndedRef.current?.()
-      return
+      if (!loopRef.current) {
+        setPositionMs(durationMs)
+        setPlaying(false)
+        anchorRef.current = { position: durationMs, at: 0 }
+        return
+      }
+      // Wrap without pausing — the demo should keep singing.
+      now = 0
+      anchorRef.current = { position: 0, at: performance.now() }
+      setPositionMs(0)
     }
 
     const idx = activeLineIndex(lines, now)

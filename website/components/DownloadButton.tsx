@@ -55,6 +55,9 @@ export default function DownloadButton({
 
   const pad = size === 'lg' ? '15px 28px' : '11px 21px'
   const fontSize = size === 'lg' ? 'var(--text-base)' : 'var(--text-sm)'
+  // Theme-aware ink fills need the on-accent token (white↔near-black).
+  // Fixed jewel / hex accents stay dark enough that white label works.
+  const labelColor = accent === 'var(--ink)' ? 'var(--text-on-accent)' : '#ffffff'
 
   return (
     <div
@@ -71,13 +74,13 @@ export default function DownloadButton({
           padding: pad,
           borderRadius: 'var(--radius-round)',
           background: accent,
-          color: 'var(--white)',
+          color: labelColor,
           fontSize,
           fontWeight: 500,
           letterSpacing: '-0.01em',
           textDecoration: 'none',
           boxShadow: 'var(--shadow-md)',
-          transition: 'transform 160ms var(--ease), box-shadow 220ms var(--ease)'
+          transition: 'transform 160ms var(--ease), box-shadow 220ms var(--ease), color 220ms var(--ease)'
         }}
       >
         <Icon name="download" size={size === 'lg' ? 18 : 16} />

@@ -177,7 +177,9 @@ function createWindow(): void {
     skipTaskbar: false,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    // Windows/Linux: set window + taskbar icon (dev and unpackaged).
+    // macOS uses the .icns from the app bundle instead.
+    ...(process.platform !== 'darwin' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,
@@ -274,7 +276,9 @@ function summonWindow(): void {
 function createTray(): void {
   if (tray) return
   const image = nativeImage.createFromPath(icon)
-  tray = new Tray(image.isEmpty() ? icon : image)
+  // Tray wants a small bitmap; downscale so Windows/Linux stay crisp.
+  const trayIcon = image.isEmpty() ? icon : image.resize({ width: 32, height: 32 })
+  tray = new Tray(trayIcon)
   tray.setToolTip('Linea')
   tray.on('click', () => summonWindow())
   const menu = Menu.buildFromTemplate([

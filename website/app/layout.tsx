@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Outfit, Space_Mono } from 'next/font/google'
+import LoadingVeil from '@/components/loader/LoadingVeil'
 import './globals.css'
 
 const outfit = Outfit({
@@ -39,12 +40,21 @@ export const metadata: Metadata = {
     type: 'website',
     title: TITLE,
     description: DESCRIPTION,
-    siteName: 'Linea'
+    siteName: 'Linea',
+    images: [
+      {
+        url: '/social/linea-whatsapp-og.png',
+        width: 1200,
+        height: 630,
+        alt: 'Linea — know every word'
+      }
+    ]
   },
   twitter: {
     card: 'summary_large_image',
     title: TITLE,
-    description: DESCRIPTION
+    description: DESCRIPTION,
+    images: ['/social/linea-x-social.png']
   }
 }
 
@@ -56,7 +66,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${outfit.variable} ${spaceMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {/* In the first HTML payload on purpose: it covers the page before
+            hydration, while everything beneath it finishes assembling. */}
+        <LoadingVeil />
+        {children}
+      </body>
     </html>
   )
 }

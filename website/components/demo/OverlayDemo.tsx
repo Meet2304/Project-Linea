@@ -101,7 +101,9 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
   const clock = usePlaybackClock({
     lines: track.lines,
     durationMs: track.durationMs,
-    onEnded: nextTrack
+    // Single-track demo: loop this song forever. With a playlist, advance.
+    loop: TRACKS.length <= 1,
+    onEnded: TRACKS.length > 1 ? nextTrack : undefined
   })
   const { positionMs, playing, activeIndex, toggle, seek, play, pause } = clock
 
