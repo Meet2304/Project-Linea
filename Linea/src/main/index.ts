@@ -100,13 +100,14 @@ function setWindowBounds(bounds: { x: number; y: number; width: number; height: 
 function isBoundsVisible(bounds: WindowBounds): boolean {
   return screen.getAllDisplays().some((display) => {
     const area = display.workArea
-    const overlapX =
-      Math.max(0, Math.min(bounds.x + bounds.width, area.x + area.width) - Math.max(bounds.x, area.x))
-    const overlapY =
-      Math.max(
-        0,
-        Math.min(bounds.y + bounds.height, area.y + area.height) - Math.max(bounds.y, area.y)
-      )
+    const overlapX = Math.max(
+      0,
+      Math.min(bounds.x + bounds.width, area.x + area.width) - Math.max(bounds.x, area.x)
+    )
+    const overlapY = Math.max(
+      0,
+      Math.min(bounds.y + bounds.height, area.y + area.height) - Math.max(bounds.y, area.y)
+    )
     return overlapX >= 80 && overlapY >= 40
   })
 }
@@ -552,7 +553,10 @@ function isValidBounds(
   if (typeof value !== 'object' || value === null) return false
   const b = value as Record<string, unknown>
   return (
-    isFiniteNumber(b.x) && isFiniteNumber(b.y) && isFiniteNumber(b.width) && isFiniteNumber(b.height)
+    isFiniteNumber(b.x) &&
+    isFiniteNumber(b.y) &&
+    isFiniteNumber(b.width) &&
+    isFiniteNumber(b.height)
   )
 }
 

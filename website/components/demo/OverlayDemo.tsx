@@ -306,259 +306,259 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
       <div
         ref={panelRef}
         className={s.app}
-          data-theme={theme}
-          data-pointer-inside={pointerInside}
-          data-settings={settingsOpen}
-          data-timestamps={timestamps}
-          style={
-            {
-              '--lyric-accent': accentHex,
-              '--lyrics-size': `${SIZES[size].px}px`,
-              // Line count is part of the preset, not a separate setting —
-              // the app resizes the window to suit the type size.
-              '--visible-lines': SIZES[size].lines,
-              '--song-progress': progress
-              // No aspect ratio: the panel's height follows the three-line
-              // lyric window, so changing the lyric size resizes it the way
-              // the real window resizes.
-            } as React.CSSProperties
-          }
-          onPointerEnter={(e) => {
-            // A touch is not a hover. On a phone the chrome is always up
-            // anyway, and a finger crossing the panel on its way to
-            // scrolling the page must not read as taking the controls.
-            if (e.pointerType === 'touch') return
-            setPointerInside(true)
-            takeOver()
-          }}
-          onPointerLeave={() => setPointerInside(false)}
-          onClick={onPanelClick}
-        >
-          <div className={s.stack}>
-            {/* Top bar */}
-            <header className={s.topbar}>
-              <Thumb trackId={track.id} color={accentHex} playing={playing} size={30} />
-              <div className={s.track}>
-                <span className={s.trackTitle}>{track.title}</span>
-                <span className={s.trackArtist}>{track.artist}</span>
-              </div>
-              <div className={s.topbarActions}>
-                <button
-                  type="button"
-                  className={`${s.ghostBtn} ${s.ghostBtnSm}`}
-                  data-active={pinned}
-                  aria-pressed={pinned}
-                  aria-label="Pin on top"
-                  onClick={stop(() => setPinned((v) => !v))}
-                >
-                  <Icon name="pin" size={15} />
-                </button>
-                <button
-                  type="button"
-                  className={`${s.ghostBtn} ${s.ghostBtnSm}`}
-                  data-active={settingsOpen}
-                  aria-pressed={settingsOpen}
-                  aria-label="Settings"
-                  onClick={stop(() => setSettingsOpen((v) => !v))}
-                >
-                  <Icon name="settings" size={15} />
-                </button>
-                <button
-                  type="button"
-                  className={`${s.ghostBtn} ${s.ghostBtnSm} ${s.btnClose}`}
-                  aria-label="Close (disabled in this demo)"
-                  onClick={stop(() => {})}
-                >
-                  <Icon name="x" size={15} />
-                </button>
-              </div>
-            </header>
+        data-theme={theme}
+        data-pointer-inside={pointerInside}
+        data-settings={settingsOpen}
+        data-timestamps={timestamps}
+        style={
+          {
+            '--lyric-accent': accentHex,
+            '--lyrics-size': `${SIZES[size].px}px`,
+            // Line count is part of the preset, not a separate setting —
+            // the app resizes the window to suit the type size.
+            '--visible-lines': SIZES[size].lines,
+            '--song-progress': progress
+            // No aspect ratio: the panel's height follows the three-line
+            // lyric window, so changing the lyric size resizes it the way
+            // the real window resizes.
+          } as React.CSSProperties
+        }
+        onPointerEnter={(e) => {
+          // A touch is not a hover. On a phone the chrome is always up
+          // anyway, and a finger crossing the panel on its way to
+          // scrolling the page must not read as taking the controls.
+          if (e.pointerType === 'touch') return
+          setPointerInside(true)
+          takeOver()
+        }}
+        onPointerLeave={() => setPointerInside(false)}
+        onClick={onPanelClick}
+      >
+        <div className={s.stack}>
+          {/* Top bar */}
+          <header className={s.topbar}>
+            <Thumb trackId={track.id} color={accentHex} playing={playing} size={30} />
+            <div className={s.track}>
+              <span className={s.trackTitle}>{track.title}</span>
+              <span className={s.trackArtist}>{track.artist}</span>
+            </div>
+            <div className={s.topbarActions}>
+              <button
+                type="button"
+                className={`${s.ghostBtn} ${s.ghostBtnSm}`}
+                data-active={pinned}
+                aria-pressed={pinned}
+                aria-label="Pin on top"
+                onClick={stop(() => setPinned((v) => !v))}
+              >
+                <Icon name="pin" size={15} />
+              </button>
+              <button
+                type="button"
+                className={`${s.ghostBtn} ${s.ghostBtnSm}`}
+                data-active={settingsOpen}
+                aria-pressed={settingsOpen}
+                aria-label="Settings"
+                onClick={stop(() => setSettingsOpen((v) => !v))}
+              >
+                <Icon name="settings" size={15} />
+              </button>
+              <button
+                type="button"
+                className={`${s.ghostBtn} ${s.ghostBtnSm} ${s.btnClose}`}
+                aria-label="Close (disabled in this demo)"
+                onClick={stop(() => {})}
+              >
+                <Icon name="x" size={15} />
+              </button>
+            </div>
+          </header>
 
-            {settingsOpen ? (
-              <div className={s.settingsView}>
-                <div className={s.setRow}>
-                  <span className={s.setLabel}>Theme</span>
-                  {/* The app's own sun/moon control, at its settings-row
+          {settingsOpen ? (
+            <div className={s.settingsView}>
+              <div className={s.setRow}>
+                <span className={s.setLabel}>Theme</span>
+                {/* The app's own sun/moon control, at its settings-row
                       size. Flips the whole page, same as the nav toggle —
                       here the page stands in for the app. */}
-                  <ThemeToggle small />
+                <ThemeToggle small />
+              </div>
+              <div className={s.setRow}>
+                <span className={s.setLabel}>Timestamps</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={timestamps}
+                  aria-label="Show lyric timestamps"
+                  className={s.switch}
+                  onClick={stop(() => setTimestamps((v) => !v))}
+                />
+              </div>
+              <div className={s.setRow}>
+                <span className={s.setLabel}>Lyrics size</span>
+                <div className={s.segmented} role="group" aria-label="Lyrics size">
+                  {(Object.keys(SIZES) as SizeKey[]).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={s.seg}
+                      data-active={size === key}
+                      aria-pressed={size === key}
+                      onClick={stop(() => setSize(key))}
+                    >
+                      {SIZES[key].label}
+                    </button>
+                  ))}
                 </div>
-                <div className={s.setRow}>
-                  <span className={s.setLabel}>Timestamps</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={timestamps}
-                    aria-label="Show lyric timestamps"
-                    className={s.switch}
-                    onClick={stop(() => setTimestamps((v) => !v))}
-                  />
-                </div>
-                <div className={s.setRow}>
-                  <span className={s.setLabel}>Lyrics size</span>
-                  <div className={s.segmented} role="group" aria-label="Lyrics size">
-                    {(Object.keys(SIZES) as SizeKey[]).map((key) => (
+              </div>
+              <div className={s.previewBox} aria-hidden="true">
+                <span className={s.previewLabel}>Preview</span>
+                <span className={s.previewText}>Sand on a plate, finding the line</span>
+              </div>
+            </div>
+          ) : (
+            <div className={s.nowView}>
+              <section className={s.lyrics} data-up={edges.up} data-down={edges.down}>
+                <div className={s.lyricsScroll} ref={scrollRef} onScroll={onScroll}>
+                  {/* Half-viewport padding top and bottom keeps the active
+                        line centerable even at the very start and end. */}
+                  <div style={{ height: '42%' }} aria-hidden="true" />
+                  <div className={s.lyricsList} ref={listRef}>
+                    {track.lines.map((line, i) => (
                       <button
-                        key={key}
+                        key={i}
                         type="button"
-                        className={s.seg}
-                        data-active={size === key}
-                        aria-pressed={size === key}
-                        onClick={stop(() => setSize(key))}
+                        ref={(el) => {
+                          rowRefs.current[i] = el
+                        }}
+                        className={s.lyricRow}
+                        data-pos={i === activeIndex ? 'active' : i < activeIndex ? 'past' : 'next'}
+                        onClick={stop(() => {
+                          seek(line.t)
+                          setFollowing(true)
+                        })}
                       >
-                        {SIZES[key].label}
+                        <span className={s.lyricTime}>{formatLrcStamp(line.t)}</span>
+                        <span className={s.lyricText}>{line.text}</span>
                       </button>
                     ))}
                   </div>
+                  <div style={{ height: '42%' }} aria-hidden="true" />
                 </div>
-                <div className={s.previewBox} aria-hidden="true">
-                  <span className={s.previewLabel}>Preview</span>
-                  <span className={s.previewText}>Sand on a plate, finding the line</span>
+
+                {!following && (
+                  <button
+                    type="button"
+                    className={s.jumpBtn}
+                    data-dir={jumpDir}
+                    aria-label="Jump to the current line"
+                    onClick={stop(() => {
+                      setFollowing(true)
+                      scrollToActive()
+                    })}
+                  >
+                    <span>Now</span>
+                    <span className={s.jumpDir}>
+                      <Icon name="chevron-down" size={12} />
+                    </span>
+                  </button>
+                )}
+              </section>
+
+              <div className={s.controls}>
+                <div className={s.scrub}>
+                  <input
+                    id={seekId}
+                    type="range"
+                    className={s.slider}
+                    min={0}
+                    max={track.durationMs}
+                    step={250}
+                    value={positionMs}
+                    aria-label="Seek"
+                    style={{ '--fill': progress * 100 } as React.CSSProperties}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      takeOver()
+                      seek(Number(e.target.value))
+                      setFollowing(true)
+                    }}
+                  />
+                  <div className={s.timecodes}>
+                    <span>{formatTime(positionMs)}</span>
+                    <span>-{formatTime(track.durationMs - positionMs)}</span>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className={s.nowView}>
-                <section className={s.lyrics} data-up={edges.up} data-down={edges.down}>
-                  <div className={s.lyricsScroll} ref={scrollRef} onScroll={onScroll}>
-                    {/* Half-viewport padding top and bottom keeps the active
-                        line centerable even at the very start and end. */}
-                    <div style={{ height: '42%' }} aria-hidden="true" />
-                    <div className={s.lyricsList} ref={listRef}>
-                      {track.lines.map((line, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          ref={(el) => {
-                            rowRefs.current[i] = el
-                          }}
-                          className={s.lyricRow}
-                          data-pos={i === activeIndex ? 'active' : i < activeIndex ? 'past' : 'next'}
-                          onClick={stop(() => {
-                            seek(line.t)
-                            setFollowing(true)
-                          })}
-                        >
-                          <span className={s.lyricTime}>{formatLrcStamp(line.t)}</span>
-                          <span className={s.lyricText}>{line.text}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ height: '42%' }} aria-hidden="true" />
-                  </div>
 
-                  {!following && (
-                    <button
-                      type="button"
-                      className={s.jumpBtn}
-                      data-dir={jumpDir}
-                      aria-label="Jump to the current line"
-                      onClick={stop(() => {
-                        setFollowing(true)
-                        scrollToActive()
-                      })}
-                    >
-                      <span>Now</span>
-                      <span className={s.jumpDir}>
-                        <Icon name="chevron-down" size={12} />
-                      </span>
-                    </button>
-                  )}
-                </section>
-
-                <div className={s.controls}>
-                  <div className={s.scrub}>
-                    <input
-                      id={seekId}
-                      type="range"
-                      className={s.slider}
-                      min={0}
-                      max={track.durationMs}
-                      step={250}
-                      value={positionMs}
-                      aria-label="Seek"
-                      style={{ '--fill': progress * 100 } as React.CSSProperties}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        takeOver()
-                        seek(Number(e.target.value))
-                        setFollowing(true)
-                      }}
-                    />
-                    <div className={s.timecodes}>
-                      <span>{formatTime(positionMs)}</span>
-                      <span>-{formatTime(track.durationMs - positionMs)}</span>
-                    </div>
-                  </div>
-
-                  <div className={s.transport}>
-                    <button
-                      type="button"
-                      className={`${s.ghostBtn} ${s.ghostBtnSm}`}
-                      data-active={shuffle}
-                      aria-pressed={shuffle}
-                      aria-label="Shuffle"
-                      onClick={stop(() => setShuffle((v) => !v))}
-                    >
-                      <Icon name="shuffle" size={12} />
-                    </button>
-                    <button
-                      type="button"
-                      className={s.ghostBtn}
-                      aria-label="Previous track"
-                      onClick={stop(() => {
-                        setTrackIndex((i) => (i - 1 + TRACKS.length) % TRACKS.length)
-                      })}
-                    >
-                      <Icon name="skip-back" size={14} filled />
-                    </button>
-                    <button
-                      type="button"
-                      className={`${s.ghostBtn} ${s.playBtn}`}
-                      aria-label={playing ? 'Pause' : 'Play'}
-                      onClick={stop(toggle)}
-                    >
-                      <Icon name={playing ? 'pause' : 'play'} size={16} filled />
-                    </button>
-                    <button
-                      type="button"
-                      className={s.ghostBtn}
-                      aria-label="Next track"
-                      onClick={stop(nextTrack)}
-                    >
-                      <Icon name="skip-forward" size={14} filled />
-                    </button>
-                    <button
-                      type="button"
-                      className={`${s.ghostBtn} ${s.ghostBtnSm}`}
-                      data-active={repeat}
-                      aria-pressed={repeat}
-                      aria-label="Repeat"
-                      onClick={stop(() => setRepeat((v) => !v))}
-                    >
-                      <Icon name="repeat" size={12} />
-                    </button>
-                  </div>
+                <div className={s.transport}>
+                  <button
+                    type="button"
+                    className={`${s.ghostBtn} ${s.ghostBtnSm}`}
+                    data-active={shuffle}
+                    aria-pressed={shuffle}
+                    aria-label="Shuffle"
+                    onClick={stop(() => setShuffle((v) => !v))}
+                  >
+                    <Icon name="shuffle" size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    className={s.ghostBtn}
+                    aria-label="Previous track"
+                    onClick={stop(() => {
+                      setTrackIndex((i) => (i - 1 + TRACKS.length) % TRACKS.length)
+                    })}
+                  >
+                    <Icon name="skip-back" size={14} filled />
+                  </button>
+                  <button
+                    type="button"
+                    className={`${s.ghostBtn} ${s.playBtn}`}
+                    aria-label={playing ? 'Pause' : 'Play'}
+                    onClick={stop(toggle)}
+                  >
+                    <Icon name={playing ? 'pause' : 'play'} size={16} filled />
+                  </button>
+                  <button
+                    type="button"
+                    className={s.ghostBtn}
+                    aria-label="Next track"
+                    onClick={stop(nextTrack)}
+                  >
+                    <Icon name="skip-forward" size={14} filled />
+                  </button>
+                  <button
+                    type="button"
+                    className={`${s.ghostBtn} ${s.ghostBtnSm}`}
+                    data-active={repeat}
+                    aria-pressed={repeat}
+                    aria-label="Repeat"
+                    onClick={stop(() => setRepeat((v) => !v))}
+                  >
+                    <Icon name="repeat" size={12} />
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
-          <div className={s.edgeProgress}>
-            <div className={s.edgeProgressFill} />
-          </div>
+        <div className={s.edgeProgress}>
+          <div className={s.edgeProgressFill} />
+        </div>
 
-          <svg className={`${s.corner} ${s.cornerNw}`} viewBox="0 0 24 24" aria-hidden="true">
-            <path className={s.cornerArc} d="M 2 22 Q 2 2 22 2" />
-          </svg>
-          <svg className={`${s.corner} ${s.cornerNe}`} viewBox="0 0 24 24" aria-hidden="true">
-            <path className={s.cornerArc} d="M 2 2 Q 22 2 22 22" />
-          </svg>
-          <svg className={`${s.corner} ${s.cornerSe}`} viewBox="0 0 24 24" aria-hidden="true">
-            <path className={s.cornerArc} d="M 22 2 Q 22 22 2 22" />
-          </svg>
-          <svg className={`${s.corner} ${s.cornerSw}`} viewBox="0 0 24 24" aria-hidden="true">
-            <path className={s.cornerArc} d="M 22 22 Q 2 22 2 2" />
-          </svg>
+        <svg className={`${s.corner} ${s.cornerNw}`} viewBox="0 0 24 24" aria-hidden="true">
+          <path className={s.cornerArc} d="M 2 22 Q 2 2 22 2" />
+        </svg>
+        <svg className={`${s.corner} ${s.cornerNe}`} viewBox="0 0 24 24" aria-hidden="true">
+          <path className={s.cornerArc} d="M 2 2 Q 22 2 22 22" />
+        </svg>
+        <svg className={`${s.corner} ${s.cornerSe}`} viewBox="0 0 24 24" aria-hidden="true">
+          <path className={s.cornerArc} d="M 22 2 Q 22 22 2 22" />
+        </svg>
+        <svg className={`${s.corner} ${s.cornerSw}`} viewBox="0 0 24 24" aria-hidden="true">
+          <path className={s.cornerArc} d="M 22 22 Q 2 22 2 2" />
+        </svg>
       </div>
 
       {/* No caption and no chips. The panel is self-evidently interactive

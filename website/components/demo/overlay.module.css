@@ -44,7 +44,9 @@
   box-shadow: var(--shadow-overlay);
   opacity: var(--panel-alpha, 0.95);
   pointer-events: none;
-  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  transition:
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
 }
 
 /* Outer hairline that comes up on hover. */
@@ -421,7 +423,9 @@
   font-weight: var(--w-medium, 500);
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease), opacity var(--dur) var(--ease);
+  transition:
+    background var(--dur-fast) var(--ease),
+    opacity var(--dur) var(--ease);
 }
 
 .jumpBtn:hover {
@@ -610,10 +614,22 @@
   opacity: 0.5;
 }
 
-.cornerNw { top: 5px; left: 5px; }
-.cornerNe { top: 5px; right: 5px; }
-.cornerSe { bottom: 5px; right: 5px; }
-.cornerSw { bottom: 5px; left: 5px; }
+.cornerNw {
+  top: 5px;
+  left: 5px;
+}
+.cornerNe {
+  top: 5px;
+  right: 5px;
+}
+.cornerSe {
+  bottom: 5px;
+  right: 5px;
+}
+.cornerSw {
+  bottom: 5px;
+  left: 5px;
+}
 
 .cornerArc {
   fill: none;
@@ -627,7 +643,8 @@
 .settingsView {
   /* Matches the lyric window so opening settings doesn't resize the panel. */
   height: calc(
-    var(--visible-lines) * var(--lyric-line-h) + (var(--visible-lines) - 1) * var(--lyric-gap) + 28px
+    var(--visible-lines) * var(--lyric-line-h) + (var(--visible-lines) - 1) * var(--lyric-gap) +
+      28px
   );
   min-height: 0;
   margin-top: 12px;
@@ -639,8 +656,12 @@
 }
 
 @keyframes demoFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .setRow {
@@ -666,7 +687,9 @@
   background: var(--surface-sunken);
   cursor: pointer;
   padding: 0;
-  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  transition:
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
 }
 
 .switch[aria-checked='true'] {
@@ -710,7 +733,9 @@
   font-size: var(--text-2xs);
   font-weight: var(--w-medium, 500);
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
 
 .seg[data-active='true'] {
@@ -828,4 +853,3 @@
     opacity: 1;
   }
 }
-

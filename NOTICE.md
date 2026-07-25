@@ -5,20 +5,20 @@ each under its own license.
 
 ## Runtime
 
-| Project | License |
-| --- | --- |
-| [Electron](https://github.com/electron/electron) | MIT |
-| [electron-updater](https://github.com/electron-userland/electron-builder) | MIT |
-| [@electron-toolkit/preload](https://github.com/alex8088/electron-toolkit) · [@electron-toolkit/utils](https://github.com/alex8088/electron-toolkit) | MIT |
+| Project                                                                                                                                             | License |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| [Electron](https://github.com/electron/electron)                                                                                                    | MIT     |
+| [electron-updater](https://github.com/electron-userland/electron-builder)                                                                           | MIT     |
+| [@electron-toolkit/preload](https://github.com/alex8088/electron-toolkit) · [@electron-toolkit/utils](https://github.com/alex8088/electron-toolkit) | MIT     |
 
 Electron bundles Chromium and Node.js. Their licenses ship inside every packaged
 build as `LICENSES.chromium.html` and `LICENSE.electron.txt`.
 
 ## Fonts
 
-| Font | License |
-| --- | --- |
-| [Outfit](https://github.com/Outfitio/Outfit-Fonts) | SIL Open Font License 1.1 |
+| Font                                                   | License                   |
+| ------------------------------------------------------ | ------------------------- |
+| [Outfit](https://github.com/Outfitio/Outfit-Fonts)     | SIL Open Font License 1.1 |
 | [Space Mono](https://github.com/googlefonts/spacemono) | SIL Open Font License 1.1 |
 
 Both are vendored via [Fontsource](https://fontsource.org) in the app and loaded
@@ -31,10 +31,11 @@ individual paths rather than depending on the package.
 
 The website's three icons that animate on hover are
 [Animate UI](https://animate-ui.com) components, vendored into
-`website/components/animate-ui/` as that project distributes them — along with
-the runtime they share (`icons/icon.tsx`, `primitives/animate/slot.tsx`,
-`website/hooks/use-is-in-view.tsx`). They are built on the same Lucide
-geometry and animate with [Motion](https://motion.dev) (MIT).
+`website/components/animate-ui/` — along with the runtime they share
+(`icons/icon.tsx`, `primitives/animate/slot.tsx`,
+`website/hooks/use-is-in-view.tsx`). The code is that project's, formatted to
+this repo's Prettier conventions and otherwise unchanged. They are built on the
+same Lucide geometry and animate with [Motion](https://motion.dev) (MIT).
 
 > MIT + Commons Clause License Condition
 >

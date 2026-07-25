@@ -263,7 +263,12 @@ export function renderThumb(
   const ctx = canvas.getContext('2d')
   if (!ctx || canvas.width === 0 || canvas.height === 0) return
   const seed = hashSeed(seedKey || 'linea')
-  if (!thumbBuf || !thumbImage || thumbImage.width !== canvas.width || thumbImage.height !== canvas.height) {
+  if (
+    !thumbBuf ||
+    !thumbImage ||
+    thumbImage.width !== canvas.width ||
+    thumbImage.height !== canvas.height
+  ) {
     thumbBuf = new Uint8ClampedArray(new ArrayBuffer(canvas.width * canvas.height * 4))
     thumbImage = new ImageData(thumbBuf, canvas.width, canvas.height)
   }

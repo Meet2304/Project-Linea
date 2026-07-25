@@ -30,11 +30,11 @@ Just a minimal, floating window that stays out of your way while keeping you con
 
 ## Repository layout
 
-| Path | What it is |
-| --- | --- |
-| `Linea/` | The Electron app |
-| `website/` | The marketing site (Next.js) — see [`website/README.md`](./website/README.md) |
-| `documentation/` | Internal design and build notes |
+| Path             | What it is                                                                    |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `Linea/`         | The Electron app                                                              |
+| `website/`       | The marketing site (Next.js) — see [`website/README.md`](./website/README.md) |
+| `documentation/` | Internal design and build notes                                               |
 
 ## Website
 

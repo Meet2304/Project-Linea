@@ -122,12 +122,15 @@ function renderPixels(
       if (o.style === 'chladni') {
         const hx = nx * 0.5
         const hy = ny * 0.5
-        const a = Math.cos(chN * Math.PI * hx + phase * 0.3) * Math.cos(chM * Math.PI * hy + phase * 0.2)
-        const b = Math.cos(chM * Math.PI * hx - phase * 0.2) * Math.cos(chN * Math.PI * hy - phase * 0.3)
+        const a =
+          Math.cos(chN * Math.PI * hx + phase * 0.3) * Math.cos(chM * Math.PI * hy + phase * 0.2)
+        const b =
+          Math.cos(chM * Math.PI * hx - phase * 0.2) * Math.cos(chN * Math.PI * hy - phase * 0.3)
         val = 1 - Math.min(1, Math.abs(a - b) * 2.2)
       } else if (o.style === 'lattice') {
         val = Math.abs(
-          (Math.cos(nx * o.density * Math.PI + phase) + Math.cos(ny * o.density * Math.PI + phase)) *
+          (Math.cos(nx * o.density * Math.PI + phase) +
+            Math.cos(ny * o.density * Math.PI + phase)) *
             0.5
         )
       } else if (o.style === 'flow') {

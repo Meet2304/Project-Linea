@@ -154,23 +154,14 @@ describe('transport commands', () => {
       playerInit('PUT')
     )
     await seek(-50)
-    expect(spotifyFetch).toHaveBeenCalledWith(
-      '/v1/me/player/seek?position_ms=0',
-      playerInit('PUT')
-    )
+    expect(spotifyFetch).toHaveBeenCalledWith('/v1/me/player/seek?position_ms=0', playerInit('PUT'))
   })
 
   it('setShuffle and setRepeat pass their state', async () => {
     await setShuffle(true)
-    expect(spotifyFetch).toHaveBeenCalledWith(
-      '/v1/me/player/shuffle?state=true',
-      playerInit('PUT')
-    )
+    expect(spotifyFetch).toHaveBeenCalledWith('/v1/me/player/shuffle?state=true', playerInit('PUT'))
     await setRepeat('track')
-    expect(spotifyFetch).toHaveBeenCalledWith(
-      '/v1/me/player/repeat?state=track',
-      playerInit('PUT')
-    )
+    expect(spotifyFetch).toHaveBeenCalledWith('/v1/me/player/repeat?state=track', playerInit('PUT'))
   })
 
   it('retries play on an available device after a false Premium/no-device failure', async () => {

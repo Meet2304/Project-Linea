@@ -111,7 +111,10 @@ export default function DownloadButton({
           {otherAsset && (
             <>
               {' · '}
-              <a href={otherAsset.url} style={{ color: 'var(--steel)', textDecoration: 'underline' }}>
+              <a
+                href={otherAsset.url}
+                style={{ color: 'var(--steel)', textDecoration: 'underline' }}
+              >
                 also for {PLATFORM_LABEL[otherKey]}
               </a>
             </>

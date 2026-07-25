@@ -92,7 +92,12 @@ export default function OpenSource({ release }: { release: ReleaseInfo }) {
           <BrowseSource href={REPO_URL} />
           {!!release.stars && <Stat icon="star" label={`${release.stars} stars`} />}
           {!!release.forks && <Stat icon="git-fork" label={`${release.forks} forks`} />}
-          <a href={LICENSE_URL} target="_blank" rel="noreferrer noopener" style={{ textDecoration: 'none' }}>
+          <a
+            href={LICENSE_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+            style={{ textDecoration: 'none' }}
+          >
             <Stat icon="scale" label="MIT" />
           </a>
         </div>

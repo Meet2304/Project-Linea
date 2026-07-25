@@ -412,8 +412,7 @@ function wireCornerHints(): void {
 // ------------------------------------------------------------------
 function isDragExcluded(target: EventTarget | null): boolean {
   return (
-    target instanceof Element &&
-    Boolean(target.closest('button, input, a, .grip, [data-no-drag]'))
+    target instanceof Element && Boolean(target.closest('button, input, a, .grip, [data-no-drag]'))
   )
 }
 

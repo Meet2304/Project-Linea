@@ -97,11 +97,7 @@ export default function LoadingVeil() {
         {/* Grain settling, in six dots. */}
         <span style={{ display: 'flex', gap: 7 }}>
           {Array.from({ length: DOTS }, (_, i) => (
-            <span
-              key={i}
-              className="veil-dot"
-              style={{ animationDelay: `${i * 140}ms` }}
-            />
+            <span key={i} className="veil-dot" style={{ animationDelay: `${i * 140}ms` }} />
           ))}
         </span>
       </div>

@@ -11,15 +11,15 @@ bun run build
 
 ## What's here
 
-| Path | |
-| --- | --- |
-| `app/page.tsx` | Composes the page and reads the latest GitHub release at render time |
-| `app/globals.css` | The design tokens, ported from the app's `src/renderer/assets/tokens.css` |
-| `app/api/release/route.ts` | Cached proxy for the GitHub Releases API |
-| `components/field/` | The live cymatics engine and its React wrapper |
-| `components/demo/` | The interactive overlay replica |
-| `components/features/` | The sticky scroller and its four acts |
-| `lib/palettes.ts` | Named plates (patterns) and duotone palettes |
+| Path                       |                                                                           |
+| -------------------------- | ------------------------------------------------------------------------- |
+| `app/page.tsx`             | Composes the page and reads the latest GitHub release at render time      |
+| `app/globals.css`          | The design tokens, ported from the app's `src/renderer/assets/tokens.css` |
+| `app/api/release/route.ts` | Cached proxy for the GitHub Releases API                                  |
+| `components/field/`        | The live cymatics engine and its React wrapper                            |
+| `components/demo/`         | The interactive overlay replica                                           |
+| `components/features/`     | The sticky scroller and its four acts                                     |
+| `lib/palettes.ts`          | Named plates (patterns) and duotone palettes                              |
 
 ## The two things worth knowing
 

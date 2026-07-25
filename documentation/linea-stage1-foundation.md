@@ -38,6 +38,7 @@ focus, the cursor, or window attention away from what they're actually
 doing.
 
 **Full stack (later stages will introduce these — not built yet):**
+
 - Electron, split into main process / preload / renderer
 - electron-vite for the dev server + build tooling
 - Vanilla TypeScript renderer — deliberately no React/Vue/Svelte. Linea's
@@ -81,10 +82,12 @@ No Spotify. No lyrics. No saved preferences. Those start in Stage 2.
 ## Phase 1 — Environment & tooling
 
 ### Goal
+
 Get from "nothing" to a running Electron dev environment with hot reload,
 and understand what each piece of the generated project is for.
 
 ### Concepts to teach
+
 - **Node.js & npm**: Node runs JavaScript outside a browser; npm is its
   package manager and the thing reading `package.json`.
 - **package.json**: `dependencies` ship inside the built app;
@@ -105,6 +108,7 @@ and understand what each piece of the generated project is for.
   server.
 
 ### Step by step
+
 1. Install Node.js LTS (v18 or newer). Verify with `node -v` and `npm -v`.
 2. Scaffold the project:
    ```bash
@@ -140,18 +144,21 @@ and understand what each piece of the generated project is for.
    be replaced in Phase 2.
 
 ### package.json scripts you'll actually use this stage
-| Script | What it does |
-|---|---|
-| `npm run dev` | Starts the Vite dev server + launches Electron pointed at it. Hot reload on. |
+
+| Script          | What it does                                                                       |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `npm run dev`   | Starts the Vite dev server + launches Electron pointed at it. Hot reload on.       |
 | `npm run build` | Bundles main/preload/renderer into static output. No window opens — just compiles. |
 
 ### Acceptance criteria
+
 - [ ] `node -v` reports 18+
 - [ ] `npm run dev` opens a window with no errors in the terminal
 - [ ] Editing a file under `src/renderer` and saving updates the open
       window without a manual restart
 
 ### Common pitfalls
+
 - **Old Node version**: electron-vite requires a reasonably modern Node;
   if `npm install` fails with cryptic engine errors, check `node -v` first.
 - **Antivirus flags `electron.exe`** on first run on Windows — this is a
@@ -167,11 +174,13 @@ and understand what each piece of the generated project is for.
 ## Phase 2 — Minimal window shell
 
 ### Goal
+
 Replace the scaffold's default content with a deliberately minimal window
 that shows "Linea" — understanding every line of `main/index.ts` rather
 than treating it as boilerplate.
 
 ### Concepts to teach
+
 - **App lifecycle events**: `app.whenReady()` fires once Electron has
   finished initializing — nothing window-related can happen before this.
   `window-all-closed` fires when the last window closes. `activate` fires
@@ -196,6 +205,7 @@ than treating it as boilerplate.
 ### Reference implementation
 
 `src/main/index.ts`
+
 ```ts
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
@@ -232,6 +242,7 @@ app.on('activate', () => {
 ```
 
 `src/preload/index.ts` (placeholder — stays nearly empty until Phase 4)
+
 ```ts
 // Nothing exposed yet. This file exists so webPreferences.preload has a
 // real target to load. We start exposing a safe API here in Phase 4.
@@ -239,6 +250,7 @@ console.log('Linea preload loaded')
 ```
 
 `src/renderer/index.html`
+
 ```html
 <!doctype html>
 <html>
@@ -255,6 +267,7 @@ console.log('Linea preload loaded')
 ```
 
 `src/renderer/src/style.css`
+
 ```css
 body {
   margin: 0;
@@ -272,11 +285,13 @@ body {
 ```
 
 `src/renderer/src/main.ts`
+
 ```ts
 console.log('Linea renderer started')
 ```
 
 ### Acceptance criteria
+
 - [ ] `npm run dev` opens a 360×200 window showing the word "Linea"
 - [ ] Closing the window on Windows/Linux quits the app; on macOS the dock
       icon stays present (try it if on Mac, otherwise just explain it)
@@ -284,13 +299,14 @@ console.log('Linea renderer started')
       in dev and `loadFile` in production
 
 ### Common pitfalls
+
 - **Blank/white window briefly on launch**: normal — the renderer takes a
   moment to load. This becomes more relevant later when deciding whether
   to show the window only after `ready-to-show` fires.
 - **Preload path errors** ("cannot find module ../preload/index.js"):
   electron-vite outputs compiled files to a build directory that mirrors
   `src/`, but the relative path in `join(__dirname, ...)` is resolved at
-  runtime from the *compiled* file's location, not the source location —
+  runtime from the _compiled_ file's location, not the source location —
   if this trips up, it's worth opening the build output folder and looking
   at where things actually landed.
 
@@ -299,11 +315,13 @@ console.log('Linea renderer started')
 ## Phase 3 — Native window behavior
 
 ### Goal
+
 Turn the plain window into the actual overlay shape Linea needs: frameless,
 transparent, always-on-top, draggable, with click-through toggled by a
 global keyboard shortcut.
 
 ### Concepts to teach
+
 - **`frame: false`**: removes the OS title bar/border entirely. Once you do
   this, the window has no built-in way to be dragged or closed — both have
   to be reimplemented (dragging via CSS below; closing isn't needed yet
@@ -313,8 +331,8 @@ global keyboard shortcut.
   `backgroundColor: '#00000000'` explicitly — without it, some Windows
   versions render a faint background tint instead of true transparency.
 - **`alwaysOnTop: true`**: keeps the window above other app windows. It
-  does *not* by default float above other apps' fullscreen mode on macOS —
-  that needs an explicit always-on-top *level* (e.g. `'screen-saver'`),
+  does _not_ by default float above other apps' fullscreen mode on macOS —
+  that needs an explicit always-on-top _level_ (e.g. `'screen-saver'`),
   which is a Stage 2+ refinement, not needed yet.
 - **`-webkit-app-region: drag` / `no-drag`** (CSS, renderer side): since a
   frameless window has no native drag handle, you designate a draggable
@@ -326,7 +344,7 @@ global keyboard shortcut.
   This is a `BrowserWindow` instance method, callable only from the main
   process.
 - **Why a global shortcut, specifically**: once click-through is on, the
-  window can't receive a click to turn click-through *off* — that would
+  window can't receive a click to turn click-through _off_ — that would
   require clicking through it, which is exactly what's disabled. A
   `globalShortcut` (an OS-level hotkey, working even when the window isn't
   focused) is the only way out of that trap.
@@ -336,6 +354,7 @@ global keyboard shortcut.
 ### Reference implementation
 
 `src/main/index.ts` (full replacement)
+
 ```ts
 import { app, BrowserWindow, globalShortcut, screen } from 'electron'
 import { join } from 'node:path'
@@ -396,6 +415,7 @@ app.on('activate', () => {
 ```
 
 `src/renderer/src/style.css` (add drag region)
+
 ```css
 body {
   margin: 0;
@@ -417,6 +437,7 @@ body {
 ```
 
 ### Acceptance criteria
+
 - [ ] Window has no OS title bar and shows the desktop through its
       transparent background
 - [ ] Window stays on top of other normal application windows
@@ -424,10 +445,11 @@ body {
 - [ ] Pressing the registered shortcut makes clicks pass through the
       window to whatever's behind it; pressing it again restores normal
       interaction
-- [ ] You can explain why the shortcut has to be *global*, not a regular
+- [ ] You can explain why the shortcut has to be _global_, not a regular
       in-page keyboard listener
 
 ### Common pitfalls
+
 - **Transparency looks gray/opaque on Windows**: missing
   `backgroundColor: '#00000000'` — Windows needs this stated explicitly
   more often than macOS does.
@@ -444,19 +466,21 @@ body {
 ## Phase 4 — IPC & the security boundary
 
 ### Goal
+
 Add a real, secure communication channel between renderer and main process,
 and use it to expose the same click-through toggle from Phase 3 as an
 in-app button — not just a global shortcut.
 
 ### Concepts to teach
+
 - **`contextIsolation` / `nodeIntegration` / `sandbox`**: already set in
   Phase 2, but this is where they start mattering. With `nodeIntegration:
-  false` and `contextIsolation: true`, the renderer's JavaScript runs in a
+false` and `contextIsolation: true`, the renderer's JavaScript runs in a
   context where `require`, `process`, and Node's global objects simply
   don't exist — verified by checking `window.require` is `undefined` in
   DevTools. This isn't a permissions setting you can bypass by trying
   harder in renderer code; it's a different JavaScript context entirely.
-- **`contextBridge.exposeInMainWorld`**: the *only* sanctioned way to give
+- **`contextBridge.exposeInMainWorld`**: the _only_ sanctioned way to give
   the renderer access to anything — you explicitly hand it a named object
   with specific functions, each of which internally calls back into IPC.
   Nothing is exposed except exactly what you write here.
@@ -470,7 +494,7 @@ in-app button — not just a global shortcut.
   here because the click-through toggle has a result (the new state) the
   UI wants to display.
 - **Shared channel-name constants**: hardcoding the string `'linea:toggle-
-  click-through'` in two separate files (preload and main) is a silent bug
+click-through'` in two separate files (preload and main) is a silent bug
   waiting to happen — a single typo in one place breaks the bridge with no
   compile error. Defining channel names once in a shared file and
   importing them on both sides turns that typo into a TypeScript error
@@ -484,6 +508,7 @@ in-app button — not just a global shortcut.
 ### Reference implementation
 
 `src/shared/ipcChannels.ts`
+
 ```ts
 export const IPC = {
   TOGGLE_CLICK_THROUGH: 'linea:toggle-click-through',
@@ -492,6 +517,7 @@ export const IPC = {
 ```
 
 `src/preload/index.ts` (full replacement)
+
 ```ts
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipcChannels'
@@ -503,6 +529,7 @@ contextBridge.exposeInMainWorld('linea', {
 ```
 
 `src/main/index.ts` (add to the existing Phase 3 file)
+
 ```ts
 import { ipcMain } from 'electron'
 import { IPC } from '../shared/ipcChannels'
@@ -518,6 +545,7 @@ ipcMain.handle(IPC.GET_CLICK_THROUGH_STATE, () => clickThrough)
 
 `src/renderer/src/linea.d.ts` (type declaration so TypeScript knows
 `window.linea` exists)
+
 ```ts
 interface LineaAPI {
   toggleClickThrough: () => Promise<boolean>
@@ -534,6 +562,7 @@ export {}
 ```
 
 `src/renderer/src/main.ts` (full replacement)
+
 ```ts
 const app = document.getElementById('app')
 const button = document.createElement('button')
@@ -542,19 +571,19 @@ app?.appendChild(button)
 
 button.addEventListener('click', async () => {
   const isClickThrough = await window.linea.toggleClickThrough()
-  button.textContent = isClickThrough
-    ? 'Click-through ON'
-    : 'Toggle click-through'
+  button.textContent = isClickThrough ? 'Click-through ON' : 'Toggle click-through'
 })
 ```
 
 ### Testing this phase
+
 Extract the toggle logic into a pure function so it can be unit tested
 without launching Electron at all — this is the first real test in the
 project, and the pattern (pure logic separated from Electron-API calls)
 is what makes most of Linea testable later.
 
 `src/main/clickThrough.ts`
+
 ```ts
 export function nextClickThroughState(current: boolean): boolean {
   return !current
@@ -562,6 +591,7 @@ export function nextClickThroughState(current: boolean): boolean {
 ```
 
 `tests/clickThrough.test.ts`
+
 ```ts
 import { describe, it, expect } from 'vitest'
 import { nextClickThroughState } from '../src/main/clickThrough'
@@ -575,10 +605,12 @@ describe('nextClickThroughState', () => {
   })
 })
 ```
+
 Install Vitest (`npm install -D vitest`) and add a `"test": "vitest run"`
 script to `package.json`, then `npm test`.
 
 ### Acceptance criteria
+
 - [ ] A button inside the window toggles click-through, and its label
       updates to reflect the new state
 - [ ] The global shortcut from Phase 3 and the new button both control the
@@ -592,6 +624,7 @@ script to `package.json`, then `npm test`.
       preload and main files
 
 ### Common pitfalls
+
 - **TypeScript complains `window.linea` doesn't exist**: the `.d.ts`
   declaration file needs to be picked up by `tsconfig` — if it's not in an
   included path, add it, or move it next to the other renderer source
@@ -627,24 +660,24 @@ currently-playing polling, lyrics) assumes all of the above is solid.
 
 ## Glossary
 
-| Term | Meaning |
-|---|---|
-| Main process | The Node.js process Electron runs; owns windows, has OS/file access |
-| Renderer process | A Chromium tab rendering your UI; no Node access by default |
-| Preload script | Runs before the renderer's page loads; the only place allowed to bridge main ↔ renderer |
-| `contextBridge` | API used in preload to expose a hand-picked object to the renderer |
-| `contextIsolation` | Security setting keeping preload's JS context separate from the page's — required for `contextBridge` to be meaningful |
-| `nodeIntegration` | Whether the renderer has direct Node access; always `false` here |
-| IPC | Inter-process communication — the message-passing system connecting main and renderer |
-| `ipcMain` / `ipcRenderer` | The two halves of Electron's IPC API, one per process |
-| `BrowserWindow` | The class representing an actual OS window |
-| `webPreferences` | Configuration object controlling a `BrowserWindow`'s renderer security/behavior |
-| App lifecycle | `app.whenReady()`, `window-all-closed`, `activate` — events marking app/window state changes |
-| `globalShortcut` | OS-level hotkey registration, works even when the app isn't focused |
-| Frameless window | A `BrowserWindow` with no OS title bar/border (`frame: false`) |
-| Click-through | Mode where the window ignores mouse events, passing clicks to whatever's behind it |
-| HMR | Hot Module Replacement — updating running code in place without a full reload |
-| Vite | The dev server / bundler electron-vite uses for the renderer |
+| Term                      | Meaning                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Main process              | The Node.js process Electron runs; owns windows, has OS/file access                                                    |
+| Renderer process          | A Chromium tab rendering your UI; no Node access by default                                                            |
+| Preload script            | Runs before the renderer's page loads; the only place allowed to bridge main ↔ renderer                                |
+| `contextBridge`           | API used in preload to expose a hand-picked object to the renderer                                                     |
+| `contextIsolation`        | Security setting keeping preload's JS context separate from the page's — required for `contextBridge` to be meaningful |
+| `nodeIntegration`         | Whether the renderer has direct Node access; always `false` here                                                       |
+| IPC                       | Inter-process communication — the message-passing system connecting main and renderer                                  |
+| `ipcMain` / `ipcRenderer` | The two halves of Electron's IPC API, one per process                                                                  |
+| `BrowserWindow`           | The class representing an actual OS window                                                                             |
+| `webPreferences`          | Configuration object controlling a `BrowserWindow`'s renderer security/behavior                                        |
+| App lifecycle             | `app.whenReady()`, `window-all-closed`, `activate` — events marking app/window state changes                           |
+| `globalShortcut`          | OS-level hotkey registration, works even when the app isn't focused                                                    |
+| Frameless window          | A `BrowserWindow` with no OS title bar/border (`frame: false`)                                                         |
+| Click-through             | Mode where the window ignores mouse events, passing clicks to whatever's behind it                                     |
+| HMR                       | Hot Module Replacement — updating running code in place without a full reload                                          |
+| Vite                      | The dev server / bundler electron-vite uses for the renderer                                                           |
 
 ---
 

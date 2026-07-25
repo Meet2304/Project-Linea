@@ -75,11 +75,7 @@ body {
   border-radius: inherit;
   pointer-events: none;
   box-shadow: 0 0 0 1px
-    color-mix(
-      in srgb,
-      var(--text-primary) calc(14% + var(--panel-clearance, 0) * 30%),
-      transparent
-    );
+    color-mix(in srgb, var(--text-primary) calc(14% + var(--panel-clearance, 0) * 30%), transparent);
   opacity: calc(0.25 + var(--panel-clearance, 0) * 0.55);
   transition: opacity var(--chrome-dur) var(--chrome-ease);
 }
@@ -683,8 +679,10 @@ input:focus-visible {
   font-weight: var(--w-semibold);
   text-shadow:
     var(--text-halo),
-    0 0 12px color-mix(in srgb, var(--lyric-accent) calc(var(--panel-clearance, 0) * 55%), transparent),
-    0 0 2px color-mix(in srgb, var(--lyric-accent) calc(var(--panel-clearance, 0) * 80%), transparent);
+    0 0 12px
+      color-mix(in srgb, var(--lyric-accent) calc(var(--panel-clearance, 0) * 55%), transparent),
+    0 0 2px
+      color-mix(in srgb, var(--lyric-accent) calc(var(--panel-clearance, 0) * 80%), transparent);
 }
 
 #app[data-timestamps='true'] .lyric-row[data-pos='active'] .lyric-time {

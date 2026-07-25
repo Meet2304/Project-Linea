@@ -152,8 +152,8 @@ export default function Cymatics() {
             textShadow: '0 1px 14px rgba(12, 13, 16, 0.9)'
           }}
         >
-          Sand on a vibrating plate settles where the plate stands still. Chladni drew these
-          figures in 1787 — this one is being computed right now.
+          Sand on a vibrating plate settles where the plate stands still. Chladni drew these figures
+          in 1787 — this one is being computed right now.
         </p>
       </div>
 

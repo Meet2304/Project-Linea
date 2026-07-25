@@ -109,8 +109,7 @@ function mulberry32(a: number): () => number {
 
 export function prefersReducedMotion(): boolean {
   return (
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   )
 }
 
@@ -299,12 +298,11 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
           val = ((s1 + s2 + s3 + sp) / 3 + 1) * 0.5
         } else if (style === 'lattice') {
           // Standing-wave grid; the pointer warps the local cell size.
-          const wp =
-            (amt * ptWarp * 0.7) / (1 + ((X - PX) * (X - PX) + (Y - PY) * (Y - PY)) * 1.8)
+          const wp = (amt * ptWarp * 0.7) / (1 + ((X - PX) * (X - PX) + (Y - PY) * (Y - PY)) * 1.8)
           const f = 3.4 + Math.sin(t * 0.12) * 0.4 + wp * 3
           const g1 = Math.cos(X * PI * f + P.p1) * Math.cos(Y * PI * f + P.p2)
           const g2 = Math.cos((X + Y) * PI * f * 0.72 - t * 0.3) * 0.6
-          val = Math.abs(g1) * 0.8 + ((g2 + 1) * 0.5) * 0.2
+          val = Math.abs(g1) * 0.8 + (g2 + 1) * 0.5 * 0.2
           if (val > 1) val = 1
         } else if (style === 'radial') {
           // Circular Chladni plate: k radial rings against p angular petals.
