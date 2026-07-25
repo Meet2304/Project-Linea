@@ -870,11 +870,21 @@ async function init(): Promise<void> {
 
   window.linea.onPlayerError((event) => toastForReason(event.reason))
 
-  const [loadedPrefs, authState, clickThrough] = await Promise.all([
-    window.linea.getPrefs(),
-    window.linea.getAuthState(),
-    window.linea.getClickThroughState()
-  ])
+  // Both views start hidden, so a rejection here would paint an empty panel
+  // with no way back. Fall back to defaults and show the connect view — a
+  // reachable "Connect Spotify" beats a blank rectangle.
+  let loadedPrefs = prefs
+  let authState = false
+  let clickThrough = false
+  try {
+    ;[loadedPrefs, authState, clickThrough] = await Promise.all([
+      window.linea.getPrefs(),
+      window.linea.getAuthState(),
+      window.linea.getClickThroughState()
+    ])
+  } catch (error) {
+    console.error('Startup state unavailable — falling back to defaults:', error)
+  }
 
   prefs = loadedPrefs
   applyPrefsToDom(prefs)

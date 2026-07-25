@@ -49,6 +49,10 @@ const INITIAL_WIDTH = 600
 const INITIAL_HEIGHT = 250
 const MIN_WIDTH = 372
 const MIN_HEIGHT = 150
+/** Transparent shadow ring around the panel — must match main.css `body` padding. */
+const SHADOW_GUTTER = 30
+/** Breathing room between the visible panel and the work-area corner. */
+const CORNER_MARGIN = 16
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -112,14 +116,23 @@ function isBoundsVisible(bounds: WindowBounds): boolean {
   })
 }
 
-/** Bottom-center default — used only before the user has placed the window. */
+/**
+ * Bottom-right resting spot, just above the taskbar — quiet screen real
+ * estate that's ideal for passive lyrics. Used only before the user has
+ * placed the window.
+ *
+ * The window is `SHADOW_GUTTER` larger than the visible panel on every side,
+ * so the gutter is added back to keep the *panel* — not the invisible window
+ * edge — `CORNER_MARGIN` from the corner. `workArea` already excludes the
+ * taskbar, so no manual allowance is needed for it.
+ */
 function defaultWindowBounds(): WindowBounds {
   const workArea = screen.getPrimaryDisplay().workArea
   return {
     width: INITIAL_WIDTH,
     height: INITIAL_HEIGHT,
-    x: workArea.x + Math.round((workArea.width - INITIAL_WIDTH) / 2),
-    y: workArea.y + workArea.height - INITIAL_HEIGHT - 24
+    x: workArea.x + workArea.width - INITIAL_WIDTH + SHADOW_GUTTER - CORNER_MARGIN,
+    y: workArea.y + workArea.height - INITIAL_HEIGHT + SHADOW_GUTTER - CORNER_MARGIN
   }
 }
 
@@ -277,8 +290,12 @@ function summonWindow(): void {
 function createTray(): void {
   if (tray) return
   const image = nativeImage.createFromPath(icon)
-  // Tray wants a small bitmap; downscale so Windows/Linux stay crisp.
-  const trayIcon = image.isEmpty() ? icon : image.resize({ width: 32, height: 32 })
+  // `new Tray()` throws on an unloadable image, so never hand it the raw
+  // path as a fallback — an empty 1x1 keeps the tray present (and the rest
+  // of startup running) even if the icon asset is missing from the build.
+  const trayIcon = image.isEmpty()
+    ? nativeImage.createEmpty()
+    : image.resize({ width: 32, height: 32 })
   tray = new Tray(trayIcon)
   tray.setToolTip('Linea')
   tray.on('click', () => summonWindow())
@@ -615,11 +632,6 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  createWindow()
-  createTray()
-  startPolling()
-  initAutoUpdater()
-
   ipcMain.handle(IPC.TOGGLE_CLICK_THROUGH, () => {
     toggleClickThrough()
     return clickThrough
@@ -675,6 +687,26 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.SET_PREFS, (_event, partial: unknown) =>
     savePrefs(typeof partial === 'object' && partial !== null ? (partial as Partial<Prefs>) : {})
   )
+
+  // Everything the renderer needs is registered above, before the window
+  // exists. The renderer's first paint waits on GET_PREFS/AUTH_STATE — if a
+  // later step here throws, an unhandled rejection would skip the remaining
+  // registrations and leave the panel blank forever, so those handlers must
+  // never sit downstream of fallible setup.
+  createWindow()
+  // The tray and updater are conveniences; neither is worth taking the
+  // overlay down for.
+  try {
+    createTray()
+  } catch (error) {
+    console.error('Tray creation failed — continuing without it:', error)
+  }
+  startPolling()
+  try {
+    initAutoUpdater()
+  } catch (error) {
+    console.error('Auto-updater init failed:', error)
+  }
 
   // Some environments throw while parsing the accelerator rather than
   // returning false — never let that abort the rest of startup.
