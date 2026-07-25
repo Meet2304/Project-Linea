@@ -223,7 +223,13 @@ export default function Showcase({ release }: { release: ReleaseInfo }) {
       <div className={s.flow}>
         <div className={s.heroPane} ref={heroRef}>
           <div className={s.heroInner}>
-            <Mono color={heroPal.accent} tracking="0.2em">
+            {/* `heroPal` colors the plate behind this copy, and its ink is a
+                literal near-black for the canvas to draw with — not a theme
+                token. Type and the button take --ink instead, so they flip
+                with the page: the call to action is the darkest thing on a
+                light page and the brightest on a dark one, rather than a
+                near-black pill dissolving into a near-black background. */}
+            <Mono color="var(--ink)" tracking="0.2em">
               // see the shape of sound
             </Mono>
 
@@ -232,11 +238,9 @@ export default function Showcase({ release }: { release: ReleaseInfo }) {
             <p className={s.heroSub}>Live Spotify lyrics, floating over everything you do.</p>
 
             <div className={s.heroCta}>
-              <DownloadButton
-                release={release}
-                accent={heroPal.accent}
-                className={s.heroDownload}
-              />
+              {/* No accent override: the default is --ink, which is also what
+                  the closing call to action uses. */}
+              <DownloadButton release={release} className={s.heroDownload} />
               <a className={s.heroSecondary} href="#features">
                 See it work
                 <Icon name="arrow-right" size={17} />

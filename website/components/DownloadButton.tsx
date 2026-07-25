@@ -84,7 +84,13 @@ export default function DownloadButton({
           letterSpacing: '-0.01em',
           textDecoration: 'none',
           boxShadow: 'var(--shadow-md)',
-          transition: 'transform 160ms var(--ease), box-shadow 220ms var(--ease), color 220ms var(--ease)'
+          // Fill and label follow the theme, so they ease on the same clocks
+          // the page uses for its surfaces and its type (700 / 420ms) rather
+          // than snapping while everything around them crossfades. Transform
+          // and shadow stay quick — those belong to the pointer, not the
+          // theme.
+          transition:
+            'transform 160ms var(--ease), box-shadow 220ms var(--ease), background 700ms var(--ease), color 420ms var(--ease)'
         }}
       >
         <Icon name="download" size={size === 'lg' ? 18 : 16} />
