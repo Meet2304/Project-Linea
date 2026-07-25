@@ -78,7 +78,11 @@ describe('spotifyFetch', () => {
     setAccessToken('token-a', 3600)
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse(403, {
-        error: { status: 403, reason: 'PREMIUM_REQUIRED', message: 'Player command failed: Premium required' }
+        error: {
+          status: 403,
+          reason: 'PREMIUM_REQUIRED',
+          message: 'Player command failed: Premium required'
+        }
       })
     )
 

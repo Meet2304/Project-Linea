@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Icon from './ui/Icon'
 import Mono from './ui/Mono'
+import { AnimateIcon } from '@/components/animate-ui/icons/icon'
+import { DownloadIcon } from '@/components/animate-ui/icons/download'
 import {
   detectPlatform,
   formatSize,
@@ -67,29 +68,39 @@ export default function DownloadButton({
       className={className}
       style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}
     >
-      <a
-        className="dl-primary"
-        href={href}
-        {...(primaryAsset ? {} : { target: '_blank', rel: 'noreferrer noopener' })}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: pad,
-          borderRadius: 'var(--radius-round)',
-          background: accent,
-          color: labelColor,
-          fontSize,
-          fontWeight: 500,
-          letterSpacing: '-0.01em',
-          textDecoration: 'none',
-          boxShadow: 'var(--shadow-md)',
-          transition: 'transform 160ms var(--ease), box-shadow 220ms var(--ease), color 220ms var(--ease)'
-        }}
-      >
-        <Icon name="download" size={size === 'lg' ? 18 : 16} />
-        {label}
-      </a>
+      {/* asChild puts the hover on the pill itself, so the whole button
+          drives the arrow rather than the 18px glyph inside it. */}
+      <AnimateIcon animateOnHover animation="default-loop" asChild>
+        <a
+          className="dl-primary"
+          href={href}
+          {...(primaryAsset ? {} : { target: '_blank', rel: 'noreferrer noopener' })}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: pad,
+            borderRadius: 'var(--radius-round)',
+            background: accent,
+            color: labelColor,
+            fontSize,
+            fontWeight: 500,
+            letterSpacing: '-0.01em',
+            textDecoration: 'none',
+            boxShadow: 'var(--shadow-md)',
+            // Fill and label follow the theme, so they ease on the same clocks
+            // the page uses for its surfaces and its type (700 / 420ms) rather
+            // than snapping while everything around them crossfades. Transform
+            // and shadow stay quick — those belong to the pointer, not the
+            // theme.
+            transition:
+              'transform 160ms var(--ease), box-shadow 220ms var(--ease), background 700ms var(--ease), color 420ms var(--ease)'
+          }}
+        >
+          <DownloadIcon size={size === 'lg' ? 18 : 16} strokeWidth={1.75} aria-hidden="true" />
+          {label}
+        </a>
+      </AnimateIcon>
 
       {/* Only render the meta line when it actually says something. With no
           release there is no version or size to report, and a placeholder
@@ -100,7 +111,10 @@ export default function DownloadButton({
           {otherAsset && (
             <>
               {' · '}
-              <a href={otherAsset.url} style={{ color: 'var(--steel)', textDecoration: 'underline' }}>
+              <a
+                href={otherAsset.url}
+                style={{ color: 'var(--steel)', textDecoration: 'underline' }}
+              >
                 also for {PLATFORM_LABEL[otherKey]}
               </a>
             </>

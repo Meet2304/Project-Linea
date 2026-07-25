@@ -33,7 +33,7 @@ From Stages 1 and 2:
 
 - App: `Linea/` subdirectory, `Project-Linea` repository
 - Bun throughout: `bun install`, `bun run dev`, `bun test`, `bun run
-  typecheck`
+typecheck`
 - Window: frameless, transparent, always-on-top, resizable, positioned
   top-right
 - Click-through: `CommandOrControl+Shift+Period` global shortcut + IPC
@@ -90,8 +90,8 @@ and wire both into a CI pipeline that runs on every push.
 ### Concepts to teach
 
 - **Two fundamentally different kinds of test in an Electron app**: Vitest
-  tests *logic* — pure functions with no Electron dependency, isolated and
-  fast, runnable anywhere. Playwright tests *behavior* — it launches the
+  tests _logic_ — pure functions with no Electron dependency, isolated and
+  fast, runnable anywhere. Playwright tests _behavior_ — it launches the
   real compiled Electron app and drives it programmatically, the same as
   a real user would. The right test for "does `parseLrc` return the right
   timestamp?" is Vitest. The right test for "does the window actually have
@@ -120,25 +120,25 @@ and wire both into a CI pipeline that runs on every push.
   (`out/main/index.js` after `bun run build`). It returns an
   `ElectronApplication` object with two key capabilities: `firstWindow()`
   gives you a Playwright `Page` (the same API used for browser automation)
-  targeting the renderer, and `evaluate()` runs code *inside the main
-  process*, so you can read `BrowserWindow` properties directly.
-- **What Playwright can and cannot test**: it *can* test that the window
+  targeting the renderer, and `evaluate()` runs code _inside the main
+  process_, so you can read `BrowserWindow` properties directly.
+- **What Playwright can and cannot test**: it _can_ test that the window
   is frameless and always-on-top (via `app.evaluate()`), that the IPC
   bridge works (click the toggle button, check the UI updates), and that
-  the renderer renders expected content. It *cannot* test the Spotify
+  the renderer renders expected content. It _cannot_ test the Spotify
   OAuth flow — that requires opening a real browser and a human approving
   access. The e2e suite skips auth by launching the app in a state that
   bypasses the login requirement.
 - **GitHub Actions**: a YAML workflow file that tells GitHub's CI servers
   what to run and when. `on: push` means it runs every time code is pushed
-  to the repository. Jobs run on hosted VMs called *runners* — you
+  to the repository. Jobs run on hosted VMs called _runners_ — you
   specify the OS with `runs-on`. Unit tests can run on any OS
   (`ubuntu-latest` is cheapest). Playwright e2e tests need a display to
   render a window — `macos-latest` has one natively; Linux needs
   `xvfb-run` to simulate one.
 - **Bun in CI**: Bun is not pre-installed on GitHub Actions runners;
   `oven-sh/setup-bun@v2` installs it. After that, `bun install`, `bun
-  test`, and `bun run build` work exactly as they do locally.
+test`, and `bun run build` work exactly as they do locally.
 
 ### Installing Playwright
 
@@ -148,6 +148,7 @@ bunx playwright install
 ```
 
 Add to `package.json` scripts:
+
 ```json
 "test:e2e": "playwright test"
 ```
@@ -158,6 +159,7 @@ Add to `package.json` scripts:
 
 `tests/spotifyPlayer.test.ts` (new — mocks `fetch` to test the
 currently-playing module without a real Spotify API)
+
 ```ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fetchCurrentlyPlaying, hasTrackChanged } from '../src/main/spotifyPlayer'
@@ -177,10 +179,14 @@ const makeNowPlaying = (overrides: Partial<NowPlaying> = {}): NowPlaying => ({
 
 describe('hasTrackChanged', () => {
   it('returns true when track id differs', () => {
-    expect(hasTrackChanged(makeNowPlaying({ trackId: 'a' }), makeNowPlaying({ trackId: 'b' }))).toBe(true)
+    expect(
+      hasTrackChanged(makeNowPlaying({ trackId: 'a' }), makeNowPlaying({ trackId: 'b' }))
+    ).toBe(true)
   })
   it('returns false when track id is the same', () => {
-    expect(hasTrackChanged(makeNowPlaying({ trackId: 'a' }), makeNowPlaying({ trackId: 'a' }))).toBe(false)
+    expect(
+      hasTrackChanged(makeNowPlaying({ trackId: 'a' }), makeNowPlaying({ trackId: 'a' }))
+    ).toBe(false)
   })
   it('returns true when previous is null', () => {
     expect(hasTrackChanged(null, makeNowPlaying())).toBe(true)
@@ -188,20 +194,20 @@ describe('hasTrackChanged', () => {
 })
 
 describe('fetchCurrentlyPlaying', () => {
-  beforeEach(() => { vi.stubGlobal('fetch', vi.fn()) })
-  afterEach(() => { vi.unstubAllGlobals() })
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
   it('returns null for a 204 response', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(null, { status: 204 })
-    )
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }))
     expect(await fetchCurrentlyPlaying('fake-token')).toBeNull()
   })
 
   it('throws for a non-ok, non-204 response', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response('{}', { status: 401 })
-    )
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 401 }))
     await expect(fetchCurrentlyPlaying('fake-token')).rejects.toThrow('401')
   })
 
@@ -217,9 +223,7 @@ describe('fetchCurrentlyPlaying', () => {
         album: { name: 'The Album' }
       }
     }
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify(payload), { status: 200 })
-    )
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }))
     const result = await fetchCurrentlyPlaying('fake-token')
     expect(result?.trackId).toBe('abc123')
     expect(result?.trackName).toBe('My Song')
@@ -230,6 +234,7 @@ describe('fetchCurrentlyPlaying', () => {
 `tests/tokenStore.test.ts` (new — mocks the Electron module entirely since
 `safeStorage` and `app.getPath` don't exist outside a running Electron
 process)
+
 ```ts
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -271,6 +276,7 @@ describe('tokenStore', () => {
 #### Playwright configuration
 
 `playwright.config.ts` (new, at the `Linea/` root)
+
 ```ts
 import { defineConfig } from '@playwright/test'
 
@@ -286,6 +292,7 @@ export default defineConfig({
 
 `tests/e2e/app.spec.ts` (new — launches the real built Electron app and
 verifies observable behavior; does not touch the Spotify API)
+
 ```ts
 import { test, expect, _electron as electron } from '@playwright/test'
 import type { ElectronApplication } from '@playwright/test'
@@ -378,6 +385,7 @@ test('click-through state changes via IPC', async () => {
 
 `.github/workflows/ci.yml` (new, in the repository root — not inside
 `Linea/`, since GitHub Actions reads workflows from the repo root)
+
 ```yaml
 name: CI
 
@@ -446,7 +454,7 @@ jobs:
 
 ### Testing this phase
 
-The tests *are* the deliverable for this phase. The acceptance criteria
+The tests _are_ the deliverable for this phase. The acceptance criteria
 below serve as the "test for the tests."
 
 ### Acceptance criteria
@@ -468,7 +476,7 @@ below serve as the "test for the tests."
 
 - **Running e2e without building first**: `electron.launch` points at
   `out/main/index.js` — the compiled output. If you haven't run `bun run
-  build`, that file doesn't exist and the test throws a confusing
+build`, that file doesn't exist and the test throws a confusing
   "file not found" error, not an Electron error.
 - **`--frozen-lockfile` failing in CI**: if `bun.lockb` is not committed
   to the repository (common if it was gitignored), this flag breaks CI.
@@ -482,7 +490,7 @@ below serve as the "test for the tests."
   top of the file automatically, before any imports. If a mock depends on
   a variable defined in the test file body, that variable won't exist yet
   when the mock runs — use the factory function pattern (`vi.mock('path',
-  () => ({ ... }))`) to avoid this.
+() => ({ ... }))`) to avoid this.
 
 ---
 
@@ -502,8 +510,8 @@ can double-click, with a version number and the ability to update itself.
   The `.dmg` or `.exe` it produces is completely self-contained — the
   person installing it does not need Node, Bun, or any other runtime.
 - **App binary vs. installer**: `electron-builder` produces two things.
-  The *app binary* is the actual executable (`Linea.app` on macOS,
-  `Linea.exe` on Windows) bundled with Electron. The *installer* wraps
+  The _app binary_ is the actual executable (`Linea.app` on macOS,
+  `Linea.exe` on Windows) bundled with Electron. The _installer_ wraps
   the binary in a platform-native installation experience — a drag-to-
   Applications `.dmg` on macOS, or an NSIS wizard `.exe` on Windows. Both
   are produced by the same command.
@@ -535,7 +543,7 @@ can double-click, with a version number and the ability to update itself.
 - **Why macOS builds must happen on macOS**: Apple's code signing
   toolchain (`codesign`, `xcrun notarytool`) only exists on macOS. Even
   an unsigned `.dmg` is easier to produce on macOS because `electron-
-  builder`'s DMG creation uses macOS system tools. If you need to produce
+builder`'s DMG creation uses macOS system tools. If you need to produce
   a macOS build from a Linux or Windows machine, it is technically
   possible with cross-compilation, but the result is harder to verify and
   signing is impossible.
@@ -543,8 +551,9 @@ can double-click, with a version number and the ability to update itself.
 ### One-time setup — GitHub repository
 
 `electron-builder` needs to know where to publish. You need:
+
 1. A public GitHub repository for the project (already exists: `Project-
-   Linea`).
+Linea`).
 2. A GitHub Personal Access Token with `repo` scope (for publishing
    releases from CI). Store it as a repository secret named
    `GH_TOKEN` in GitHub → Settings → Secrets and Variables → Actions.
@@ -602,16 +611,17 @@ publish:
 "release": "bun run build && electron-builder --publish always"
 ```
 
-| Command | What it does |
-|---|---|
-| `bun run dist` | Builds the app and produces installers for the current platform |
-| `bun run dist:mac` | macOS `.dmg` only |
-| `bun run dist:win` | Windows NSIS installer only (must run on Windows or Wine) |
-| `bun run release` | Builds and publishes to GitHub Releases, triggering auto-update for existing users |
+| Command            | What it does                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `bun run dist`     | Builds the app and produces installers for the current platform                    |
+| `bun run dist:mac` | macOS `.dmg` only                                                                  |
+| `bun run dist:win` | Windows NSIS installer only (must run on Windows or Wine)                          |
+| `bun run release`  | Builds and publishes to GitHub Releases, triggering auto-update for existing users |
 
 #### Auto-update in the main process
 
 `src/main/updater.ts` (new — isolated from `index.ts` to keep it clean)
+
 ```ts
 import { autoUpdater } from 'electron-updater'
 import { is } from '@electron-toolkit/utils'
@@ -648,6 +658,7 @@ export function initAutoUpdater(): void {
 
 `src/main/index.ts` (add — call after `createWindow` inside
 `app.whenReady().then(...)`)
+
 ```ts
 import { initAutoUpdater } from './updater'
 
@@ -659,6 +670,7 @@ initAutoUpdater()
 
 `.github/workflows/release.yml` (new, in the repository root — separate
 from the CI workflow; only runs when a version tag is pushed)
+
 ```yaml
 name: Release
 
@@ -783,9 +795,9 @@ Gatekeeper warning on unsigned builds — this is expected.
 
 ## Extension — Code signing & notarization (Tier 3 distribution)
 
-*This section is optional and not required to complete Stage 3. Implement
+_This section is optional and not required to complete Stage 3. Implement
 it when you've decided to distribute Linea publicly, beyond the 5-user
-cap of Spotify's Development Mode.*
+cap of Spotify's Development Mode._
 
 ### What signing adds
 
@@ -796,6 +808,7 @@ SmartScreen. From the user's perspective, the app just opens.
 ### What it requires
 
 **macOS:**
+
 - An Apple Developer Program membership ($99/yr, at
   developer.apple.com/programs)
 - A "Developer ID Application" certificate, generated in Xcode or the
@@ -804,6 +817,7 @@ SmartScreen. From the user's perspective, the app just opens.
 - The `notarize` hook in `electron-builder.yml`
 
 **Windows:**
+
 - A code signing certificate from a trusted CA (DigiCert, Sectigo, etc.)
   — prices vary, typically $200–$500/yr for an EV certificate
 - Windows signing can be done from a Windows CI runner only
@@ -826,6 +840,7 @@ afterSign: build/notarize.js
 ```
 
 `build/entitlements.mac.plist` (new)
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -847,6 +862,7 @@ afterSign: build/notarize.js
 > hardened runtime enabled.
 
 `build/notarize.js` (new)
+
 ```js
 const { notarize } = require('@electron/notarize')
 
@@ -866,6 +882,7 @@ exports.default = async function notarizing(context) {
 ```
 
 Add to the release workflow's macOS job:
+
 ```yaml
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -903,7 +920,7 @@ your app.
 - [ ] The installed app launches, connects to Spotify, and shows lyrics
 - [ ] `electron-updater` is initialized and silently skipped in dev mode
 - [ ] Releasing a new version requires only `npm version patch && git push
-      --tags` — the rest is automated
+--tags` — the rest is automated
 - [ ] Learner can explain, unprompted: why Vitest and Playwright cover
       different things, what `latest.yml` is and how the update loop works,
       and what the practical difference between a signed and unsigned build
@@ -913,25 +930,25 @@ your app.
 
 ## Glossary (additions to Stages 1–2)
 
-| Term | Meaning |
-|---|---|
-| `electron-builder` | Tool that bundles your compiled code + Electron binary into a platform installer |
-| `electron-updater` | Library that compares the running app's version against a remote `latest.yml` and applies updates |
-| `latest.yml` | Metadata file generated by `electron-builder --publish`; lists the latest version and download URL; what `electron-updater` checks |
-| Semantic versioning | `major.minor.patch` version numbering convention; `npm version patch` bumps the patch number and creates a git tag |
-| Notarization | Submitting a macOS app binary to Apple's servers to be scanned; required for Gatekeeper to pass silently |
-| Hardened runtime | macOS security requirement for notarized apps; restricts certain code behaviors and requires explicit entitlements |
-| Entitlements | A `.plist` file declaring what a hardened-runtime macOS app is allowed to do (JIT compilation, unsigned memory, etc.) |
-| `CSC_LINK` | Environment variable holding a base64-encoded `.p12` certificate used by `electron-builder` for code signing |
-| Gatekeeper | macOS system that verifies app signatures before allowing launch; shows the "cannot be verified" warning for unsigned apps |
-| SmartScreen | Windows equivalent of Gatekeeper; shows a warning for unsigned or unknown executables |
-| NSIS | Nullsoft Scriptable Install System; the installer format `electron-builder` uses for Windows by default |
-| `vi.stubGlobal` | Vitest function that replaces a global (like `fetch`) with a mock for the duration of a test |
-| `vi.mock` | Vitest function that replaces an entire module's exports with a manual fake at import time |
-| `_electron.launch()` | Playwright API that starts a real Electron process and returns an `ElectronApplication` for test control |
-| `app.evaluate()` | Playwright Electron method that runs a function inside the main process and returns the result |
-| Runner | A CI virtual machine provided by GitHub Actions; `ubuntu-latest`, `macos-latest`, `windows-latest` are the three main options |
-| Extended Quota Mode | Spotify developer status allowing more than 5 authorized users; requires manual application and review |
+| Term                 | Meaning                                                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `electron-builder`   | Tool that bundles your compiled code + Electron binary into a platform installer                                                   |
+| `electron-updater`   | Library that compares the running app's version against a remote `latest.yml` and applies updates                                  |
+| `latest.yml`         | Metadata file generated by `electron-builder --publish`; lists the latest version and download URL; what `electron-updater` checks |
+| Semantic versioning  | `major.minor.patch` version numbering convention; `npm version patch` bumps the patch number and creates a git tag                 |
+| Notarization         | Submitting a macOS app binary to Apple's servers to be scanned; required for Gatekeeper to pass silently                           |
+| Hardened runtime     | macOS security requirement for notarized apps; restricts certain code behaviors and requires explicit entitlements                 |
+| Entitlements         | A `.plist` file declaring what a hardened-runtime macOS app is allowed to do (JIT compilation, unsigned memory, etc.)              |
+| `CSC_LINK`           | Environment variable holding a base64-encoded `.p12` certificate used by `electron-builder` for code signing                       |
+| Gatekeeper           | macOS system that verifies app signatures before allowing launch; shows the "cannot be verified" warning for unsigned apps         |
+| SmartScreen          | Windows equivalent of Gatekeeper; shows a warning for unsigned or unknown executables                                              |
+| NSIS                 | Nullsoft Scriptable Install System; the installer format `electron-builder` uses for Windows by default                            |
+| `vi.stubGlobal`      | Vitest function that replaces a global (like `fetch`) with a mock for the duration of a test                                       |
+| `vi.mock`            | Vitest function that replaces an entire module's exports with a manual fake at import time                                         |
+| `_electron.launch()` | Playwright API that starts a real Electron process and returns an `ElectronApplication` for test control                           |
+| `app.evaluate()`     | Playwright Electron method that runs a function inside the main process and returns the result                                     |
+| Runner               | A CI virtual machine provided by GitHub Actions; `ubuntu-latest`, `macos-latest`, `windows-latest` are the three main options      |
+| Extended Quota Mode  | Spotify developer status allowing more than 5 authorized users; requires manual application and review                             |
 
 ---
 
@@ -996,9 +1013,9 @@ Project-Linea/
 
 ## Sign-off (fill in on completion)
 
-| Field | Value |
-|---|---|
-| Stage | 3 — Ship (Phases 9–10) |
-| Result | **Complete** — see [linea-stage3-completion.md](./linea-stage3-completion.md) |
-| Recorded | 2026-07-21 08:04:09 +05:30 |
-| Next | Optional Tier-3 signing / Extended Quota; Linea is shipped for guided curriculum |
+| Field    | Value                                                                            |
+| -------- | -------------------------------------------------------------------------------- |
+| Stage    | 3 — Ship (Phases 9–10)                                                           |
+| Result   | **Complete** — see [linea-stage3-completion.md](./linea-stage3-completion.md)    |
+| Recorded | 2026-07-21 08:04:09 +05:30                                                       |
+| Next     | Optional Tier-3 signing / Extended Quota; Linea is shipped for guided curriculum |

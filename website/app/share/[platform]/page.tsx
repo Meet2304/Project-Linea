@@ -43,7 +43,14 @@ export async function generateMetadata({
       title: TITLE,
       description: DESCRIPTION,
       siteName: 'Linea',
-      images: [{ url: asset.image, width: asset.width, height: asset.height, alt: 'Linea — know every word' }]
+      images: [
+        {
+          url: asset.image,
+          width: asset.width,
+          height: asset.height,
+          alt: 'Linea — know every word'
+        }
+      ]
     },
     twitter: {
       card: 'summary_large_image',

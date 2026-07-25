@@ -46,8 +46,8 @@ export default function FeatureScroller() {
         <Mono>// one surface, four colors</Mono>
         <h2 className={s.introTitle}>Every feature is a frequency</h2>
         <p className={s.introBody}>
-          Below is the real interface, running in your browser. Scroll to walk through what it
-          does — or just reach in and use it.
+          Below is the real interface, running in your browser. Scroll to walk through what it does
+          — or just reach in and use it.
         </p>
       </div>
 

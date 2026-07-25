@@ -101,20 +101,22 @@ lyrics, anything beyond Spotify.
 ## Phase 5 — Spotify auth (PKCE)
 
 ### Goal
+
 Let the user connect their Spotify account from inside Linea, ending with
 an access token in memory and a refresh token safely on disk — without
 ever embedding a client secret, because a distributed desktop app can't
 keep one.
 
 ### Concepts to teach
+
 - **OAuth Authorization Code flow**: the standard "redirect to provider,
   come back with a code, exchange the code for a token" shape.
 - **Why PKCE specifically**: the classic flow assumes a trusted server
   holds a client secret proving "this is really my app." Linea has no
   server — anyone could extract a secret baked into the binary. PKCE
   replaces the secret with a value generated fresh per login (the
-  *verifier*) that's never transmitted until the very last step, paired
-  with its hash (the *challenge*) sent earlier. Spotify checks that the
+  _verifier_) that's never transmitted until the very last step, paired
+  with its hash (the _challenge_) sent earlier. Spotify checks that the
   verifier hashes to the challenge it received — proving continuity
   without ever trusting a stored secret.
 - **The loopback redirect**: a desktop app has no public URL for Spotify
@@ -138,6 +140,7 @@ keep one.
   account — copying the file elsewhere doesn't make it readable.
 
 ### One-time setup (Spotify Developer Dashboard)
+
 1. Create an app at the Spotify Developer Dashboard.
 2. Add a redirect URI matching exactly what the code below uses:
    `http://127.0.0.1:8888/callback` (must be `127.0.0.1`, not `localhost`
@@ -154,6 +157,7 @@ keep one.
 ### Reference implementation
 
 `src/main/config.ts` (new)
+
 ```ts
 // As-built: electron-vite main env (see Linea/.env.example)
 export const SPOTIFY_CLIENT_ID = import.meta.env.MAIN_VITE_SPOTIFY_CLIENT_ID ?? ''
@@ -164,15 +168,12 @@ export const LOOPBACK_PORT = 8888
 
 `src/main/spotifyAuth.ts` (new — PKCE + token exchange, pure-ish and
 testable where possible)
+
 ```ts
 import { randomBytes, createHash } from 'node:crypto'
 
 function base64url(buffer: Buffer): string {
-  return buffer
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
+  return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 export function generateCodeVerifier(): string {
@@ -252,6 +253,7 @@ export async function refreshAccessToken(params: {
 ```
 
 `src/main/loopbackServer.ts` (new)
+
 ```ts
 import { createServer, type Server } from 'node:http'
 
@@ -288,6 +290,7 @@ export function startLoopbackServer(
 
 `src/main/tokenStore.ts` (new — `safeStorage`-backed refresh token
 persistence)
+
 ```ts
 import { app, safeStorage } from 'electron'
 import { join } from 'node:path'
@@ -310,6 +313,7 @@ export function clearRefreshToken(): void {
 ```
 
 `src/shared/ipcChannels.ts` (add to existing file)
+
 ```ts
 export const IPC = {
   TOGGLE_CLICK_THROUGH: 'linea:toggle-click-through',
@@ -322,6 +326,7 @@ export const IPC = {
 
 `src/main/index.ts` (add — orchestrates the flow above; goes alongside
 the existing `createWindow`/`toggleClickThrough` code from Stage 1)
+
 ```ts
 import { shell, ipcMain } from 'electron'
 import { IPC } from '../shared/ipcChannels'
@@ -376,6 +381,7 @@ ipcMain.handle(IPC.SPOTIFY_AUTH_STATE, () => accessToken !== null || loadRefresh
 ```
 
 `src/preload/index.ts` (add to the existing `contextBridge` call)
+
 ```ts
 login: () => ipcRenderer.invoke(IPC.SPOTIFY_LOGIN),
 logout: () => ipcRenderer.invoke(IPC.SPOTIFY_LOGOUT),
@@ -383,7 +389,9 @@ getAuthState: () => ipcRenderer.invoke(IPC.SPOTIFY_AUTH_STATE),
 ```
 
 ### Testing this phase
+
 `tests/spotifyAuth.test.ts` (new)
+
 ```ts
 import { describe, it, expect } from 'vitest'
 import { generateCodeVerifier, generateCodeChallenge } from '../src/main/spotifyAuth'
@@ -405,6 +413,7 @@ describe('PKCE helpers', () => {
 ```
 
 ### Acceptance criteria
+
 - [x] Clicking "Connect Spotify" opens the real system browser, not a
       window inside Linea
 - [x] After approving access, the browser tab shows a simple confirmation
@@ -418,6 +427,7 @@ describe('PKCE helpers', () => {
       every login while the challenge is what's sent upfront
 
 ### Common pitfalls
+
 - **Redirect URI mismatch**: Spotify requires an exact string match
   including trailing slashes — `127.0.0.1` vs `localhost`, or a missing
   `/callback`, fails silently with an error on Spotify's side.
@@ -434,12 +444,14 @@ describe('PKCE helpers', () => {
 ## Phase 6 — Currently-playing polling
 
 ### Goal
+
 Keep Linea's renderer continuously aware of what's playing on Spotify by
 polling from the main process and pushing updates — introducing the
 **push** side of IPC, as opposed to the **request/response** pattern used
 for click-through and login.
 
 ### Concepts to teach
+
 - **Push vs. request/response IPC**: `invoke`/`handle` (used so far)
   assumes the renderer asks and main answers once. Polling is the
   opposite shape — main decides when something's worth telling the
@@ -465,6 +477,7 @@ for click-through and login.
 
 `src/shared/types.ts` (new — shared between main and renderer, no
 Electron/Node dependency)
+
 ```ts
 export interface NowPlaying {
   isPlaying: boolean
@@ -479,6 +492,7 @@ export interface NowPlaying {
 ```
 
 `src/main/spotifyPlayer.ts` (new)
+
 ```ts
 import type { NowPlaying } from '../shared/types'
 
@@ -509,12 +523,14 @@ export async function fetchCurrentlyPlaying(accessToken: string): Promise<NowPla
 ```
 
 `src/shared/ipcChannels.ts` (add)
+
 ```ts
 NOW_PLAYING: 'linea:now-playing',
 ```
 
 `src/main/index.ts` (add — the poll loop; lives alongside the auth code
 from Phase 5)
+
 ```ts
 import { fetchCurrentlyPlaying, hasTrackChanged } from './spotifyPlayer'
 import { refreshAccessToken } from './spotifyAuth'
@@ -557,6 +573,7 @@ function startPolling(): void {
 ```
 
 `src/preload/index.ts` (add)
+
 ```ts
 onNowPlaying: (callback: (data: NowPlaying) => void) => {
   const listener = (_event: unknown, data: NowPlaying) => callback(data)
@@ -564,10 +581,12 @@ onNowPlaying: (callback: (data: NowPlaying) => void) => {
   return () => ipcRenderer.removeListener(IPC.NOW_PLAYING, listener)
 },
 ```
+
 (Add the matching type to `src/renderer/src/linea.d.ts` and import
 `NowPlaying` from `src/shared/types`.)
 
 ### Acceptance criteria
+
 - [x] Playing/pausing/skipping tracks on Spotify is reflected in the
       renderer within a couple of seconds, without any user action in Linea
 - [x] Leaving Spotify paused or idle doesn't throw errors — the 204 case is
@@ -582,6 +601,7 @@ onNowPlaying: (callback: (data: NowPlaying) => void) => {
 (the earlier reference snippet returned without notifying the renderer).
 
 ### Common pitfalls
+
 - **Forgetting the 204 check**: calling `response.json()` on an empty 204
   body throws, which looks like a Spotify API failure but is actually a
   normal "nothing playing" response misread.
@@ -599,12 +619,14 @@ onNowPlaying: (callback: (data: NowPlaying) => void) => {
 ## Phase 7 — Lyrics fetch & sync engine
 
 ### Goal
+
 Given the live track data from Phase 6, fetch synced lyrics from LRCLIB,
 parse the LRC timestamp format, cache results per track, and compute which
 line should be showing at any given moment — smoothly, not just once per
 poll tick.
 
 ### Concepts to teach
+
 - **LRCLIB**: a free, no-auth-required lyrics API. Its `get` endpoint takes
   track/artist/album/duration and returns a `syncedLyrics` field in LRC
   format when available.
@@ -613,12 +635,12 @@ poll tick.
 - **Shared pure logic**: the LRC parser and the "which line is current"
   lookup have no Electron or Node dependency at all — they're just data
   transformations. Putting them in `src/shared/` (rather than
-  `src/main/`) means the *renderer* can import and use them directly too,
+  `src/main/`) means the _renderer_ can import and use them directly too,
   which matters for the next part.
 - **Local position interpolation**: the poll loop only pushes a position
   every ~2 seconds, but lyrics need to feel continuous. The fix is cheap:
   store the last known position alongside the timestamp it was captured
-  at, and in the renderer, continuously estimate the *current* position as
+  at, and in the renderer, continuously estimate the _current_ position as
   "last known position + time elapsed since it was captured" — recomputed
   on every animation frame, not just when a new poll update arrives.
 - **File-based caching, not a database**: lyrics for a given track don't
@@ -628,6 +650,7 @@ poll tick.
 ### Reference implementation
 
 `src/shared/lyrics.ts` (new — pure, importable by both main and renderer)
+
 ```ts
 export interface LyricLine {
   timeMs: number
@@ -672,6 +695,7 @@ export function estimatePositionMs(params: {
 
 `src/main/lyricsCache.ts` (new — network fetch + disk cache, Electron/Node
 dependent, so stays out of `shared/`)
+
 ```ts
 import { app } from 'electron'
 import { join } from 'node:path'
@@ -714,11 +738,13 @@ export async function getLyricsForTrack(params: {
 ```
 
 `src/shared/ipcChannels.ts` (add)
+
 ```ts
 LYRICS_UPDATE: 'linea:lyrics-update',
 ```
 
 `src/main/index.ts` (fills in the Phase 6 placeholder)
+
 ```ts
 import { getLyricsForTrack } from './lyricsCache'
 
@@ -736,6 +762,7 @@ if (nowPlaying.trackId) {
 ```
 
 `src/preload/index.ts` (add)
+
 ```ts
 onLyricsUpdate: (callback: (lines: LyricLine[]) => void) => {
   const listener = (_event: unknown, lines: LyricLine[]) => callback(lines)
@@ -747,6 +774,7 @@ onLyricsUpdate: (callback: (lines: LyricLine[]) => void) => {
 `src/renderer/src/renderer.ts` (add — combines the pushed lyric lines with
 locally-interpolated position; this is the first renderer code that
 imports from `shared/` directly)
+
 ```ts
 import { getCurrentLineIndex, estimatePositionMs } from '../../shared/lyrics'
 import type { LyricLine } from '../../shared/lyrics'
@@ -775,7 +803,9 @@ requestAnimationFrame(renderCurrentLine)
 ```
 
 ### Testing this phase
+
 `tests/lyrics.test.ts` (new)
+
 ```ts
 import { describe, it, expect } from 'vitest'
 import { parseLrc, getCurrentLineIndex } from '../src/shared/lyrics'
@@ -805,6 +835,7 @@ describe('getCurrentLineIndex', () => {
 ```
 
 ### Acceptance criteria
+
 - [x] Playing a song with known lyrics on LRCLIB results in the correct
       line being identifiable at any given position
 - [x] Switching tracks triggers exactly one lyrics fetch, not one per poll
@@ -816,6 +847,7 @@ describe('getCurrentLineIndex', () => {
       `src/shared/` instead of `src/main/`
 
 ### Common pitfalls
+
 - **Track found on Spotify but no lyrics on LRCLIB**: a normal, expected
   case — `getLyricsForTrack` returns an empty array, which the renderer
   should treat as "no lyrics available," not an error state.
@@ -833,11 +865,13 @@ describe('getCurrentLineIndex', () => {
 ## Phase 8 — UI & settings
 
 ### Goal
+
 Turn the placeholder window into the actual lyric overlay — current line
 emphasized, neighboring lines visible but dim — plus a small settings
 panel (opacity, font size) that persists across restarts.
 
 ### Concepts to teach
+
 - **Secrets vs. preferences storage**: the refresh token is encrypted via
   `safeStorage` because it's sensitive; opacity and font size are not
   sensitive at all and don't need encryption — they're plain JSON. Mixing
@@ -855,6 +889,7 @@ panel (opacity, font size) that persists across restarts.
 ### Reference implementation
 
 `src/shared/types.ts` (add)
+
 ```ts
 export interface Prefs {
   opacity: number
@@ -863,6 +898,7 @@ export interface Prefs {
 ```
 
 `src/main/prefs.ts` (new)
+
 ```ts
 import { app } from 'electron'
 import { join } from 'node:path'
@@ -892,12 +928,14 @@ export function savePrefs(partial: Partial<Prefs>): Prefs {
 ```
 
 `src/shared/ipcChannels.ts` (add)
+
 ```ts
 GET_PREFS: 'linea:get-prefs',
 SET_PREFS: 'linea:set-prefs',
 ```
 
 `src/main/index.ts` (add)
+
 ```ts
 import { loadPrefs, savePrefs } from './prefs'
 
@@ -906,6 +944,7 @@ ipcMain.handle(IPC.SET_PREFS, (_event, partial) => savePrefs(partial))
 ```
 
 `src/preload/index.ts` (add)
+
 ```ts
 getPrefs: () => ipcRenderer.invoke(IPC.GET_PREFS),
 setPrefs: (partial: Partial<Prefs>) => ipcRenderer.invoke(IPC.SET_PREFS, partial),
@@ -913,6 +952,7 @@ setPrefs: (partial: Partial<Prefs>) => ipcRenderer.invoke(IPC.SET_PREFS, partial
 
 `src/renderer/src/renderer.ts` (replace the Phase 7 placeholder comment
 with actual rendering, and add the settings panel)
+
 ```ts
 const lyricEl = document.getElementById('lyric')!
 const prevEl = document.getElementById('lyric-prev')!
@@ -943,8 +983,10 @@ opacitySlider.addEventListener('input', async () => {
 ```
 
 `src/renderer/assets/main.css` (add)
+
 ```css
-#lyric-prev, #lyric-next {
+#lyric-prev,
+#lyric-next {
   opacity: 0.4;
   font-size: 0.8em;
 }
@@ -955,7 +997,9 @@ opacitySlider.addEventListener('input', async () => {
 ```
 
 ### Testing this phase
+
 `tests/prefs.test.ts` (new)
+
 ```ts
 import { describe, it, expect } from 'vitest'
 import { clampPrefs } from '../src/main/prefs'
@@ -972,6 +1016,7 @@ describe('clampPrefs', () => {
 ```
 
 ### Acceptance criteria
+
 - [x] Current lyric line is visually distinct from the previous/next lines
 - [x] Adjusting the opacity slider updates the window live and persists
       after restarting the app
@@ -985,6 +1030,7 @@ describe('clampPrefs', () => {
 status, lyric neighbors, and both settings sliders fit without crowding.
 
 ### Common pitfalls
+
 - **Settings UI in the draggable region**: any new interactive element
   (the slider) needs `-webkit-app-region: no-drag`, same issue as the
   click-through button in Stage 1 — easy to forget on a new element.
@@ -1020,18 +1066,18 @@ Stage 3 (testing pass, packaging, distribution) may proceed.
 
 ## Glossary (additions to Stage 1's list)
 
-| Term | Meaning |
-|---|---|
-| PKCE | Proof Key for Code Exchange — OAuth extension letting a public client (no server secret) prove continuity via a verifier/challenge pair |
-| Code verifier | A random value generated fresh per login attempt, kept local until the final token exchange |
-| Code challenge | SHA-256 hash of the verifier, sent upfront when starting the login |
-| Loopback redirect | Briefly running a local HTTP server on `127.0.0.1` to catch an OAuth redirect, since a desktop app has no public URL |
-| Access token | Short-lived credential sent on every API call |
-| Refresh token | Long-lived, sensitive credential used to obtain new access tokens without re-login |
-| `safeStorage` | Electron API encrypting strings using the OS's native credential store |
-| Push IPC (`send`/`on`) | Main-initiated, ongoing messages to the renderer — contrast with `invoke`/`handle` |
-| LRC format | Plain-text lyrics format with per-line `[mm:ss.xx]` timestamps |
-| Position interpolation | Estimating "where we are now" between infrequent updates, using elapsed time since the last known position |
+| Term                   | Meaning                                                                                                                                 |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| PKCE                   | Proof Key for Code Exchange — OAuth extension letting a public client (no server secret) prove continuity via a verifier/challenge pair |
+| Code verifier          | A random value generated fresh per login attempt, kept local until the final token exchange                                             |
+| Code challenge         | SHA-256 hash of the verifier, sent upfront when starting the login                                                                      |
+| Loopback redirect      | Briefly running a local HTTP server on `127.0.0.1` to catch an OAuth redirect, since a desktop app has no public URL                    |
+| Access token           | Short-lived credential sent on every API call                                                                                           |
+| Refresh token          | Long-lived, sensitive credential used to obtain new access tokens without re-login                                                      |
+| `safeStorage`          | Electron API encrypting strings using the OS's native credential store                                                                  |
+| Push IPC (`send`/`on`) | Main-initiated, ongoing messages to the renderer — contrast with `invoke`/`handle`                                                      |
+| LRC format             | Plain-text lyrics format with per-line `[mm:ss.xx]` timestamps                                                                          |
+| Position interpolation | Estimating "where we are now" between infrequent updates, using elapsed time since the last known position                              |
 
 ---
 
@@ -1103,11 +1149,11 @@ Linea/
 
 ## Sign-off
 
-| Field | Value |
-|---|---|
-| Stage | 2 — Features (Phases 5–8) |
-| Result | **Complete** |
-| Recorded | 2026-07-21 06:37:58 +05:30 |
-| Commit | `6f10db9` |
+| Field       | Value                                                      |
+| ----------- | ---------------------------------------------------------- |
+| Stage       | 2 — Features (Phases 5–8)                                  |
+| Result      | **Complete**                                               |
+| Recorded    | 2026-07-21 06:37:58 +05:30                                 |
+| Commit      | `6f10db9`                                                  |
 | Full record | [linea-stage2-completion.md](./linea-stage2-completion.md) |
-| Next stage | Stage 3 — Testing pass, packaging & distribution |
+| Next stage  | Stage 3 — Testing pass, packaging & distribution           |

@@ -19,12 +19,12 @@ Stage 1’s main / preload / renderer split and “pure logic first” testing p
 
 ## Timeline
 
-| Milestone | Date / time (local, +05:30) | Notes |
-|---|---|---|
-| Stage 2 features guide written | 2026-06-18 | `documentation/linea-stage2-features.md` |
-| Phase 5 modules started (uncommitted) | 2026-06-18 | `spotifyAuth`, `loopbackServer`, `tokenStore`, PKCE tests |
-| Stage 2 implemented end-to-end | 2026-07-21 | Phases 5–8 wired; overlay UI |
-| **Stage 2 committed & pushed** | **2026-07-21 06:37:58** | `6f10db9` on `02_Features` → `origin/02_Features` |
+| Milestone                             | Date / time (local, +05:30) | Notes                                                     |
+| ------------------------------------- | --------------------------- | --------------------------------------------------------- |
+| Stage 2 features guide written        | 2026-06-18                  | `documentation/linea-stage2-features.md`                  |
+| Phase 5 modules started (uncommitted) | 2026-06-18                  | `spotifyAuth`, `loopbackServer`, `tokenStore`, PKCE tests |
+| Stage 2 implemented end-to-end        | 2026-07-21                  | Phases 5–8 wired; overlay UI                              |
+| **Stage 2 committed & pushed**        | **2026-07-21 06:37:58**     | `6f10db9` on `02_Features` → `origin/02_Features`         |
 
 ---
 
@@ -49,16 +49,16 @@ All criteria from the features guide are met in code:
 
 ## Technology choices
 
-| Area | Choice | Rationale |
-|---|---|---|
-| Spotify auth | Authorization Code + PKCE | No client secret in a distributed desktop app |
+| Area               | Choice                                              | Rationale                                                            |
+| ------------------ | --------------------------------------------------- | -------------------------------------------------------------------- |
+| Spotify auth       | Authorization Code + PKCE                           | No client secret in a distributed desktop app                        |
 | Client ID delivery | `MAIN_VITE_SPOTIFY_CLIENT_ID` via electron-vite env | Main-process env prefix; `.env` gitignored; `.env.example` committed |
-| Redirect | `http://127.0.0.1:8888/callback` | Loopback catcher; Spotify allows `http` on `127.0.0.1` |
-| Token storage | Electron `safeStorage` → `auth.dat` | OS-backed encryption (DPAPI / Keychain) |
-| Now-playing | Poll Spotify Web API every 2s | Simple live sync without WebSocket complexity |
-| Lyrics | LRCLIB `get` + LRC parse | Free, no auth; synced timestamps |
-| Prefs | Plain JSON `prefs.json` | Non-secret; kept separate from `auth.dat` |
-| Tests | Vitest (`npm test`) | Same runner as Stage 1; pure modules only |
+| Redirect           | `http://127.0.0.1:8888/callback`                    | Loopback catcher; Spotify allows `http` on `127.0.0.1`               |
+| Token storage      | Electron `safeStorage` → `auth.dat`                 | OS-backed encryption (DPAPI / Keychain)                              |
+| Now-playing        | Poll Spotify Web API every 2s                       | Simple live sync without WebSocket complexity                        |
+| Lyrics             | LRCLIB `get` + LRC parse                            | Free, no auth; synced timestamps                                     |
+| Prefs              | Plain JSON `prefs.json`                             | Non-secret; kept separate from `auth.dat`                            |
+| Tests              | Vitest (`npm test`)                                 | Same runner as Stage 1; pure modules only                            |
 
 ---
 
@@ -66,32 +66,32 @@ All criteria from the features guide are met in code:
 
 Intentional deviations or refinements during the build:
 
-| Topic | Features guide reference | Implemented |
-|---|---|---|
-| Client ID env | `process.env.SPOTIFY_CLIENT_ID` | **`import.meta.env.MAIN_VITE_SPOTIFY_CLIENT_ID`** — electron-vite main-process convention; see `Linea/.env.example` |
-| Default window size | Stage 1 size (320×160) | **380×240** — room for status, lyrics trio, and settings controls |
-| Nothing playing (204) | Poll returns early (no renderer notify) | **Sends `null` now-playing** and clears lyrics so the UI can show idle state |
-| Empty lyrics cache | Guide writes whatever LRCLIB returns | **Only cache non-empty lines** — avoids sticky “no lyrics” after a transient miss |
-| Poll errors | Not specified | **`try/catch` per tick** — one failure does not stop the interval |
-| Token expiry on login | Set on refresh path | **Also set on initial code exchange** |
-| Spotify / LRCLIB JSON | Untyped `response.json()` | **Typed response interfaces** — no `any` |
-| Overlay UI | Partial snippets (lyric + opacity) | **Full HTML shell**: Connect/Disconnect, click-through, neighbors, opacity + font sliders |
-| `tsconfig.web.json` | Not updated in guide | **Includes `src/shared/**/*`** so the renderer can import lyrics helpers |
-| Package scripts | Doc often says `bun test` | **`npm test` / `npm run typecheck` / `npm run lint`** verified; Bun lockfile still present |
+| Topic                 | Features guide reference                | Implemented                                                                                                         |
+| --------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Client ID env         | `process.env.SPOTIFY_CLIENT_ID`         | **`import.meta.env.MAIN_VITE_SPOTIFY_CLIENT_ID`** — electron-vite main-process convention; see `Linea/.env.example` |
+| Default window size   | Stage 1 size (320×160)                  | **380×240** — room for status, lyrics trio, and settings controls                                                   |
+| Nothing playing (204) | Poll returns early (no renderer notify) | **Sends `null` now-playing** and clears lyrics so the UI can show idle state                                        |
+| Empty lyrics cache    | Guide writes whatever LRCLIB returns    | **Only cache non-empty lines** — avoids sticky “no lyrics” after a transient miss                                   |
+| Poll errors           | Not specified                           | **`try/catch` per tick** — one failure does not stop the interval                                                   |
+| Token expiry on login | Set on refresh path                     | **Also set on initial code exchange**                                                                               |
+| Spotify / LRCLIB JSON | Untyped `response.json()`               | **Typed response interfaces** — no `any`                                                                            |
+| Overlay UI            | Partial snippets (lyric + opacity)      | **Full HTML shell**: Connect/Disconnect, click-through, neighbors, opacity + font sliders                           |
+| `tsconfig.web.json`   | Not updated in guide                    | **Includes `src/shared/**/\*`\*\* so the renderer can import lyrics helpers                                         |
+| Package scripts       | Doc often says `bun test`               | **`npm test` / `npm run typecheck` / `npm run lint`** verified; Bun lockfile still present                          |
 
 ---
 
 ## IPC surface (as built)
 
-| Channel | Shape | Purpose |
-|---|---|---|
-| `linea:spotify-login` | `invoke` / `handle` | Start PKCE login |
-| `linea:spotify-logout` | `invoke` / `handle` | Clear tokens + UI state |
-| `linea:spotify-auth-state` | `invoke` / `handle` | Connected? (memory or stored refresh) |
-| `linea:now-playing` | `send` / `on` | Push `NowPlaying \| null` |
-| `linea:lyrics-update` | `send` / `on` | Push `LyricLine[]` |
-| `linea:get-prefs` / `linea:set-prefs` | `invoke` / `handle` | Load / save clamped prefs |
-| Stage 1 click-through channels | unchanged | Still present |
+| Channel                               | Shape               | Purpose                               |
+| ------------------------------------- | ------------------- | ------------------------------------- |
+| `linea:spotify-login`                 | `invoke` / `handle` | Start PKCE login                      |
+| `linea:spotify-logout`                | `invoke` / `handle` | Clear tokens + UI state               |
+| `linea:spotify-auth-state`            | `invoke` / `handle` | Connected? (memory or stored refresh) |
+| `linea:now-playing`                   | `send` / `on`       | Push `NowPlaying \| null`             |
+| `linea:lyrics-update`                 | `send` / `on`       | Push `LyricLine[]`                    |
+| `linea:get-prefs` / `linea:set-prefs` | `invoke` / `handle` | Load / save clamped prefs             |
+| Stage 1 click-through channels        | unchanged           | Still present                         |
 
 Preload exposes these on `window.linea` (`login`, `logout`, `getAuthState`, `onNowPlaying`, `onLyricsUpdate`, `getPrefs`, `setPrefs`, plus Stage 1 APIs).
 
@@ -178,10 +178,10 @@ Remaining optional cleanup (not required for Stage 2 or 3 exit):
 
 ## Sign-off
 
-| Field | Value |
-|---|---|
-| Stage | 2 — Features (Phases 5–8) |
-| Result | **Complete** |
-| Recorded | 2026-07-21 06:37:58 +05:30 |
-| Commit | `6f10db9` |
+| Field      | Value                                                                               |
+| ---------- | ----------------------------------------------------------------------------------- |
+| Stage      | 2 — Features (Phases 5–8)                                                           |
+| Result     | **Complete**                                                                        |
+| Recorded   | 2026-07-21 06:37:58 +05:30                                                          |
+| Commit     | `6f10db9`                                                                           |
 | Next stage | Stage 3 — **Complete** ([linea-stage3-completion.md](./linea-stage3-completion.md)) |

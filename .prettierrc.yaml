@@ -1,0 +1,7 @@
+--- # Repo-wide formatting. Identical to Linea/.prettierrc.yaml, which the
+# app has always used — this lifts the same four rules to the root so the
+# website, the docs and the top-level markdown share one convention.
+singleQuote: true
+semi: false
+printWidth: 100
+trailingComma: none

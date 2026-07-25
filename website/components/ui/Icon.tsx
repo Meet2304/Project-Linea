@@ -5,6 +5,10 @@
  * Linea/src/renderer/src/renderer.ts). Default 1.75px stroke and
  * `currentColor` so icons inherit the surrounding text or feature color.
  * Lucide is ISC licensed — see NOTICE.md.
+ *
+ * These are the still icons. The three that animate on hover — download and
+ * the two arrows — are Animate UI components, under
+ * components/animate-ui/icons.
  */
 
 export type IconName =
@@ -159,7 +163,9 @@ const PATHS: Record<IconName, React.ReactNode> = {
   zap: (
     <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
   ),
-  'mouse-pointer-2': <path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z" />
+  'mouse-pointer-2': (
+    <path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z" />
+  )
 }
 
 interface Props {

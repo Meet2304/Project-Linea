@@ -18,16 +18,16 @@ The architectural rule from day one is in place: OS-facing logic lives in the **
 
 ## Timeline
 
-| Milestone | Date / time (local, +05:30) | Notes |
-|---|---|---|
-| Repository initial commit | 2026-06-17 (per `git log`) | `Project-Linea` root |
-| Stage 1 foundation guide written | 2026-06-17 | `documentation/linea-stage1-foundation.md` |
-| Project scaffolded (`electron-vite`) | 2026-06-17 | `bun create @quick-start/electron@latest` in `Linea/` |
-| Phase 1 — dev environment | 2026-06-17 | `bun install`, `bun run dev`, renderer hot reload confirmed |
-| Phase 2 — minimal window shell | 2026-06-17 | 360×200 → later 320×160; security flags set |
-| Phase 3 — native overlay behavior | 2026-06-17 | Frameless, transparent, drag, global shortcut |
-| Phase 4 — IPC & tests | 2026-06-17 | `window.linea`, Vitest wired |
-| **Stage 1 signed off** | **2026-06-17 22:53:15** | Implementation reviewed and accepted |
+| Milestone                            | Date / time (local, +05:30) | Notes                                                       |
+| ------------------------------------ | --------------------------- | ----------------------------------------------------------- |
+| Repository initial commit            | 2026-06-17 (per `git log`)  | `Project-Linea` root                                        |
+| Stage 1 foundation guide written     | 2026-06-17                  | `documentation/linea-stage1-foundation.md`                  |
+| Project scaffolded (`electron-vite`) | 2026-06-17                  | `bun create @quick-start/electron@latest` in `Linea/`       |
+| Phase 1 — dev environment            | 2026-06-17                  | `bun install`, `bun run dev`, renderer hot reload confirmed |
+| Phase 2 — minimal window shell       | 2026-06-17                  | 360×200 → later 320×160; security flags set                 |
+| Phase 3 — native overlay behavior    | 2026-06-17                  | Frameless, transparent, drag, global shortcut               |
+| Phase 4 — IPC & tests                | 2026-06-17                  | `window.linea`, Vitest wired                                |
+| **Stage 1 signed off**               | **2026-06-17 22:53:15**     | Implementation reviewed and accepted                        |
 
 ---
 
@@ -49,16 +49,16 @@ All criteria from the foundation guide are met:
 
 ## Technology choices
 
-| Area | Choice | Rationale |
-|---|---|---|
-| Package manager | **Bun** (`bun install`, `bun run dev`, `bun test`) | Developer preference; scripts in `package.json` remain standard |
-| Scaffold tool | `@quick-start/electron` (electron-vite) | Official quick-start; vanilla + TypeScript template |
-| UI framework | **Vanilla TypeScript** | Linea is a text overlay; no React/Vue bundle overhead |
-| TypeScript | Yes | End-to-end typing; separate `tsconfig.node` / `tsconfig.web` |
-| Electron updater (scaffold prompt) | No (at scaffold time) | Not needed for Stage 1; `electron-updater` remains as scaffold dependency |
-| Download mirror (scaffold prompt) | No (at scaffold time) | Default Electron install URLs used |
-| Test runner | **Vitest** | Pure logic testable without launching Electron |
-| Lint / format | ESLint + Prettier | From scaffold |
+| Area                               | Choice                                             | Rationale                                                                 |
+| ---------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------- |
+| Package manager                    | **Bun** (`bun install`, `bun run dev`, `bun test`) | Developer preference; scripts in `package.json` remain standard           |
+| Scaffold tool                      | `@quick-start/electron` (electron-vite)            | Official quick-start; vanilla + TypeScript template                       |
+| UI framework                       | **Vanilla TypeScript**                             | Linea is a text overlay; no React/Vue bundle overhead                     |
+| TypeScript                         | Yes                                                | End-to-end typing; separate `tsconfig.node` / `tsconfig.web`              |
+| Electron updater (scaffold prompt) | No (at scaffold time)                              | Not needed for Stage 1; `electron-updater` remains as scaffold dependency |
+| Download mirror (scaffold prompt)  | No (at scaffold time)                              | Default Electron install URLs used                                        |
+| Test runner                        | **Vitest**                                         | Pure logic testable without launching Electron                            |
+| Lint / format                      | ESLint + Prettier                                  | From scaffold                                                             |
 
 ---
 
@@ -66,17 +66,17 @@ All criteria from the foundation guide are met:
 
 These are intentional deviations or learnings during the build:
 
-| Topic | Foundation reference | Implemented |
-|---|---|---|
-| Global shortcut | `CommandOrControl+Shift+L` | **`CommandOrControl+Shift+Period`** — `Ctrl+Shift+L` was already owned on the dev machine |
-| Window resizable | `resizable: false` | **`resizable: true`** — user can choose overlay size |
-| Default window size | 360×200 (Phase 2) → 320×160 (Phase 3) | **320×160**, positioned top-right via `screen.getPrimaryDisplay().workAreaSize` |
-| Drag region | `-webkit-app-region: drag` on `#app` | **On `body`** — full panel draggable, not only the text node |
-| Button click target | `#app button { no-drag }` | Same — required for Phase 4 button |
-| Shortcut error message | Generic | Logs **`Ctrl+Shift+Period`** when registration fails |
-| Scaffold utilities | Stripped in reference | **`@electron-toolkit/utils` retained** — `ready-to-show`, DevTools shortcuts, external link handler |
-| `sandbox` | Not specified | **`sandbox: false`** (scaffold default); security via `contextIsolation` + `nodeIntegration: false` |
-| Project layout | `linea/` at repo root | App lives in **`Linea/`** subdirectory; docs at repo `documentation/` |
+| Topic                  | Foundation reference                  | Implemented                                                                                         |
+| ---------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Global shortcut        | `CommandOrControl+Shift+L`            | **`CommandOrControl+Shift+Period`** — `Ctrl+Shift+L` was already owned on the dev machine           |
+| Window resizable       | `resizable: false`                    | **`resizable: true`** — user can choose overlay size                                                |
+| Default window size    | 360×200 (Phase 2) → 320×160 (Phase 3) | **320×160**, positioned top-right via `screen.getPrimaryDisplay().workAreaSize`                     |
+| Drag region            | `-webkit-app-region: drag` on `#app`  | **On `body`** — full panel draggable, not only the text node                                        |
+| Button click target    | `#app button { no-drag }`             | Same — required for Phase 4 button                                                                  |
+| Shortcut error message | Generic                               | Logs **`Ctrl+Shift+Period`** when registration fails                                                |
+| Scaffold utilities     | Stripped in reference                 | **`@electron-toolkit/utils` retained** — `ready-to-show`, DevTools shortcuts, external link handler |
+| `sandbox`              | Not specified                         | **`sandbox: false`** (scaffold default); security via `contextIsolation` + `nodeIntegration: false` |
+| Project layout         | `linea/` at repo root                 | App lives in **`Linea/`** subdirectory; docs at repo `documentation/`                               |
 
 ---
 
@@ -150,27 +150,27 @@ Linea/
 
 ## Key dependencies (pinned ranges in `package.json`)
 
-| Package | Role |
-|---|---|
-| `electron` ^39.2.6 | Desktop runtime |
-| `electron-vite` ^5.0.0 | Main / preload / renderer bundling + dev server |
-| `vite` ^7.2.6 | Renderer dev server and HMR |
-| `typescript` ^5.9.3 | Type checking |
-| `vitest` ^4.1.9 | Unit tests |
-| `@electron-toolkit/utils` ^4.0.0 | Dev shortcuts, `is.dev`, app user model ID |
+| Package                          | Role                                            |
+| -------------------------------- | ----------------------------------------------- |
+| `electron` ^39.2.6               | Desktop runtime                                 |
+| `electron-vite` ^5.0.0           | Main / preload / renderer bundling + dev server |
+| `vite` ^7.2.6                    | Renderer dev server and HMR                     |
+| `typescript` ^5.9.3              | Type checking                                   |
+| `vitest` ^4.1.9                  | Unit tests                                      |
+| `@electron-toolkit/utils` ^4.0.0 | Dev shortcuts, `is.dev`, app user model ID      |
 
 ---
 
 ## Commands
 
-| Command | Purpose |
-|---|---|
-| `bun install` | Install dependencies |
-| `bun run dev` | Start electron-vite dev server + Electron (renderer HMR) |
-| `bun run build` | Typecheck + production bundle to `out/` |
-| `bun test` | Run Vitest (`vitest run`) |
-| `bun run typecheck` | TypeScript check (node + web projects) |
-| `bun run lint` | ESLint |
+| Command             | Purpose                                                  |
+| ------------------- | -------------------------------------------------------- |
+| `bun install`       | Install dependencies                                     |
+| `bun run dev`       | Start electron-vite dev server + Electron (renderer HMR) |
+| `bun run build`     | Typecheck + production bundle to `out/`                  |
+| `bun test`          | Run Vitest (`vitest run`)                                |
+| `bun run typecheck` | TypeScript check (node + web projects)                   |
+| `bun run lint`      | ESLint                                                   |
 
 ---
 
@@ -187,12 +187,12 @@ Linea/
 
 ## Issues encountered and resolved
 
-| Issue | Cause | Resolution |
-|---|---|---|
-| `mainWindow` possibly null (TS) | `ready-to-show` callback; module-level nullable type | Local `const win = mainWindow` for window callbacks |
-| Global shortcut registration failed | `Ctrl+Shift+L` owned by another app | Switched to `Ctrl+Shift+Period` |
-| Preload import errors | Semicolons in `ipcChannels` object; `.ts` extension in import; `shared/` not in `tsconfig.node.json` | Commas in object literal; extensionless import; added `src/shared/**/*` to include |
-| Drag only on text | `-webkit-app-region: drag` on small `#app` | Applied drag to `body` (full panel) |
+| Issue                               | Cause                                                                                                | Resolution                                                                         |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `mainWindow` possibly null (TS)     | `ready-to-show` callback; module-level nullable type                                                 | Local `const win = mainWindow` for window callbacks                                |
+| Global shortcut registration failed | `Ctrl+Shift+L` owned by another app                                                                  | Switched to `Ctrl+Shift+Period`                                                    |
+| Preload import errors               | Semicolons in `ipcChannels` object; `.ts` extension in import; `shared/` not in `tsconfig.node.json` | Commas in object literal; extensionless import; added `src/shared/**/*` to include |
+| Drag only on text                   | `-webkit-app-region: drag` on small `#app`                                                           | Applied drag to `body` (full panel)                                                |
 
 ---
 
@@ -220,9 +220,9 @@ Do not pull forward from later stages until Stage 2 guide exists: Spotify PKCE a
 
 ## Sign-off
 
-| Field | Value |
-|---|---|
-| Stage | 1 — Foundation (Phases 1–4) |
-| Result | **Complete** |
-| Recorded | 2026-06-17 22:53:15 +05:30 |
+| Field      | Value                                                                              |
+| ---------- | ---------------------------------------------------------------------------------- |
+| Stage      | 1 — Foundation (Phases 1–4)                                                        |
+| Result     | **Complete**                                                                       |
+| Recorded   | 2026-06-17 22:53:15 +05:30                                                         |
 | Next stage | Stage 2 — complete; see [linea-stage2-completion.md](./linea-stage2-completion.md) |

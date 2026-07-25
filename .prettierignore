@@ -1,0 +1,17 @@
+# Build output and dependencies
+node_modules
+out
+dist
+.next
+
+# Generated, and enormous: reformatting a lockfile only makes it harder to
+# read a diff of it.
+bun.lock
+package-lock.json
+pnpm-lock.yaml
+
+# Left as written
+LICENSE
+LICENSE.md
+tsconfig.json
+tsconfig.*.json
