@@ -22,7 +22,7 @@ import type {
   Prefs,
   WindowBounds
 } from '../shared/types'
-import type { LyricLine } from '../shared/lyrics'
+import type { LyricsResult } from '../shared/lyrics'
 import { estimatePositionMs } from '../shared/lyrics'
 import { nextPollDelay } from '../shared/pollPolicy'
 import { nextClickThroughState } from './clickThrough'
@@ -330,8 +330,8 @@ function sendNowPlaying(data: PlayerState | null): void {
   sendToRenderer(IPC.NOW_PLAYING, data)
 }
 
-function sendLyrics(lines: LyricLine[]): void {
-  sendToRenderer(IPC.LYRICS_UPDATE, lines)
+function sendLyrics(result: LyricsResult): void {
+  sendToRenderer(IPC.LYRICS_UPDATE, result)
 }
 
 function sendPlayerError(reason: PlayerErrorReason, message: string): void {
@@ -389,7 +389,7 @@ function logoutFromSpotify(): void {
   lastState = null
   likedCache.clear()
   sendNowPlaying(null)
-  sendLyrics([])
+  sendLyrics({ lines: [], status: 'none' })
 }
 
 // ------------------------------------------------------------------
@@ -429,14 +429,14 @@ async function updateLikedState(trackId: string): Promise<void> {
 
 async function refreshLyrics(state: PlayerState): Promise<void> {
   if (!state.trackId) return
-  const lines = await getLyricsForTrack({
+  const result = await getLyricsForTrack({
     trackId: state.trackId,
     trackName: state.trackName,
     artistName: state.artistName,
     albumName: state.albumName,
     durationSec: Math.round(state.durationMs / 1000)
   })
-  sendLyrics(lines)
+  sendLyrics(result)
 }
 
 async function pollOnce(): Promise<void> {
@@ -473,7 +473,7 @@ async function pollOnce(): Promise<void> {
       if (lastState !== null) {
         lastState = null
         sendNowPlaying(null)
-        sendLyrics([])
+        sendLyrics({ lines: [], status: 'none' })
       }
       schedulePoll()
       return

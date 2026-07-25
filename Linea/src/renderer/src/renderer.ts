@@ -833,9 +833,9 @@ async function init(): Promise<void> {
     refreshPlayerUi()
   })
 
-  window.linea.onLyricsUpdate((newLines) => {
+  window.linea.onLyricsUpdate(({ lines: newLines, status }) => {
     lines = newLines
-    renderAllLyrics(newLines)
+    renderAllLyrics(newLines, status)
     following = true
     el.btnJump.hidden = true
     scheduler.sync(lines, player)
