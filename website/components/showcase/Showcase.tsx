@@ -145,20 +145,36 @@ export default function Showcase({ release }: { release: ReleaseInfo }) {
     }
   }, [])
 
-  /* --- Which act is on screen ------------------------------------------- */
+  /* --- Which act is on screen -------------------------------------------
+     A crossing of the band is the cue to look, not the answer itself. One
+     fast flick can cross two or three panes inside a single observer
+     callback, and taking the last entry in that batch leaves the copy on
+     an act the page has already scrolled past — you land on act 02 and
+     read act 04. So on any crossing, measure: whichever pane's middle is
+     nearest the middle of the viewport is the act in front of the reader.
+     Cheap (four rects, only on a crossing) and it cannot drift. */
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue
-          const i = actRefs.current.indexOf(entry.target as HTMLDivElement)
-          if (i >= 0) setActive(i)
+    const resolve = () => {
+      const mid = window.innerHeight / 2
+      let best = -1
+      let bestDist = Infinity
+      actRefs.current.forEach((el, i) => {
+        if (!el) return
+        const r = el.getBoundingClientRect()
+        const dist = Math.abs(r.top + r.height / 2 - mid)
+        if (dist < bestDist) {
+          bestDist = dist
+          best = i
         }
-      },
-      // A thin band across the middle: exactly one pane can satisfy it, so
-      // the active act never flickers between two.
-      { rootMargin: '-45% 0px -45% 0px', threshold: 0 }
-    )
+      })
+      if (best >= 0) setActive(best)
+    }
+
+    const observer = new IntersectionObserver(resolve, {
+      // A thin band across the middle of the viewport.
+      rootMargin: '-45% 0px -45% 0px',
+      threshold: 0
+    })
     for (const el of actRefs.current) if (el) observer.observe(el)
     return () => observer.disconnect()
   }, [])

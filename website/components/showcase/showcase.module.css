@@ -520,10 +520,26 @@
     padding-bottom: clamp(64px, 11svh, 120px);
   }
 
-  /* One flick per act — shorter than the desktop's share of scroll,
-     because a thumb covers less ground than a wheel. */
+  /* One act per swipe, which takes both of these together.
+
+     Snapping decides where a gesture *ends*: every pane is a snap point,
+     centred because the middle of a pane is where the band that picks the
+     active act sits — so the position a scroll settles at is always a
+     position where exactly one act reads as the current one, never a
+     halfway house. `scroll-snap-stop: always` then forbids the momentum
+     after a flick from coasting over the next one.
+
+     The height decides how much a gesture *can* cross: while the finger is
+     down the page follows it, snapping or not, so a pane shorter than a
+     comfortable swipe is a pane a single swipe can drag straight past.
+     Measured with synthesised touch gestures — 300 to 600px of drag over
+     120 to 450ms, which spans a flick to a slow pull — panes below ~460px
+     let the fast ones through; at this height every one of them advances
+     exactly one act. */
   .actPane {
-    height: clamp(250px, 36svh, 340px);
+    height: clamp(360px, 56svh, 520px);
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
   }
 
   /* Act 01's share of scroll starts while the rail is still settling into
