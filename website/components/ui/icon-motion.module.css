@@ -1,22 +1,23 @@
 /* ============================================================
    ICON MOTION
-   The icons that answer their button.
+   The download arrow, which answers its button.
 
    The trigger is the button, never the glyph: it carries .trigger,
    the moving half of the icon carries its own class, and the icon
-   plays whenever the pointer is anywhere on the button — a 14px
+   plays whenever the pointer is anywhere on the button — an 18px
    arrow is far too small to be a hover target of its own. Keyboard
    focus gets the same cue, since a button reached by tab deserves
    the affordance a hovered one gets.
 
-   (Animate UI does this with a motion component and a React context
-   so a parent can drive a child. A CSS ancestor is all the parent
-   has to be here, and it costs no JavaScript.)
+   The two arrows that also animate are Animate UI components (see
+   components/animate-ui/icons), which do the same thing through a
+   React context. This one stays CSS: it was already built, it reads
+   the same, and it needs no JavaScript at all.
 
    One pass per hover, no bounce, the page's own easing — the same
    language as everything else on the page. Under
    prefers-reduced-motion the global rule in globals.css collapses
-   every animation to 0.01ms, which lands these on their identity
+   every animation to 0.01ms, which lands this on its identity
    frame: no motion at all.
    ============================================================ */
 
@@ -53,66 +54,6 @@
   }
   100% {
     transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* --- The right arrow leaves and returns ------------------------- */
-
-.trigger:hover .arrowRight,
-.trigger:focus-visible .arrowRight {
-  animation: iconArrowRight 700ms var(--ease);
-}
-
-@keyframes iconArrowRight {
-  0% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  44% {
-    transform: translateX(9px);
-    opacity: 0;
-  }
-  45% {
-    transform: translateX(-9px);
-    opacity: 0;
-  }
-  78% {
-    transform: translateX(-1px);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* --- The out-and-up arrow leaves through its own corner --------- */
-
-.trigger:hover .arrowUpRight,
-.trigger:focus-visible .arrowUpRight {
-  animation: iconArrowUpRight 700ms var(--ease);
-}
-
-@keyframes iconArrowUpRight {
-  0% {
-    transform: translate(0, 0);
-    opacity: 1;
-  }
-  44% {
-    transform: translate(8px, -8px);
-    opacity: 0;
-  }
-  45% {
-    transform: translate(-8px, 8px);
-    opacity: 0;
-  }
-  78% {
-    transform: translate(-1px, 1px);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(0, 0);
     opacity: 1;
   }
 }

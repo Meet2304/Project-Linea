@@ -1,7 +1,8 @@
 import CymaticField from './field/CymaticField'
 import CloneTerminal from './oss/CloneTerminal'
 import Mono from './ui/Mono'
-import Icon, { iconTrigger, type IconName } from './ui/Icon'
+import Icon, { type IconName } from './ui/Icon'
+import BrowseSource from './oss/BrowseSource'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
 import { LICENSE_URL, REPO_URL, type ReleaseInfo } from '@/lib/release'
 
@@ -88,29 +89,7 @@ export default function OpenSource({ release }: { release: ReleaseInfo }) {
             flexWrap: 'wrap'
           }}
         >
-          <a
-            href={REPO_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-            // The whole button drives the corner arrow, not the 14px glyph.
-            className={iconTrigger}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '11px 22px',
-              borderRadius: 'var(--radius-round)',
-              background: 'var(--ink)',
-              color: 'var(--surface-page)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 500,
-              textDecoration: 'none'
-            }}
-          >
-            <Icon name="github" size={16} />
-            Browse the source
-            <Icon name="arrow-up-right" size={14} />
-          </a>
+          <BrowseSource href={REPO_URL} />
           {!!release.stars && <Stat icon="star" label={`${release.stars} stars`} />}
           {!!release.forks && <Stat icon="git-fork" label={`${release.forks} forks`} />}
           <a href={LICENSE_URL} target="_blank" rel="noreferrer noopener" style={{ textDecoration: 'none' }}>

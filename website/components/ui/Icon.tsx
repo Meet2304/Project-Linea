@@ -6,11 +6,12 @@
  * `currentColor` so icons inherit the surrounding text or feature color.
  * Lucide is ISC licensed — see NOTICE.md.
  *
- * Three of them — the two arrows and the download tray — group the part of
- * the geometry that moves so a button can animate it on hover. The class is
- * always on the group; it only does anything inside an element carrying
- * `m.trigger`, so an icon anywhere else is untouched. See
- * icon-motion.module.css.
+ * One of them — download — groups the part of the geometry that moves so a
+ * button can animate it on hover in CSS. The class is always on the group;
+ * it only does anything inside an element carrying `m.trigger`, so the icon
+ * anywhere else is untouched. See icon-motion.module.css. The two arrows
+ * that also animate are Animate UI components instead, under
+ * components/animate-ui/icons.
  */
 
 import m from './icon-motion.module.css'
@@ -110,16 +111,16 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   'arrow-right': (
-    <g className={m.arrowRight}>
+    <>
       <path d="M5 12h14" />
       <path d="m12 5 7 7-7 7" />
-    </g>
+    </>
   ),
   'arrow-up-right': (
-    <g className={m.arrowUpRight}>
+    <>
       <path d="M7 7h10v10" />
       <path d="M7 17 17 7" />
-    </g>
+    </>
   ),
   github: (
     <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
