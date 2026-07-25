@@ -23,10 +23,28 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # A missing client id does not fail the build — it silently produces an
+      # installer that can never log in. Fail loudly here instead.
+      - name: Verify Spotify client id is available
+        shell: bash
+        run: |
+          if [ -z "$MAIN_VITE_SPOTIFY_CLIENT_ID" ]; then
+            echo "::error::MAIN_VITE_SPOTIFY_CLIENT_ID is empty. Set the SPOTIFY_CLIENT_ID repository secret — a release built without it cannot connect to Spotify."
+            exit 1
+          fi
+        env:
+          MAIN_VITE_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+
       - name: Build and publish
         run: bun run release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Inlined into the main bundle at build time. Without it the client
+          # id folds to '' and Vite dead-code-eliminates the entire login
+          # body, leaving loginToSpotify() as nothing but its throw — so a
+          # release built without this cannot connect to Spotify at all.
+          # Public PKCE client id, not a confidential secret.
+          MAIN_VITE_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
 
   build-win:
     name: Build Windows
@@ -45,7 +63,25 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # A missing client id does not fail the build — it silently produces an
+      # installer that can never log in. Fail loudly here instead.
+      - name: Verify Spotify client id is available
+        shell: bash
+        run: |
+          if [ -z "$MAIN_VITE_SPOTIFY_CLIENT_ID" ]; then
+            echo "::error::MAIN_VITE_SPOTIFY_CLIENT_ID is empty. Set the SPOTIFY_CLIENT_ID repository secret — a release built without it cannot connect to Spotify."
+            exit 1
+          fi
+        env:
+          MAIN_VITE_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+
       - name: Build and publish
         run: bun run release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Inlined into the main bundle at build time. Without it the client
+          # id folds to '' and Vite dead-code-eliminates the entire login
+          # body, leaving loginToSpotify() as nothing but its throw — so a
+          # release built without this cannot connect to Spotify at all.
+          # Public PKCE client id, not a confidential secret.
+          MAIN_VITE_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}

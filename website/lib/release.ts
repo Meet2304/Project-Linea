@@ -55,3 +55,13 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   mac: 'macOS',
   other: 'your platform'
 }
+
+/**
+ * Link target for a download. Always the /download redirect rather than a
+ * release asset URL: the asset URL names a specific version and gets frozen
+ * into the cached HTML, so a stale page keeps serving a superseded installer.
+ * The redirect resolves the latest release when the visitor clicks.
+ */
+export function downloadHref(platform: 'win' | 'mac'): string {
+  return `/download?platform=${platform}`
+}
