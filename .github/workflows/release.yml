@@ -6,52 +6,29 @@ on:
       - 'v*'
 
 jobs:
-  build-mac:
-    name: Build macOS
-    runs-on: macos-latest
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: Linea
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      # A missing client id does not fail the build — it silently produces an
-      # installer that can never log in. Fail loudly here instead.
-      - name: Verify Spotify client id is available
-        shell: bash
-        run: |
-          if [ -z "$MAIN_VITE_SPOTIFY_CLIENT_ID" ]; then
-            echo "::error::MAIN_VITE_SPOTIFY_CLIENT_ID is empty. Set the SPOTIFY_CLIENT_ID repository secret — a release built without it cannot connect to Spotify."
-            exit 1
-          fi
-        env:
-          MAIN_VITE_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
-
-      - name: Build and publish
-        run: bun run release
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          # Inlined into the main bundle at build time. Without it the client
-          # id folds to '' and Vite dead-code-eliminates the entire login
-          # body, leaving loginToSpotify() as nothing but its throw — so a
-          # release built without this cannot connect to Spotify at all.
-          # Public PKCE client id, not a confidential secret.
-          MAIN_VITE_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
-
-  build-win:
-    name: Build Windows
-    runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: Linea
+    strategy:
+      # electron-builder creates the GitHub draft release on its first publish
+      # and reuses it afterwards. Run the platforms in parallel and both race
+      # to create it, producing two drafts with the assets split between them —
+      # every release so far has needed manual consolidation. Serialising means
+      # the second job always finds the draft the first one made.
+      max-parallel: 1
+      # One platform failing should not discard the other's artifacts; the
+      # release is a draft either way, so a partial result is still reviewable.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+          - os: macos-latest
+            name: macOS
 
     steps:
       - uses: actions/checkout@v4

@@ -436,6 +436,9 @@ async function refreshLyrics(state: PlayerState): Promise<void> {
     albumName: state.albumName,
     durationSec: Math.round(state.durationMs / 1000)
   })
+  // A lookup can span several providers, so a fast skip could land the
+  // previous track's lyrics over the current one. Drop late answers.
+  if (lastState?.trackId !== state.trackId) return
   sendLyrics(result)
 }
 
