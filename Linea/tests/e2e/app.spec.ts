@@ -45,18 +45,35 @@ test('window opens at panel size', async () => {
   expect(bounds.height).toBeLessThanOrEqual(700)
 })
 
-test('window opens bottom-center when no saved placement exists', async () => {
-  // Fresh launches have null windowBounds — bottom-center is the first-run default.
+/** Transparent shadow ring around the panel. Mirrors src/main/index.ts. */
+const SHADOW_GUTTER = 30
+/** Breathing room between the visible panel and the work-area corner. */
+const CORNER_MARGIN = 16
+
+test('window opens bottom-right when no saved placement exists', async () => {
+  // Fresh launches have null windowBounds. Bottom-right, just above the
+  // taskbar, is the first-run default — it replaced bottom-center in 0.1.1.
   // After the user moves the window, that placement is restored instead.
   const { bounds, workArea } = await app.evaluate(({ BrowserWindow, screen }) => {
     const win = BrowserWindow.getAllWindows()[0]
     if (!win) throw new Error('No BrowserWindow open')
     return { bounds: win.getBounds(), workArea: screen.getPrimaryDisplay().workArea }
   })
-  const expectedX = workArea.x + Math.round((workArea.width - bounds.width) / 2)
-  const expectedY = workArea.y + workArea.height - bounds.height - 24
-  expect(Math.abs(bounds.x - expectedX)).toBeLessThanOrEqual(12)
-  expect(Math.abs(bounds.y - expectedY)).toBeLessThanOrEqual(12)
+
+  // The window is SHADOW_GUTTER larger than the visible panel on every side,
+  // so asserting the window's own edges would bake the gutter into the
+  // expectation. What 0.1.1 actually promised is about the *panel*: its
+  // visible corner sits CORNER_MARGIN from the work-area corner. Measure
+  // that, and the test keeps passing if the gutter is ever retuned.
+  const panelRight = bounds.x + bounds.width - SHADOW_GUTTER
+  const panelBottom = bounds.y + bounds.height - SHADOW_GUTTER
+
+  const gapRight = workArea.x + workArea.width - panelRight
+  const gapBottom = workArea.y + workArea.height - panelBottom
+
+  // DPI scaling can nudge getBounds() by a few pixels.
+  expect(Math.abs(gapRight - CORNER_MARGIN)).toBeLessThanOrEqual(12)
+  expect(Math.abs(gapBottom - CORNER_MARGIN)).toBeLessThanOrEqual(12)
 })
 
 test('renderer exposes window.linea but not window.require', async () => {
