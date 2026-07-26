@@ -48,6 +48,16 @@ export const DEMO_TRACK: DemoTrack = {
 export const TRACKS: DemoTrack[] = [DEMO_TRACK]
 
 /**
+ * Production credits that some providers emit as real timestamped lines at
+ * the head of the file. They are not lyrics and must not scroll past as
+ * though they were. Copied from Linea/src/shared/lyrics.ts — LRCLIB rarely
+ * carries these, but the NetEase fallback routinely does, so the website
+ * needed the same guard once it grew a provider chain.
+ */
+const CREDIT_ROW =
+  /^(?:作词|作曲|编曲|制作人|出品人|出品|监制|混音|母带|录音|配唱|和声|吉他|贝斯|鼓|键盘|弦乐|策划|统筹|发行|企划|词|曲|OP|SP)\s*[:：]/
+
+/**
  * Parse an LRC body into timestamped lines.
  * Mirrors the app's own parser: `[mm:ss.xx]` prefixes, blank cues dropped.
  */
@@ -73,6 +83,7 @@ export function parseLrc(lrc: string): LyricLine[] {
     const text = raw.replace(stamp, '').trim()
     // Instrumental cues carry a timestamp but no words — skip them.
     if (!text) continue
+    if (CREDIT_ROW.test(text)) continue
     for (const t of stamps) out.push({ t, text })
   }
 

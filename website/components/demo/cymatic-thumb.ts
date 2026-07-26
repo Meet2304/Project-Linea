@@ -70,6 +70,38 @@ export function jewelForTrack(trackId: string): (typeof JEWELS)[number] {
   return JEWELS[hashSeed(trackId) % JEWELS.length]
 }
 
+export interface SongVisuals {
+  /** The seed everything below was derived from — possibly walked. */
+  seed: number
+  /** Jewel token name, without the leading `--`. */
+  jewel: string
+  style: CymaticStyle
+  density: number
+  /** Modal numbers for a full-size plate, as opposed to a 64px tile. */
+  n: number
+  m: number
+}
+
+/**
+ * Everything a track decides about how something looks. The changelog uses
+ * this to let a song pick a release's colour and plate rather than anyone
+ * choosing one by hand.
+ */
+export function paramsForSeed(seed: number): SongVisuals {
+  return {
+    seed,
+    jewel: JEWELS[seed % JEWELS.length].slice(2),
+    style: STYLES[seed % STYLES.length],
+    density: 4 + (seed % 4),
+    n: 2 + (seed % 5),
+    m: 3 + ((seed + 2) % 6)
+  }
+}
+
+export function paramsForTrack(trackId: string): SongVisuals {
+  return paramsForSeed(hashSeed(trackId))
+}
+
 interface ThumbOptions {
   color: string
   density: number
@@ -181,7 +213,13 @@ export function drawThumb(
   seedKey: string,
   color: string,
   phase: number,
-  scratch: { buf: Uint8ClampedArray; image: ImageData } | null
+  scratch: { buf: Uint8ClampedArray; image: ImageData } | null,
+  /**
+   * Overrides the seed derived from `seedKey`. The changelog walks a seed
+   * forward when two songs collide on a jewel; the tile has to walk with it
+   * or the tile and the plate behind it disagree.
+   */
+  seedOverride?: number
 ): { buf: Uint8ClampedArray; image: ImageData } | null {
   const ctx = canvas.getContext('2d')
   if (!ctx || canvas.width === 0 || canvas.height === 0) return scratch
@@ -192,7 +230,7 @@ export function drawThumb(
     s = { buf, image: new ImageData(buf, canvas.width, canvas.height) }
   }
 
-  const seed = hashSeed(seedKey || 'linea')
+  const seed = seedOverride ?? hashSeed(seedKey || 'linea')
   renderPixels(
     canvas.width,
     canvas.height,

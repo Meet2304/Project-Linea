@@ -39,6 +39,16 @@ export interface FieldOptions {
   /** Pointer influence strength; 0 disables it. */
   ptAmt?: number
   /**
+   * Where to listen for the pointer, when that is not the canvas itself.
+   *
+   * A field that sits in one corner of a large section still wants to answer
+   * a cursor moving anywhere across it — otherwise the plate only reacts in
+   * the small patch it occupies, and the interaction reads as broken. Position
+   * is still measured against the field's own box and clamped, so the pointer
+   * leaving that box pulls the pattern toward the edge it left by.
+   */
+  pointerHost?: HTMLElement | null
+  /**
    * How fast the plate itself breathes. This is the "music is playing"
    * clock — raise it to make the field feel alive.
    */
@@ -189,9 +199,10 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
     ptActive = 0
   }
 
+  const ptHost = opts.pointerHost ?? el
   if (ptAmt > 0) {
-    el.addEventListener('pointermove', onMove)
-    el.addEventListener('pointerleave', onLeave)
+    ptHost.addEventListener('pointermove', onMove)
+    ptHost.addEventListener('pointerleave', onLeave)
   }
 
   function resize(): void {
@@ -442,8 +453,8 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
       io.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
       if (ptAmt > 0) {
-        el.removeEventListener('pointermove', onMove)
-        el.removeEventListener('pointerleave', onLeave)
+        ptHost.removeEventListener('pointermove', onMove)
+        ptHost.removeEventListener('pointerleave', onLeave)
       }
       display.remove()
     }
