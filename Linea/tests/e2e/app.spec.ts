@@ -45,18 +45,53 @@ test('window opens at panel size', async () => {
   expect(bounds.height).toBeLessThanOrEqual(700)
 })
 
-test('window opens bottom-center when no saved placement exists', async () => {
-  // Fresh launches have null windowBounds — bottom-center is the first-run default.
+/**
+ * Transparent shadow ring around the panel. Mirrors src/main/index.ts, where
+ * the matching CORNER_MARGIN is 16.
+ */
+const SHADOW_GUTTER = 30
+
+test('window opens bottom-right when no saved placement exists', async () => {
+  // Fresh launches have null windowBounds. Bottom-right, just above the
+  // taskbar, is the first-run default — it replaced bottom-center in 0.1.1.
   // After the user moves the window, that placement is restored instead.
   const { bounds, workArea } = await app.evaluate(({ BrowserWindow, screen }) => {
     const win = BrowserWindow.getAllWindows()[0]
     if (!win) throw new Error('No BrowserWindow open')
     return { bounds: win.getBounds(), workArea: screen.getPrimaryDisplay().workArea }
   })
-  const expectedX = workArea.x + Math.round((workArea.width - bounds.width) / 2)
-  const expectedY = workArea.y + workArea.height - bounds.height - 24
-  expect(Math.abs(bounds.x - expectedX)).toBeLessThanOrEqual(12)
-  expect(Math.abs(bounds.y - expectedY)).toBeLessThanOrEqual(12)
+
+  // The window is SHADOW_GUTTER larger than the visible panel on every side,
+  // so asserting the window's own edges would bake the gutter into the
+  // expectation. What 0.1.1 promised is about the *panel*: its visible corner
+  // sits near the work-area corner.
+  const panelRight = bounds.x + bounds.width - SHADOW_GUTTER
+  const panelBottom = bounds.y + bounds.height - SHADOW_GUTTER
+
+  const gapRight = workArea.x + workArea.width - panelRight
+  const gapBottom = workArea.y + workArea.height - panelBottom
+
+  // How close depends on the platform, and both answers are correct.
+  //
+  // Placing the panel 16px from the corner means the window itself — gutter
+  // included — hangs 14px past the work area. Windows and Linux allow that,
+  // so the panel lands exactly on 16. macOS refuses to position a window
+  // outside the visible frame and clamps it back, which pushes the whole
+  // gutter inside and leaves the panel SHADOW_GUTTER from the corner.
+  //
+  // So assert the range rather than one platform's number: the panel is on
+  // screen, and no further in than a full gutter. DPI scaling can nudge
+  // getBounds() by a few pixels on top of that.
+  expect(gapRight).toBeGreaterThanOrEqual(0)
+  expect(gapRight).toBeLessThanOrEqual(SHADOW_GUTTER + 12)
+  expect(gapBottom).toBeGreaterThanOrEqual(0)
+  expect(gapBottom).toBeLessThanOrEqual(SHADOW_GUTTER + 12)
+
+  // And prove it is anchored rather than centred — the stale version of this
+  // test asserted bottom-*center*, which is what the app did before 0.1.1.
+  // A centred window would leave equal room on both sides.
+  expect(gapRight).toBeLessThan(bounds.x - workArea.x)
+  expect(gapBottom).toBeLessThan(bounds.y - workArea.y)
 })
 
 test('renderer exposes window.linea but not window.require', async () => {

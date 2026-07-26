@@ -241,6 +241,15 @@ html {
   }
 }
 
+/* The changelog is a different contract: one flick, one state, at every
+   width. Mandatory is only safe there because every screen on that page is
+   exactly one viewport tall and never grows — see changelog.module.css. The
+   attribute is set and removed by Changelog.tsx, and its higher specificity
+   beats the mobile rule above without depending on source order. */
+html[data-snap='changelog'] {
+  scroll-snap-type: y mandatory;
+}
+
 body {
   background: var(--surface-page);
   color: var(--text-body);

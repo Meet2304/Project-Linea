@@ -3,8 +3,15 @@
 import { useEffect, useRef } from 'react'
 import { mountField, type FieldInstance, type FieldOptions } from './cymatics-live'
 
-interface Props extends FieldOptions {
+interface Props extends Omit<FieldOptions, 'pointerHost'> {
   className?: string
+  /**
+   * Listen for the pointer on this element instead of the canvas. Passed as a
+   * ref because the host is usually an ancestor that only exists once React
+   * has committed — refs are attached before effects run, so it is populated
+   * by the time the field mounts.
+   */
+  pointerHostRef?: React.RefObject<HTMLElement | null>
   /**
    * Changing this remounts the engine. Keep it out of the color props —
    * colors go through setColors() so a palette change never flashes.
@@ -25,7 +32,13 @@ interface Props extends FieldOptions {
  * Colors are applied imperatively: the feature scroller crossfades palettes
  * between acts, and remounting the canvas for that would blink.
  */
-export default function CymaticField({ className, patternKey, paused, ...opts }: Props) {
+export default function CymaticField({
+  className,
+  patternKey,
+  paused,
+  pointerHostRef,
+  ...opts
+}: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const instRef = useRef<FieldInstance | null>(null)
 
@@ -36,7 +49,10 @@ export default function CymaticField({ className, patternKey, paused, ...opts }:
   useEffect(() => {
     const host = hostRef.current
     if (!host) return
-    const inst = mountField(host, optsRef.current)
+    const inst = mountField(host, {
+      ...optsRef.current,
+      pointerHost: pointerHostRef?.current ?? null
+    })
     instRef.current = inst
     return () => {
       inst.destroy()

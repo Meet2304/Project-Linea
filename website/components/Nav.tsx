@@ -4,10 +4,15 @@ import Icon from './ui/Icon'
 import ThemeToggle from './theme/ThemeToggle'
 import { REPO_URL } from '@/lib/release'
 
+/**
+ * Absolute, not bare fragments: this bar is on the changelog route too, where
+ * `#features` would look for a section that is not on the page.
+ */
 const LINKS = [
-  { href: '#features', label: 'Features' },
-  { href: '#cymatics', label: 'Cymatics' },
-  { href: '#source', label: 'Source' }
+  { href: '/#features', label: 'Features' },
+  { href: '/#cymatics', label: 'Cymatics' },
+  { href: '/changelog', label: 'Changelog' },
+  { href: '/#source', label: 'Source' }
 ]
 
 /**
@@ -47,12 +52,12 @@ export default function Nav() {
         }}
       >
         <a
-          href="#top"
+          href="/#top"
           aria-label="Linea — home"
           className="nav-wordmark"
           style={{ textDecoration: 'none' }}
         >
-          <Wordmark size={24} />
+          <Wordmark size={34} />
         </a>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(16px, 2.4vw, 30px)' }}>

@@ -11,6 +11,8 @@ interface Props {
   playing: boolean
   /** CSS size in px; the buffer is always 64x64, as in the app. */
   size?: number
+  /** See drawThumb — keeps a de-collided tile in step with its plate. */
+  seedOverride?: number
   className?: string
 }
 
@@ -22,7 +24,14 @@ const FRAME_MS = 1000 / 30
  * The little standing-wave tile beside the track title. It evolves while the
  * song plays and holds a still frame when paused — same as the real overlay.
  */
-export default function Thumb({ trackId, color, playing, size = 30, className }: Props) {
+export default function Thumb({
+  trackId,
+  color,
+  playing,
+  size = 30,
+  seedOverride,
+  className
+}: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
   const scratch = useRef<{ buf: Uint8ClampedArray; image: ImageData } | null>(null)
   const phase = useRef(0)
@@ -35,7 +44,7 @@ export default function Thumb({ trackId, color, playing, size = 30, className }:
 
     // Paused, or motion-averse: one frame at the current phase, no loop.
     if (!playing || reduced) {
-      scratch.current = drawThumb(canvas, trackId, color, phase.current, scratch.current)
+      scratch.current = drawThumb(canvas, trackId, color, phase.current, scratch.current, seedOverride)
       return
     }
 
@@ -50,12 +59,12 @@ export default function Thumb({ trackId, color, playing, size = 30, className }:
       phase.current += dt * PHASE_RATE
       if (now - lastDraw < FRAME_MS) return
       lastDraw = now
-      scratch.current = drawThumb(canvas, trackId, color, phase.current, scratch.current)
+      scratch.current = drawThumb(canvas, trackId, color, phase.current, scratch.current, seedOverride)
     }
 
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [trackId, color, playing])
+  }, [trackId, color, playing, seedOverride])
 
   return (
     <canvas

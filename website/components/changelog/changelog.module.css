@@ -1,0 +1,811 @@
+/* ============================================================
+   CHANGELOG — DISPATCHES
+   One release, one screen, signed. Features get the whole
+   viewport and the song that was playing while they were built;
+   a run of corrections collapses into one interlude between the
+   letters. Emphasis on this page is real estate and voice.
+   ============================================================ */
+
+/* ---------- the flick model ----------
+   One flick, one state. Three things have to hold together:
+
+   1. `mandatory` snapping, set on <html> from Changelog.tsx — proximity
+      lets a fast flick coast past a snap point and settle on momentum.
+   2. `scroll-snap-stop: always` here. Without it, mandatory still allows a
+      single hard flick to skip two or three screens and snap only at the end
+      of the throw. This is the property that makes each state unskippable.
+   3. Every screen exactly one viewport, no exceptions. A target shorter than
+      the viewport shows the next one underneath it; one taller takes more
+      than one flick to clear.
+
+   Because of (3) a screen can never grow, so anything that expands — the
+   notes disclosure, copy wrapping on a narrow viewport — scrolls *inside*
+   the screen and chains out to the document at its end.
+
+   `dvh`, not `svh`: on a phone with a retracting toolbar `svh` is the height
+   with the bar shown, so once it hides the section is shorter than what you
+   can see, which is exactly the leak (3) is guarding against. */
+.screen {
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  /* `safe`: if content does overflow, fall back to top alignment rather than
+     centring it and putting the first line out of reach above. */
+  align-items: safe center;
+  padding: 116px clamp(20px, 6vw, 80px) 96px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  --pad: clamp(20px, 6vw, 80px);
+}
+
+.screen::-webkit-scrollbar {
+  width: 0;
+}
+
+/* ---------- opener ---------- */
+
+.opener {
+  text-align: center;
+}
+
+.openerInner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.openerInner h1 {
+  font-size: clamp(2.6rem, 7vw, 4.5rem);
+  line-height: var(--leading-tight);
+  margin: 20px 0 26px;
+}
+
+.openerSub {
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  max-width: 48ch;
+  margin: 0 auto;
+}
+
+.hint {
+  margin-top: 56px;
+  display: block;
+  animation: drift 2.8s var(--ease) infinite;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(5px);
+    opacity: 1;
+  }
+}
+
+/* ---------- a letter ---------- */
+
+.plate {
+  position: absolute;
+  inset: -8% -8% auto auto;
+  width: min(74vh, 62%);
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+  mask-image: radial-gradient(closest-side at 50% 50%, #000 40%, transparent 76%);
+  -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 40%, transparent 76%);
+}
+
+/* The version, set enormous and nearly invisible, seated on the bottom-left
+   corner and bleeding a touch off the left edge — the way a plate number sits
+   on an engraving. It is the only ornament on the page and it carries the
+   "this one is a milestone" signal without a badge.
+
+   Bottom-LEFT specifically: the panel owns the bottom-right corner, and the
+   two fought when the version was over there. The letter is centred in
+   whatever room is left above it, so .dispatch reserves the height below. */
+.ghost {
+  position: absolute;
+  left: calc(var(--pad) - 0.06em);
+  bottom: max(3vh, 26px);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: clamp(3.5rem, 9vw, 8rem);
+  line-height: 0.78;
+  letter-spacing: -0.05em;
+  color: color-mix(in oklch, var(--accent-c) 13%, transparent);
+  pointer-events: none;
+  user-select: none;
+  transition: opacity var(--dur) var(--ease);
+}
+
+/* Open the notes and the letter grows down into this corner. Once someone has
+   asked for the detail, the ornament steps out of its way. */
+.dispatch[data-notes='true'] .ghost {
+  opacity: 0;
+}
+
+/* The room the version sits in. Without this the centred letter would reach
+   down into it — screens are a fixed viewport tall and cannot grow, so the
+   space has to be taken out of the letter's share rather than added. */
+.dispatch {
+  padding-bottom: clamp(120px, 20vh, 200px);
+}
+
+.letter {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 760ms var(--ease-out),
+    transform 760ms var(--ease-out);
+}
+
+/* The letter's rhythm is deliberately loose. There is a plate, a poster-sized
+   version number and a running lyric panel on this screen already — the
+   writing earns its weight by being the least crowded thing on it, so every
+   gap here is larger than a page of prose would want. */
+.stamp {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 44px;
+}
+
+.stampRule {
+  flex: 1;
+  max-width: 90px;
+  height: 1px;
+  background: var(--line);
+}
+
+.headline {
+  font-size: clamp(2.2rem, 5.2vw, 3.75rem);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  margin-bottom: 34px;
+  max-width: 14ch;
+}
+
+/* A short measure on purpose. One sentence that turns the corner twice reads
+   as a paragraph; held to ~42 characters it stays a statement. */
+.lede {
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--text-body);
+  max-width: 42ch;
+}
+
+/* The letter voice: larger than body, lighter, and signed. This is the part
+   that has to sound like a person. */
+.note {
+  margin-top: 40px;
+  font-size: var(--text-lg);
+  font-weight: 300;
+  line-height: 1.45;
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+  max-width: 38ch;
+}
+
+.sign {
+  margin-top: 26px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.signMark {
+  width: 26px;
+  height: 1px;
+  background: var(--accent-c);
+}
+
+.actions {
+  margin-top: 52px;
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.notesBtn {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  padding: 11px 20px;
+  border-radius: var(--radius-round);
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background-color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.notesBtn:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface-page);
+}
+
+.ghostLink {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-decoration: none;
+  transition: color var(--dur) var(--ease);
+}
+
+.ghostLink:hover {
+  color: var(--ink);
+}
+
+/* Folded away. Nobody has to read it; it is here because somebody will want
+   to. Expanding scrolls the screen rather than growing it. */
+.notes {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 520ms var(--ease-out);
+}
+
+.notes > div {
+  overflow: hidden;
+}
+
+.notes[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.notesInner {
+  padding-top: 38px;
+  max-width: 58ch;
+}
+
+.points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.points li {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.points li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.points h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  margin-bottom: 6px;
+}
+
+.points p {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+/* ---------- the panel ----------
+   The app's window opens at 600x250 (Linea/src/main/index.ts), so this is
+   wide and shallow — about 2.4:1 — not a square widget. */
+
+.panelWrap {
+  position: absolute;
+  right: var(--pad);
+  bottom: 7vh;
+  z-index: 2;
+  width: 480px;
+}
+
+.panelTag {
+  margin-bottom: 10px;
+  display: block;
+}
+
+.panel {
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--line);
+  background: color-mix(in oklch, var(--surface-page) 82%, transparent);
+  backdrop-filter: blur(var(--blur-panel, 18px));
+  -webkit-backdrop-filter: blur(var(--blur-panel, 18px));
+  box-shadow: var(--shadow-lg);
+  padding: 14px 16px 13px;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.panelMeta {
+  min-width: 0;
+  flex: 1;
+}
+
+.panelTitle {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panelArtist {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.panelPlay {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: none;
+  cursor: pointer;
+  position: relative;
+  color: var(--text-secondary);
+  transition:
+    border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.panelPlay:hover {
+  border-color: var(--song-c);
+  color: var(--song-c);
+}
+
+.panelPlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 0 5px 8px;
+  border-color: transparent transparent transparent currentColor;
+  transform: translateX(1px);
+}
+
+.panelPlay[data-playing='true']::before {
+  width: 8px;
+  height: 9px;
+  border: 0;
+  transform: none;
+  background: currentColor;
+  -webkit-mask:
+    linear-gradient(#000 0 0) 0 0 / 3px 100% no-repeat,
+    linear-gradient(#000 0 0) 100% 0 / 3px 100% no-repeat;
+  mask:
+    linear-gradient(#000 0 0) 0 0 / 3px 100% no-repeat,
+    linear-gradient(#000 0 0) 100% 0 / 3px 100% no-repeat;
+}
+
+/* Fixed height in whole lines, so the panel never resizes as the song moves.
+   Three visible, like the app's default window. */
+.lyrics {
+  --lyric-line-h: 21px;
+  --lyric-gap: 7px;
+  --visible-lines: 3;
+  position: relative;
+  margin-top: 13px;
+  height: calc(
+    var(--visible-lines) * var(--lyric-line-h) + (var(--visible-lines) - 1) * var(--lyric-gap)
+  );
+  display: flex;
+  overflow: hidden;
+}
+
+.lyricsScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Lyrics scroll on their own; the page must not move underneath them. */
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.lyricsScroll::-webkit-scrollbar {
+  width: 0;
+}
+
+.lyricsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lyric-gap);
+}
+
+/* One row, always — a long line truncates rather than wrapping and breaking
+   the window height. */
+.lyricRow {
+  display: flex;
+  align-items: baseline;
+  height: var(--lyric-line-h);
+  flex: none;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.32;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--text-body);
+  opacity: 0.51;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    opacity var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.lyricRow[data-pos='past'] {
+  opacity: 0.33;
+}
+
+.lyricRow[data-pos='active'] {
+  opacity: 1;
+  color: var(--song-c);
+  font-weight: 600;
+}
+
+/* Collapsed to nothing, as in the app — timestamps are a setting there, not
+   the resting state, and hiding them gives each line its full width. */
+.lyricTime {
+  flex: none;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: inherit;
+  white-space: nowrap;
+}
+
+.lyricText {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jump {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  height: 21px;
+  padding: 0 9px;
+  border-radius: var(--radius-round);
+  border: 1px solid color-mix(in oklch, var(--song-c) 34%, transparent);
+  background: var(--surface-raised);
+  color: var(--song-c);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.bar {
+  margin-top: 13px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--song-c);
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 7px;
+}
+
+/* A note about the words, not a label — so it drops the caps the mono
+   utility applies everywhere else. */
+.panelFoot {
+  margin-top: 10px;
+  display: block;
+  color: var(--text-faint);
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.85;
+}
+
+/* ---------- the interlude ---------- */
+
+.interlude {
+  background: var(--surface-alt);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.interludeInner {
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 760ms var(--ease-out),
+    transform 760ms var(--ease-out);
+}
+
+.interludeLead {
+  max-width: 52ch;
+  margin-bottom: 34px;
+}
+
+.interludeLead h2 {
+  font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+  margin: 12px 0 14px;
+}
+
+.interludeLead p {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+}
+
+.fixes {
+  border-top: 1px solid var(--line);
+}
+
+.fix {
+  border-bottom: 1px solid var(--line);
+}
+
+.fixHead {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 52px 1fr 20px;
+  align-items: baseline;
+  gap: 18px;
+  padding: 24px 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.fixVer {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  letter-spacing: var(--tracking-mono);
+}
+
+.fixTitle {
+  font-size: var(--text-base);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.fixAside {
+  display: block;
+  font-size: var(--text-base);
+  color: var(--ink);
+  margin-bottom: 14px;
+  font-style: italic;
+}
+
+.fixChev {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  transition: transform var(--dur) var(--ease);
+  justify-self: end;
+}
+
+.fix[data-open='true'] .fixChev {
+  transform: rotate(90deg);
+}
+
+.fixPanel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease);
+}
+
+.fixPanel > div {
+  overflow: hidden;
+}
+
+.fix[data-open='true'] .fixPanel {
+  grid-template-rows: 1fr;
+}
+
+/* Two short paragraphs and a link. The measure is deliberately narrow — this
+   is an aside, and it should never look like it wants the same attention as
+   a letter. */
+.fixInner {
+  padding: 2px 0 30px 70px;
+  max-width: 48ch;
+}
+
+.fixInner > p {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.fixInner .ghostLink {
+  display: inline-block;
+  margin-top: 22px;
+}
+
+/* ---------- closer ----------
+   A full screen like the rest — it has to be, or it is a state you cannot
+   flick to. It carries the sign-off, so the page needs no separate footer
+   that would sit outside the snap sequence. */
+
+.closer {
+  text-align: center;
+}
+
+.closerInner {
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.closerInner h2 {
+  font-size: clamp(1.6rem, 3.4vw, 2.25rem);
+  margin-bottom: 16px;
+}
+
+.closerInner > p {
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  max-width: 46ch;
+  margin: 0 auto;
+}
+
+.closerLinks {
+  margin-top: 40px;
+  display: flex;
+  gap: 26px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- reveal ----------
+   Last in the file on purpose. `.in` is a single-class selector, so it can
+   only beat the resting states it overrides by coming after them — and
+   .interludeInner is declared further down than .letter. Written as compound
+   selectors so adding another revealing block cannot silently lose again. */
+.letter.in,
+.interludeInner.in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- rail ---------- */
+
+.rail {
+  position: fixed;
+  z-index: 40;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.tick {
+  width: 1px;
+  background: var(--line-strong);
+  transition:
+    background-color var(--dur) var(--ease),
+    height var(--dur) var(--ease);
+}
+
+.tickMajor {
+  height: 26px;
+}
+
+.tickMinor {
+  height: 10px;
+}
+
+.tickOn {
+  background: var(--ink);
+}
+
+/* ---------- narrow ---------- */
+
+/* Once the letter and the panel would meet, the panel stops pretending to be
+   docked to a screen corner and joins the letter. 640 + 480 plus the page
+   padding needs about 1320px before they touch. */
+@media (max-width: 1320px) {
+  .panelWrap {
+    position: static;
+    width: 100%;
+    max-width: 480px;
+    margin-top: 36px;
+  }
+
+  /* With the panel inline the letter is much taller, and there is no longer a
+     quiet corner for the version to sit in. The tag line still carries it. */
+  .ghost {
+    display: none;
+  }
+
+  .dispatch {
+    padding-bottom: 96px;
+  }
+}
+
+@media (max-width: 900px) {
+  .rail {
+    display: none;
+  }
+
+  .plate {
+    inset: -4% -26% auto auto;
+    width: 96%;
+    opacity: 0.6;
+  }
+
+  .ghost {
+    font-size: 4rem;
+    bottom: 1vh;
+    opacity: 0.7;
+  }
+
+  .fixInner {
+    padding-left: 0;
+  }
+
+  .panelWrap {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .letter,
+  .interludeInner {
+    opacity: 1;
+    transform: none;
+  }
+
+  .hint {
+    animation: none;
+  }
+}
