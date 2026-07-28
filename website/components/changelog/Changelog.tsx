@@ -33,6 +33,31 @@ function blocksOf(releases: Release[]): Block[] {
   return out
 }
 
+/**
+ * The opener counts itself.
+ *
+ * These numbers were written by hand and went stale the moment a release was
+ * added — which is exactly what this file's header promises does not happen.
+ * Spelled out because the headline is prose, not a stat.
+ */
+const NUMBER_WORDS = [
+  'Zero',
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+  'Eleven',
+  'Twelve'
+]
+
+const spell = (n: number): string => NUMBER_WORDS[n] ?? String(n)
+
 /** Jewel tokens differ between the ramps, so read the live value back. */
 function jewelHex(name: string | undefined, fallback: string): string {
   if (typeof window === 'undefined') return fallback
@@ -91,6 +116,7 @@ export default function Changelog() {
     return map
   }, [songs, theme])
 
+  const letters = blocks.filter((b) => b.kind === 'letter').length
   const total = blocks.length + 2 // opener + closer
 
   return (
@@ -113,9 +139,9 @@ export default function Changelog() {
         <div className={s.openerInner}>
           <p className="mono">Linea — dispatches</p>
           <h1>
-            Five releases.
+            {spell(RELEASES.length)} releases.
             <br />
-            Two of them
+            {spell(letters)} of them
             <br />
             worth a letter.
           </h1>

@@ -66,6 +66,41 @@ const REPO = 'https://github.com/Meet2304/Project-Linea/releases/tag/'
 
 export const RELEASES: Release[] = [
   {
+    version: '0.1.5',
+    tag: 'v0.1.5',
+    date: '2026-07-26',
+    dateLong: '26 July 2026',
+    title: 'A smaller install',
+    kind: 'feature',
+    accent: 'var(--teal)',
+    track: {
+      key: 'Badlands — Mumford & Sons, Gracie Abrams',
+      title: 'Badlands',
+      artist: 'Mumford & Sons, Gracie Abrams'
+    },
+
+    headline: 'Most of it was never Linea.',
+    lede: 'The app takes 72 MB less room once installed.',
+    note: 'Linea’s own code is 616 KB. The rest came free with the runtime — including a great deal it never touches.',
+
+    points: [
+      {
+        h: 'Fifty-four languages out',
+        d: 'Chromium ships translations of its own bookmark manager and settings pages. Linea has neither.'
+      },
+      {
+        h: 'A compiler for nothing',
+        d: 'A 25 MB DirectX shader compiler, kept for 3D work the overlay never draws.'
+      },
+      {
+        h: 'An icon at its real size',
+        d: 'The tray icon was a 1254-pixel image being painted at 32.'
+      }
+    ],
+    url: REPO + 'v0.1.5'
+  },
+
+  {
     version: '0.1.4',
     tag: 'v0.1.4',
     date: '2026-07-25',
