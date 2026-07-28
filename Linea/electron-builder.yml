@@ -6,6 +6,22 @@ directories:
   output: dist
   buildResources: build
 
+# Chromium ships 55 locale .pak files (45 MB) that hold *its own* browser-UI
+# translations — bookmark manager, settings pages, privacy dialogs. Linea renders
+# none of that UI: the tray menu is built in-app with English labels and there are
+# no native dialogs. Script support for non-Latin lyrics comes from icudtl.dat,
+# HarfBuzz (inside the binary) and system font fallback, none of which live here.
+#
+# `en-US` is the one value that works on both platforms. app-builder-lib keeps a
+# locale when the wanted string equals the file stem *or* starts with `<stem>-`,
+# so this matches Windows' en-US.pak exactly and macOS' en.lproj by prefix.
+# Writing `en` would delete everything — Chromium has no en.pak — and only warn.
+electronLanguages:
+  - en-US
+
+# Strips the WebGPU shader compiler; see the script for why it is safe here.
+afterPack: scripts/afterPack.js
+
 files:
   - out/**/*
   # The main bundle resolves the tray/window icon as out/main/../../resources/
