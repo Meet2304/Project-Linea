@@ -305,7 +305,15 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
             Math.sqrt((X + 0.8) * (X + 0.8) + (Y - 1.0) * (Y - 1.0)) * 6.2 - t * 1.9 + P.p3
           )
           const rpd = Math.sqrt((X - PX) * (X - PX) + (Y - PY) * (Y - PY))
-          const sp = Math.sin(rpd * 6 - tp * 2.4) * amt * ringAmp
+          // The three sources above are ambient and full amplitude, so scaling
+          // the cursor's ring by `ringAmp` alone left it roughly twenty times
+          // quieter than them — this style read as dead to the mouse while
+          // flow and lattice did not. It is also the only style with no modal
+          // numbers, so the n/m retune above (the loudest pointer effect there
+          // is) does nothing for it. Answering `ptWarp` as well is what every
+          // other style already does; without it a caller's tuned value
+          // reaches every plate on the page except a ripple.
+          const sp = Math.sin(rpd * 6 - tp * 2.4) * amt * (ringAmp + ptWarp * 1.5)
           val = ((s1 + s2 + s3 + sp) / 3 + 1) * 0.5
         } else if (style === 'lattice') {
           // Standing-wave grid; the pointer warps the local cell size.

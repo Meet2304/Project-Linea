@@ -24,6 +24,29 @@ export interface StandIn {
 }
 
 export const STANDINS: Record<string, StandIn> = {
+  'Badlands — Mumford & Sons, Gracie Abrams': {
+    durationMs: 176_000,
+    lines: cue(
+      [
+        'Waiting on the words',
+        'though 0.1.5 is the release about everything that was not needed',
+        'Linea itself compiles to 616 kilobytes',
+        'The install was three hundred and thirty one megabytes',
+        'Chromium had shipped fifty five sets of its own menu translations',
+        'for menus this overlay does not have',
+        'and a shader compiler for graphics it never draws',
+        'The tray icon was a 1254 pixel image',
+        'being painted at thirty two',
+        'None of it had ever run',
+        'All of it was being downloaded',
+        'Seventy two megabytes lighter now',
+        'and nothing about the panel changed'
+      ],
+      900,
+      4300
+    )
+  },
+
   'Indigo — Henry Moodie': {
     durationMs: 168_000,
     lines: cue(
