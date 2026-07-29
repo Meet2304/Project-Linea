@@ -44,8 +44,8 @@ export interface FieldOptions {
    * A field that sits in one corner of a large section still wants to answer
    * a cursor moving anywhere across it — otherwise the plate only reacts in
    * the small patch it occupies, and the interaction reads as broken. Position
-   * is still measured against the field's own box and clamped, so the pointer
-   * leaving that box pulls the pattern toward the edge it left by.
+   * is measured against this element, so crossing the section sweeps the
+   * pattern through its whole range rather than clamping outside the corner.
    */
   pointerHost?: HTMLElement | null
   /**
@@ -189,8 +189,22 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
   let pY = 0.5
   let pAmt = 0
 
+  const ptHost = opts.pointerHost ?? el
+
+  // Measured against whichever element we listen on, not against the field's
+  // own box. When those are the same element the two are identical, so every
+  // full-bleed plate is unaffected.
+  //
+  // They are not the same for a field that sits in one corner of a much
+  // larger section. Measuring against the field's box there means the cursor
+  // is outside it nearly everywhere a reader's cursor actually goes — over
+  // the letter, over the panel — and the clamp pins the position to a
+  // constant. The plate holds one saturated pose and stops answering, which
+  // reads as no interaction at all rather than as a lean. Measuring against
+  // the host gives the whole section a full 0..1 sweep, which is what
+  // `pointerHost` was for.
   function onMove(e: PointerEvent): void {
-    const r = el.getBoundingClientRect()
+    const r = ptHost.getBoundingClientRect()
     ptTargetX = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
     ptTargetY = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))
     ptActive = 1
@@ -199,7 +213,6 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
     ptActive = 0
   }
 
-  const ptHost = opts.pointerHost ?? el
   if (ptAmt > 0) {
     ptHost.addEventListener('pointermove', onMove)
     ptHost.addEventListener('pointerleave', onLeave)

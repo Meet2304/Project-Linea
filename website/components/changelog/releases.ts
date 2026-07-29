@@ -66,6 +66,36 @@ const REPO = 'https://github.com/Meet2304/Project-Linea/releases/tag/'
 
 export const RELEASES: Release[] = [
   {
+    version: '0.1.6',
+    tag: 'v0.1.6',
+    date: '2026-07-28',
+    dateLong: '28 July 2026',
+    title: 'Updates that arrive',
+    kind: 'feature',
+    accent: 'var(--emerald)',
+
+    headline: 'The app can tell you now.',
+    lede: 'Linea says when a new version is out, and installs it itself.',
+    note: 'Six releases went out before this one. The app mentioned none of them.',
+
+    points: [
+      {
+        h: 'It says so',
+        d: 'A mark in the top bar once a version is ready, and a line telling you it is there.'
+      },
+      {
+        h: 'One restart',
+        d: 'The download already happened, quietly, while you were using it. Nothing to go and fetch.'
+      },
+      {
+        h: 'macOS still gets the notice',
+        d: 'An unsigned build cannot replace itself there, so it takes you to the download instead of pretending.'
+      }
+    ],
+    url: REPO + 'v0.1.6'
+  },
+
+  {
     version: '0.1.5',
     tag: 'v0.1.5',
     date: '2026-07-26',
