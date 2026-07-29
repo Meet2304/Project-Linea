@@ -653,6 +653,7 @@ function wireTransport(): void {
   el.btnSettings.addEventListener('click', () => toggleSettings())
 
   el.btnClose.addEventListener('click', () => void window.linea.closeWindow())
+  el.btnCloseConnect.addEventListener('click', () => void window.linea.closeWindow())
 
   // Click lyrics / empty chrome to play or pause — never the drag handles
   // (top bar / connect) or real controls, and never after a move/resize.

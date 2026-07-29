@@ -172,6 +172,7 @@ input:focus-visible {
    Connect (disconnected) view
    ------------------------------------------------------------ */
 .connect {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -185,6 +186,39 @@ input:focus-visible {
 
 .connect:active {
   cursor: grabbing;
+}
+
+/* Close, while disconnected. The top bar — and with it the only close
+   button — belongs to the player view, so a frameless window with no
+   Spotify session could not be shut without the tray.
+   .connect fills the stack, so top/right 0 lands it exactly where the
+   top bar's close button sits once connected. Hover-revealed on the same
+   clocks as .topbar-actions, but gated on the pointer alone: there is no
+   lyrics mode to qualify it here. */
+.connect-close {
+  position: absolute;
+  /* The top bar is a ~32px row centring a 26px button, which leaves its
+     close button 3px down from the stack. Matching that here keeps the X
+     in one place when a session connects and the player view takes over. */
+  top: 3px;
+  right: 0;
+  z-index: 3;
+  opacity: 0;
+  transform: translateY(-3px);
+  pointer-events: none;
+  transition:
+    opacity var(--chrome-dur-out) var(--ease),
+    transform var(--chrome-dur-out) var(--ease);
+}
+
+#app[data-pointer-inside='true'] .connect-close,
+#app:focus-within .connect-close {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition:
+    opacity var(--chrome-dur) var(--chrome-ease),
+    transform var(--chrome-dur) var(--chrome-ease);
 }
 
 .wordmark {
@@ -504,13 +538,15 @@ input:focus-visible {
   animation: icon-pin-wiggle 1s ease-in-out forwards;
 }
 
-#btn-close:hover .icon-anim-x-a,
-#btn-close:focus-visible .icon-anim-x-a {
+/* Keyed on the class, not the id — the disconnected view carries a second
+   close button and it should behave like the one in the top bar. */
+.btn-close:hover .icon-anim-x-a,
+.btn-close:focus-visible .icon-anim-x-a {
   animation: icon-x-spin 0.4s ease-in-out forwards;
 }
 
-#btn-close:hover .icon-anim-x-b,
-#btn-close:focus-visible .icon-anim-x-b {
+.btn-close:hover .icon-anim-x-b,
+.btn-close:focus-visible .icon-anim-x-b {
   animation: icon-x-spin 0.4s ease-in-out 0.1s forwards;
 }
 
@@ -580,10 +616,10 @@ input:focus-visible {
   #btn-settings:focus-visible .icon-anim-settings,
   #btn-pin:hover .icon-anim-pin,
   #btn-pin:focus-visible .icon-anim-pin,
-  #btn-close:hover .icon-anim-x-a,
-  #btn-close:hover .icon-anim-x-b,
-  #btn-close:focus-visible .icon-anim-x-a,
-  #btn-close:focus-visible .icon-anim-x-b,
+  .btn-close:hover .icon-anim-x-a,
+  .btn-close:hover .icon-anim-x-b,
+  .btn-close:focus-visible .icon-anim-x-a,
+  .btn-close:focus-visible .icon-anim-x-b,
   #btn-update:hover .icon-anim-update,
   #btn-update:focus-visible .icon-anim-update {
     animation: none;
@@ -592,6 +628,10 @@ input:focus-visible {
   .btn-pin,
   .btn-settings,
   .btn-update {
+    transition-duration: var(--dur-fast);
+  }
+
+  .connect-close {
     transition-duration: var(--dur-fast);
   }
 }
