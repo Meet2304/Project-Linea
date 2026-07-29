@@ -359,10 +359,22 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
           const b = Math.cos(m * PI * hx) * Math.cos(n * PI * hy)
           val = 1 - Math.min(1, Math.abs(a - b) * 2.2)
           // Pointer excitation: a slow ring swelling out of the cursor.
+          //
+          // Scaled like ripple's, and for the same reason. chladni does have
+          // modal numbers, so it looks like the n/m retune above covers it —
+          // but both of them already breathe by ±0.55 on their own, and the
+          // pointer only moves them by ±ptWarp/2. The response is a fifth of
+          // motion the cursor did not cause, so it never reads as an answer.
+          //
+          // That leaves this ring as the only thing the cursor visibly does
+          // here, and at ringAmp alone it is a 0.16 glow laid over hard nodal
+          // lines — against flow's 0.38 advection and lattice's 0.67 cell
+          // warp, chladni was the one plate on the page that felt dead.
           const rx = X - PX
           const ry = Y - PY
           const rd = Math.sqrt(rx * rx + ry * ry)
-          val += (Math.cos(rd * 8 - tp * 2.4) / (1 + rd * rd * 5.5)) * amt * ringAmp
+          const ring = Math.cos(rd * 8 - tp * 2.4) / (1 + rd * rd * 5.5)
+          val += ring * amt * (ringAmp + ptWarp * 1.5)
           if (val < 0) val = 0
           else if (val > 1) val = 1
         }
