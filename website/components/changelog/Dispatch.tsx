@@ -65,10 +65,18 @@ export default function Dispatch({ release: r, song, accentHex }: Props) {
         className={s.plate}
         // The whole screen drives it, not just the corner it occupies.
         pointerHostRef={ref}
-        style={song?.style ?? 'chladni'}
-        n={song?.n}
-        m={song?.m}
-        seed={song ? song.seed % 100_000 : 7}
+        // A release with no song used to fall back to chladni, whose only
+        // answer to the cursor is a glow added on top of its nodal lines —
+        // next to flow's advection and lattice's warping cells it read as a
+        // blob following the mouse rather than the plate responding. radial
+        // retunes instead: its angular petals are driven by the pointer and
+        // by nothing else, so crossing the screen twists the figure itself.
+        // It is also the one style no song hashes to, so a songless dispatch
+        // can never turn up wearing a tracked release's plate.
+        style={song?.style ?? 'radial'}
+        n={song?.n ?? 4}
+        m={song?.m ?? 6}
+        seed={song ? song.seed % 100_000 : 5}
         scale={1.5}
         speed={0.9}
         dither={0.5}
