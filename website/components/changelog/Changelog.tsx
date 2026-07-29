@@ -58,6 +58,17 @@ const NUMBER_WORDS = [
 
 const spell = (n: number): string => NUMBER_WORDS[n] ?? String(n)
 
+/**
+ * 'var(--emerald)' -> 'emerald'. A release with no song paints from its own
+ * accent, and the canvas needs that as a literal like any other jewel —
+ * without this it fell through to the amethyst fallback, so the plate and the
+ * type it sits behind disagreed.
+ */
+function tokenOf(accent: string): string | undefined {
+  const m = /^var\(--([\w-]+)\)$/.exec(accent.trim())
+  return m?.[1]
+}
+
 /** Jewel tokens differ between the ramps, so read the live value back. */
 function jewelHex(name: string | undefined, fallback: string): string {
   if (typeof window === 'undefined') return fallback
@@ -111,7 +122,10 @@ export default function Changelog() {
     const map = new Map<string, string>()
     for (const r of RELEASES) {
       const song = songs.get(r.version)
-      map.set(r.version, jewelHex(song?.jewel, theme === 'dark' ? '#a894d8' : '#6d5b9e'))
+      map.set(
+        r.version,
+        jewelHex(song?.jewel ?? tokenOf(r.accent), theme === 'dark' ? '#a894d8' : '#6d5b9e')
+      )
     }
     return map
   }, [songs, theme])

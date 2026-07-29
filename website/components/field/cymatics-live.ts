@@ -41,11 +41,11 @@ export interface FieldOptions {
   /**
    * Where to listen for the pointer, when that is not the canvas itself.
    *
-   * A field that sits in one corner of a large section still wants to answer
-   * a cursor moving anywhere across it — otherwise the plate only reacts in
-   * the small patch it occupies, and the interaction reads as broken. Position
-   * is still measured against the field's own box and clamped, so the pointer
-   * leaving that box pulls the pattern toward the edge it left by.
+   * A plate is `pointer-events: none`, and so is its canvas, so a field that
+   * sits in one corner of a large section cannot hear the pointer at all.
+   * Catching the events further up is the only way to reach it. Position and
+   * influence are still measured against the field's own box, so it answers
+   * the cursor while the cursor is over the plate and nowhere else.
    */
   pointerHost?: HTMLElement | null
   /**
@@ -189,17 +189,42 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
   let pY = 0.5
   let pAmt = 0
 
+  const ptHost = opts.pointerHost ?? el
+
+  /**
+   * Position and influence both come from the field's own box, never from
+   * the element we happen to be listening on.
+   *
+   * Those differ only when the field is a corner of something larger, and
+   * there the host exists purely because the plate cannot hear a pointer
+   * itself — it and its canvas are both `pointer-events: none`, so the
+   * events have to be caught further up and mapped back down.
+   *
+   * `inside` is what keeps that mapping honest. Without it a cursor halfway
+   * across the section still counts as touching the plate, at a position the
+   * clamp has pinned to an edge: the figure holds one saturated pose that
+   * answers nothing, and drifts under a cursor nowhere near it. Gating on
+   * the box means the plate tracks the pointer while it is over the plate,
+   * and eases back out when it leaves.
+   *
+   * A full-bleed field's box is the host, so `inside` is true for every
+   * event it can receive and none of this changes its behaviour.
+   */
   function onMove(e: PointerEvent): void {
     const r = el.getBoundingClientRect()
-    ptTargetX = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
-    ptTargetY = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))
-    ptActive = 1
+    const x = (e.clientX - r.left) / r.width
+    const y = (e.clientY - r.top) / r.height
+    const inside = x >= 0 && x <= 1 && y >= 0 && y <= 1
+    if (inside) {
+      ptTargetX = x
+      ptTargetY = y
+    }
+    ptActive = inside ? 1 : 0
   }
   function onLeave(): void {
     ptActive = 0
   }
 
-  const ptHost = opts.pointerHost ?? el
   if (ptAmt > 0) {
     ptHost.addEventListener('pointermove', onMove)
     ptHost.addEventListener('pointerleave', onLeave)

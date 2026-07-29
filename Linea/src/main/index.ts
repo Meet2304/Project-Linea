@@ -40,7 +40,13 @@ import { setAccessToken, clearAccessToken, hasAuth } from './spotifyClient'
 import * as player from './spotifyPlayer'
 import { getLyricsForTrack } from './lyricsCache'
 import { loadPrefs, savePrefs } from './prefs'
-import { initAutoUpdater } from './updater'
+import {
+  initAutoUpdater,
+  getUpdateState,
+  checkForUpdate,
+  installUpdate,
+  stopUpdateChecks
+} from './updater'
 
 // The panel fills the window minus a 30px shadow gutter per side. The
 // window is freely resizable (custom grips in the renderer drive
@@ -622,7 +628,18 @@ app.on('web-contents-created', (_event, contents) => {
   })
 })
 
+// quitAndInstall() hands control to the NSIS installer, which relaunches the
+// app — if the old process is still shutting down, that leaves two overlays
+// stacked on the desktop. The lock also fixes the pre-existing case of a user
+// launching Linea again when the unpinned panel is buried: the second launch
+// now summons the first instead of spawning a duplicate.
+const hasInstanceLock = app.requestSingleInstanceLock()
+if (!hasInstanceLock) app.quit()
+
+app.on('second-instance', () => summonWindow())
+
 app.whenReady().then(() => {
+  if (!hasInstanceLock) return
   electronApp.setAppUserModelId('com.meet2304.linea')
 
   // The overlay has no use for camera/mic/geolocation/etc. — deny all
@@ -691,6 +708,14 @@ app.whenReady().then(() => {
     savePrefs(typeof partial === 'object' && partial !== null ? (partial as Partial<Prefs>) : {})
   )
 
+  ipcMain.handle(IPC.GET_UPDATE_STATE, () => getUpdateState())
+  ipcMain.handle(IPC.CHECK_FOR_UPDATE, () => {
+    checkForUpdate()
+  })
+  ipcMain.handle(IPC.INSTALL_UPDATE, () => {
+    installUpdate()
+  })
+
   // Everything the renderer needs is registered above, before the window
   // exists. The renderer's first paint waits on GET_PREFS/AUTH_STATE — if a
   // later step here throws, an unhandled rejection would skip the remaining
@@ -706,7 +731,7 @@ app.whenReady().then(() => {
   }
   startPolling()
   try {
-    initAutoUpdater()
+    initAutoUpdater(sendToRenderer)
   } catch (error) {
     console.error('Auto-updater init failed:', error)
   }
@@ -741,6 +766,7 @@ app.whenReady().then(() => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
   stopPolling()
+  stopUpdateChecks()
 })
 
 app.on('window-all-closed', () => {

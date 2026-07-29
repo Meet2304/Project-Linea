@@ -19,5 +19,12 @@ export const IPC = {
   CLOSE_WINDOW: 'linea:close-window',
   CLICK_THROUGH_CHANGED: 'linea:click-through-changed',
   WINDOW_FOCUS_CHANGED: 'linea:window-focus-changed',
-  PLAYER_ERROR: 'linea:player-error'
+  PLAYER_ERROR: 'linea:player-error',
+  /** Push: every updater state transition. */
+  UPDATE_STATE: 'linea:update-state',
+  /** Pull: the current state, for the renderer's first paint. */
+  GET_UPDATE_STATE: 'linea:get-update-state',
+  CHECK_FOR_UPDATE: 'linea:check-for-update',
+  /** Installs on Windows; opens the release page on macOS. */
+  INSTALL_UPDATE: 'linea:install-update'
 } as const

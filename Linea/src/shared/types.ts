@@ -57,6 +57,23 @@ export interface WindowBounds {
   height: number
 }
 
+/**
+ * Everything the update UI needs, as one union so the renderer never has to
+ * infer state from a combination of flags. `version` is always the running
+ * app version, so the settings row can name it in every state; `next` is the
+ * version being offered.
+ *
+ * `manual` is macOS: the build is unsigned and dmg-only, so electron-updater
+ * cannot install it — we can only point the user at the release page.
+ */
+export type UpdateState =
+  | { status: 'idle'; version: string }
+  | { status: 'checking'; version: string }
+  | { status: 'downloading'; version: string; next: string; percent: number }
+  | { status: 'ready'; version: string; next: string }
+  | { status: 'manual'; version: string; next: string }
+  | { status: 'error'; version: string }
+
 export interface Prefs {
   opacity: number
   lyricsSize: LyricsSize

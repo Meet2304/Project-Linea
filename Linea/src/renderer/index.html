@@ -32,6 +32,13 @@
             </div>
             <div class="topbar-actions">
               <button
+                id="btn-update"
+                class="ghost-btn ghost-btn-sm btn-update"
+                type="button"
+                hidden
+                aria-label="Update available"
+              ></button>
+              <button
                 id="btn-pin"
                 class="ghost-btn ghost-btn-sm btn-pin"
                 type="button"
@@ -126,6 +133,20 @@
             <div id="settings-scroll-wrap" class="settings-scroll-wrap">
               <div id="settings-scroll" class="settings-scroll">
                 <div class="settings-body">
+                  <!-- Update: also the panel the topbar badge opens onto, so
+                       it sits first. -->
+                  <div class="set-row">
+                    <div class="update-text">
+                      <span id="update-title" class="set-label">Linea</span>
+                      <span id="update-hint" class="set-hint">Up to date</span>
+                    </div>
+                    <button id="update-action" class="btn-update-action" type="button">
+                      Check
+                    </button>
+                  </div>
+                  <div id="update-progress" class="update-progress" hidden aria-hidden="true">
+                    <div class="update-progress-fill"></div>
+                  </div>
                   <div class="set-row">
                     <span class="set-label">Theme</span>
                     <!-- Animated sun/moon toggle — ThemeToggleButton2 adapted from Skiper UI

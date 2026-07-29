@@ -111,6 +111,11 @@ export function toggleSettings(): void {
   setSettingsOpen(el.settingsView.hidden)
 }
 
+/** The update badge wants "open", not "toggle" — it is never a latch. */
+export function openSettings(): void {
+  if (el.settingsView.hidden) setSettingsOpen(true)
+}
+
 export function closeSettings(): void {
   if (!el.settingsView.hidden) setSettingsOpen(false)
 }

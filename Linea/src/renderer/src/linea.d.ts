@@ -3,7 +3,8 @@ import type {
   PlayerCommand,
   PlayerErrorEvent,
   PlayerState,
-  Prefs
+  Prefs,
+  UpdateState
 } from '../../shared/types'
 import type { LyricsResult } from '../../shared/lyrics'
 
@@ -33,6 +34,10 @@ interface LineaAPI {
   onPlayerError: (callback: (event: PlayerErrorEvent) => void) => () => void
   getPrefs: () => Promise<Prefs>
   setPrefs: (partial: Partial<Prefs>) => Promise<Prefs>
+  getUpdateState: () => Promise<UpdateState>
+  checkForUpdate: () => Promise<void>
+  installUpdate: () => Promise<void>
+  onUpdateState: (callback: (state: UpdateState) => void) => () => void
 }
 
 declare global {
