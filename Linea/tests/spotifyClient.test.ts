@@ -119,6 +119,23 @@ describe('spotifyFetch', () => {
     expect(result).toMatchObject({ ok: false, reason: 'no_device' })
   })
 
+  // This is what an account missing from the Spotify app's Development Mode
+  // allowlist gets on every single call. It used to fall through to `network`,
+  // where the poll loop retried it as a blip and never told anyone — the app
+  // connected and then showed "Nothing playing" forever.
+  it('maps the Development Mode allowlist 403 to not_registered', async () => {
+    setAccessToken('token-a', 3600)
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse(403, {
+        error: { status: 403, message: 'User not registered in the Developer Dashboard' }
+      })
+    )
+
+    const result = await spotifyFetch('/v1/me/player')
+
+    expect(result).toMatchObject({ ok: false, reason: 'not_registered' })
+  })
+
   it('maps unknown 403s to network instead of assuming Premium', async () => {
     setAccessToken('token-a', 3600)
     vi.mocked(fetch).mockResolvedValueOnce(

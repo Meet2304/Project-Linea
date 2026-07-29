@@ -67,6 +67,13 @@ function mapErrorResult(status: number, body: unknown, retryAfterMs?: number): A
   if (status === 429) return { ok: false, reason: 'rate_limited', retryAfterMs }
   if (status === 404) return { ok: false, reason: 'no_device' }
   if (status === 403) {
+    // Checked first because it is the most specific, and because collapsing
+    // it into `network` is what made a hard "this account cannot use the app
+    // at all" look like a passing connection blip — the panel then sat on
+    // "Nothing playing" forever without ever saying why.
+    if (/not registered in the developer dashboard/i.test(message)) {
+      return { ok: false, reason: 'not_registered' }
+    }
     // Only treat explicit Premium failures as premium_required. Spotify also
     // returns 403 for missing devices / restrictions, and a blanket default
     // made Premium users see a false "Premium required" toast.

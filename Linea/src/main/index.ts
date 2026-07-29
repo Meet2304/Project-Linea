@@ -70,6 +70,24 @@ let pollTimer: ReturnType<typeof setTimeout> | null = null
 /** Old refresh tokens lack the transport scopes — degrade to read-only. */
 let scopeLimited = false
 let scopeToastShown = false
+/** Consecutive failed polls; reset by the first success. */
+let pollFailures = 0
+/** Which reason has already been reported, so a stuck poll toasts once. */
+let pollFailureToast: PlayerErrorReason | null = null
+
+/**
+ * Failures retrying cannot fix. Reported on the first occurrence rather than
+ * after a run of them — waiting only delays telling someone something they
+ * have to act on (or ask someone else to).
+ */
+const PERMANENT_POLL_FAILURES: ReadonlySet<PlayerErrorReason> = new Set<PlayerErrorReason>([
+  'not_registered',
+  'auth_expired',
+  'insufficient_scope'
+])
+
+/** A blip should not toast; a pattern should. ~30s at the idle cadence. */
+const POLL_FAILURES_BEFORE_TOAST = 3
 
 const likedCache = new Map<string, boolean>()
 const LIKED_CACHE_MAX = 50
@@ -378,9 +396,12 @@ async function loginToSpotify(): Promise<boolean> {
     })
     saveRefreshToken(tokens.refreshToken)
     setAccessToken(tokens.accessToken, tokens.expiresIn)
-    // A fresh login carries the full scope set again.
+    // A fresh login carries the full scope set again, and whatever the last
+    // account could not do should not be reported against this one.
     scopeLimited = false
     scopeToastShown = false
+    pollFailures = 0
+    pollFailureToast = null
     startPolling()
     return true
   } finally {
@@ -468,14 +489,33 @@ async function pollOnce(): Promise<void> {
 
     if (!result.ok) {
       if (result.reason === 'rate_limited') {
+        // Self-resolving and Spotify tells us when — no point alarming anyone.
         schedulePoll(result.retryAfterMs ?? 30_000)
         return
       }
-      // Transient failures (network, auth mid-refresh): retry on the
-      // idle cadence rather than tearing anything down.
-      schedulePoll(10_000)
+
+      // A failing poll used to retry here in silence, forever. Nothing was
+      // ever sent to the renderer, so the panel kept the "Nothing playing /
+      // Play a song on Spotify" it ships with — identical to an idle Spotify.
+      // A user whose account simply cannot reach the API saw a working app
+      // that never showed a song, and had nothing to report but that.
+      pollFailures += 1
+      const permanent = PERMANENT_POLL_FAILURES.has(result.reason)
+      if (
+        pollFailureToast !== result.reason &&
+        (permanent || pollFailures >= POLL_FAILURES_BEFORE_TOAST)
+      ) {
+        pollFailureToast = result.reason
+        sendPlayerError(result.reason, 'Could not read playback state')
+      }
+      // Permanent failures still get re-checked, in case access is granted
+      // or a session is repaired while the app is open — just not every 10s.
+      schedulePoll(permanent ? 60_000 : 10_000)
       return
     }
+
+    pollFailures = 0
+    pollFailureToast = null
 
     const state = result.data
     if (!state) {

@@ -33,6 +33,14 @@ export type PlayerErrorReason =
   | 'rate_limited'
   | 'auth_expired'
   | 'insufficient_scope'
+  /**
+   * The account is not on the Spotify app's allowlist. Spotify apps start in
+   * Development Mode, which admits only accounts the developer has added in
+   * the dashboard; everyone else gets a 403 on every call. Distinct from
+   * `network` because it is permanent for that user — retrying never helps,
+   * and it is the one failure the person hitting it cannot fix themselves.
+   */
+  | 'not_registered'
   | 'network'
 
 export type ApiResult<T> =

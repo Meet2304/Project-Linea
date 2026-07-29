@@ -561,6 +561,7 @@ function toastForReason(reason: PlayerErrorReason): void {
     rate_limited: 'Spotify is rate-limiting requests — try again shortly',
     auth_expired: 'Spotify session expired — reconnect in settings',
     insufficient_scope: 'Reconnect Spotify to enable playback controls',
+    not_registered: 'This Spotify account is not approved for Linea — contact the developer',
     network: 'Could not reach Spotify'
   }
   showToast(messages[reason])
