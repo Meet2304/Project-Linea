@@ -5,7 +5,8 @@ import type {
   PlayerCommand,
   PlayerErrorEvent,
   PlayerState,
-  Prefs
+  Prefs,
+  UpdateState
 } from '../shared/types'
 import type { LyricsResult } from '../shared/lyrics'
 
@@ -45,5 +46,9 @@ contextBridge.exposeInMainWorld('linea', {
   onWindowFocusChanged: subscribe<boolean>(IPC.WINDOW_FOCUS_CHANGED),
   onPlayerError: subscribe<PlayerErrorEvent>(IPC.PLAYER_ERROR),
   getPrefs: (): Promise<Prefs> => ipcRenderer.invoke(IPC.GET_PREFS),
-  setPrefs: (partial: Partial<Prefs>): Promise<Prefs> => ipcRenderer.invoke(IPC.SET_PREFS, partial)
+  setPrefs: (partial: Partial<Prefs>): Promise<Prefs> => ipcRenderer.invoke(IPC.SET_PREFS, partial),
+  getUpdateState: (): Promise<UpdateState> => ipcRenderer.invoke(IPC.GET_UPDATE_STATE),
+  checkForUpdate: (): Promise<void> => ipcRenderer.invoke(IPC.CHECK_FOR_UPDATE),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke(IPC.INSTALL_UPDATE),
+  onUpdateState: subscribe<UpdateState>(IPC.UPDATE_STATE)
 })

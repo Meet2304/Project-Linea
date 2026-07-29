@@ -33,6 +33,7 @@ export const el = {
   btnPlay: byId<HTMLButtonElement>('btn-play'),
   btnNext: byId<HTMLButtonElement>('btn-next'),
   btnRepeat: byId<HTMLButtonElement>('btn-repeat'),
+  btnUpdate: byId<HTMLButtonElement>('btn-update'),
   btnPin: byId<HTMLButtonElement>('btn-pin'),
   btnSettings: byId<HTMLButtonElement>('btn-settings'),
   btnClose: byId<HTMLButtonElement>('btn-close'),
@@ -42,6 +43,10 @@ export const el = {
   lyricsScroll: byId('lyrics-scroll'),
   lyricsList: byId('lyrics-list'),
   btnJump: byId<HTMLButtonElement>('btn-jump'),
+  updateTitle: byId('update-title'),
+  updateHint: byId('update-hint'),
+  updateAction: byId<HTMLButtonElement>('update-action'),
+  updateProgress: byId('update-progress'),
   toast: byId('toast')
 }
 
@@ -49,6 +54,7 @@ export function injectStaticIcons(): void {
   el.btnShuffle.innerHTML = icons.shuffle
   el.btnPrev.innerHTML = icons.skipBack
   el.btnNext.innerHTML = icons.skipForward
+  el.btnUpdate.innerHTML = icons.update
   el.btnPin.innerHTML = icons.pin
   el.btnSettings.innerHTML = icons.cog
   el.btnClose.innerHTML = icons.x

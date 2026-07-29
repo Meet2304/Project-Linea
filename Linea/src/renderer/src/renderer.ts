@@ -37,8 +37,10 @@ import {
   reflectPrefs,
   reflectClickThrough,
   toggleSettings,
-  closeSettings
+  closeSettings,
+  openSettings
 } from './settingsUi'
+import { initUpdateUi, reflectUpdateState } from './updateUi'
 
 // ------------------------------------------------------------------
 // State
@@ -870,6 +872,9 @@ async function init(): Promise<void> {
 
   window.linea.onPlayerError((event) => toastForReason(event.reason))
 
+  initUpdateUi({ onOpenSettings: openSettings })
+  window.linea.onUpdateState(reflectUpdateState)
+
   // Both views start hidden, so a rejection here would paint an empty panel
   // with no way back. Fall back to defaults and show the connect view — a
   // reachable "Connect Spotify" beats a blank rectangle.
@@ -899,6 +904,16 @@ async function init(): Promise<void> {
   void window.linea.setPointerOverPanel(hovering)
   setConnected(authState)
   refreshPlayerUi()
+
+  // Deliberately outside the Promise.all above: the updater is a convenience,
+  // and a failure here must not cost the panel its prefs or auth state. The
+  // pull covers a check that resolved before first paint; onUpdateState covers
+  // one that resolves after.
+  try {
+    reflectUpdateState(await window.linea.getUpdateState())
+  } catch (error) {
+    console.error('Update state unavailable:', error)
+  }
 }
 
 /** Hover chrome — explicit flag so we can clear stuck :hover on blur. */

@@ -85,3 +85,23 @@ jobs:
           # release built without this cannot connect to Spotify at all.
           # Public PKCE client id, not a confidential secret.
           MAIN_VITE_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+
+  # electron-updater's GitHub provider reads /releases/latest, which skips
+  # drafts — so while the release stayed a draft, no installed copy of Linea
+  # could ever see it. Publishing is what makes the in-app update notification
+  # fire at all.
+  #
+  # `needs: build` waits for the whole matrix and is skipped if either platform
+  # failed, so a release missing one platform's installer is never published.
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the draft so electron-updater can see it
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        # --latest is load-bearing twice over: it is the feed the updater
+        # reads, and the page the macOS "Download" button opens.
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
