@@ -37,6 +37,8 @@ export const el = {
   btnPin: byId<HTMLButtonElement>('btn-pin'),
   btnSettings: byId<HTMLButtonElement>('btn-settings'),
   btnClose: byId<HTMLButtonElement>('btn-close'),
+  /** The disconnected view's own close — the top bar does not exist there. */
+  btnCloseConnect: byId<HTMLButtonElement>('btn-close-connect'),
   nowView: byId('now-view'),
   settingsView: byId('settings-view'),
   lyricsPanel: byId('lyrics-panel'),
@@ -58,6 +60,7 @@ export function injectStaticIcons(): void {
   el.btnPin.innerHTML = icons.pin
   el.btnSettings.innerHTML = icons.cog
   el.btnClose.innerHTML = icons.x
+  el.btnCloseConnect.innerHTML = icons.x
   const jumpDir = el.btnJump.querySelector('.jump-dir')
   if (jumpDir) jumpDir.innerHTML = icons.chevronDown
 }

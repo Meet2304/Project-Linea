@@ -15,6 +15,14 @@
       <div class="stack">
         <!-- Disconnected -->
         <div id="connect-view" class="connect" hidden>
+          <!-- The top bar belongs to the player, so while disconnected this
+               is the only way out of a frameless window besides the tray. -->
+          <button
+            id="btn-close-connect"
+            class="ghost-btn ghost-btn-sm btn-close connect-close"
+            type="button"
+            aria-label="Close Linea"
+          ></button>
           <div class="wordmark">linea</div>
           <div class="connect-tag">// see the shape of sound</div>
           <button id="connect-btn" class="btn-primary" type="button">Connect Spotify</button>
