@@ -28,6 +28,27 @@ Just a minimal, floating window that stays out of your way while keeping you con
 - **Fast by design** — event-driven lyric scheduling (no always-on loop), adaptive polling that backs off when idle, and crash-resilient main/renderer error handling
 </p>
 
+## "Nothing playing" after connecting
+
+Linea's Spotify app is in **Development Mode**, which is the default for every
+Spotify app and admits only accounts the developer has added by hand — up to 25
+of them. Any other account finishes the login normally, then gets `403` on every
+API call, so the overlay connects and then never shows a song.
+
+If that is you, the panel now says so instead of sitting on "Nothing playing".
+[Open an issue](https://github.com/Meet2304/Project-Linea/issues) with the email
+on your Spotify account and it can be added.
+
+Two things to rule out first, because they look identical:
+
+- **Private session.** Spotify reports no playback at all while one is on, so
+  there is genuinely nothing for Linea to read. Turn it off and play something.
+- **Nothing actually playing on a device Spotify knows about.** Web-player-only
+  playback sometimes does not register; play from the desktop or phone app.
+
+Lifting the 25-account limit needs Spotify to grant **Extended Quota Mode**,
+which is a manual review. Until then the allowlist is the ceiling.
+
 ## Repository layout
 
 | Path             | What it is                                                                    |
