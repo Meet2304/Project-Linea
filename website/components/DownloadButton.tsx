@@ -1,26 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Mono from './ui/Mono'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { DownloadIcon } from '@/components/animate-ui/icons/download'
 import {
   detectPlatform,
   downloadHref,
-  formatSize,
   PLATFORM_LABEL,
   RELEASES_URL,
-  type Platform,
-  type ReleaseInfo
+  type Platform
 } from '@/lib/release'
 
 interface Props {
-  release: ReleaseInfo
   size?: 'md' | 'lg'
   /** Accent for the filled button. Defaults to ink. */
   accent?: string
-  /** Show the version / size / other-platform line beneath. */
-  showMeta?: boolean
   /** Hook for the caller's own layout — the hero stretches it on a phone. */
   className?: string
 }
@@ -36,24 +30,19 @@ interface Props {
  * falls back to the Releases page rather than a 404. It stays labelled
  * "Download": this is the one call to action on the page and swapping it for
  * something else undersells the product.
+ *
+ * Nothing renders beneath the pill. The version, the installer size, the
+ * other platform's link and the beta's caveats all used to sit here, and a
+ * stack of small print under the one thing we want clicked reads as an
+ * apology for it. What the button hands over is decided by /download, which
+ * resolves the newest release — the beta included — at click time.
  */
-export default function DownloadButton({
-  release,
-  size = 'lg',
-  accent = 'var(--ink)',
-  showMeta = true,
-  className
-}: Props) {
+export default function DownloadButton({ size = 'lg', accent = 'var(--ink)', className }: Props) {
   const [platform, setPlatform] = useState<Platform | null>(null)
   useEffect(() => setPlatform(detectPlatform()), [])
 
-  const primaryAsset =
-    platform === 'win' ? release.assets.win : platform === 'mac' ? release.assets.mac : undefined
-  const otherKey = platform === 'win' ? 'mac' : 'win'
-  const otherAsset = release.assets[otherKey]
-
-  // Never link at primaryAsset.url — that pins the version this page was
-  // rendered with. The redirect resolves the latest release at click time.
+  // Never link at a release asset URL — that pins the version this page was
+  // rendered with. The redirect resolves the current release at click time.
   const href = platform === 'win' || platform === 'mac' ? downloadHref(platform) : RELEASES_URL
   const label =
     platform === 'win' || platform === 'mac'
@@ -67,10 +56,9 @@ export default function DownloadButton({
   const labelColor = accent === 'var(--ink)' ? 'var(--text-on-accent)' : '#ffffff'
 
   return (
-    <div
-      className={className}
-      style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}
-    >
+    // The wrapper stays so callers keep a layout hook around the pill —
+    // showcase.module.css stretches `.heroDownload > a` on a phone.
+    <div className={className} style={{ display: 'inline-flex', alignItems: 'flex-start' }}>
       {/* asChild puts the hover on the pill itself, so the whole button
           drives the arrow rather than the 18px glyph inside it. */}
       <AnimateIcon animateOnHover animation="default-loop" asChild>
@@ -106,37 +94,6 @@ export default function DownloadButton({
           {label}
         </a>
       </AnimateIcon>
-
-      <a
-        href={RELEASES_URL + '/tag/v0.2.0-beta.1'}
-        style={{ color: 'var(--steel)', fontSize: 'var(--text-sm)', textUnderlineOffset: 3 }}
-      >
-        Windows beta 0.2.0 — no Spotify login
-      </a>
-      <span style={{ color: 'var(--slate)', fontSize: 'var(--text-xs)', maxWidth: 320 }}>
-        The stable download above uses the legacy Spotify integration and requires an approved
-        account.
-      </span>
-
-      {/* Only render the meta line when it actually says something. With no
-          release there is no version or size to report, and a placeholder
-          there just reads as an apology under the main CTA. */}
-      {showMeta && primaryAsset && (
-        <Mono style={{ paddingLeft: 4 }}>
-          {release.tag} · {formatSize(primaryAsset.size)}
-          {otherAsset && (
-            <>
-              {' · '}
-              <a
-                href={downloadHref(otherKey)}
-                style={{ color: 'var(--steel)', textDecoration: 'underline' }}
-              >
-                also for {PLATFORM_LABEL[otherKey]}
-              </a>
-            </>
-          )}
-        </Mono>
-      )}
 
       <style>{`
         .dl-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }

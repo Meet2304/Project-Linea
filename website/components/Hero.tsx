@@ -3,13 +3,12 @@ import DownloadButton from './DownloadButton'
 import Mono from './ui/Mono'
 import Icon from './ui/Icon'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
-import type { ReleaseInfo } from '@/lib/release'
 
 /**
  * The Weave plate in Ink — the brand's default standing wave. Copy only;
  * the product itself appears in the next section so this field stays clean.
  */
-export default function Hero({ release }: { release: ReleaseInfo }) {
+export default function Hero() {
   const pal = PALETTES.ink
   const pat = PATTERNS.weave
 
@@ -108,7 +107,7 @@ export default function Hero({ release }: { release: ReleaseInfo }) {
             pointerEvents: 'auto'
           }}
         >
-          <DownloadButton release={release} accent={pal.accent} />
+          <DownloadButton accent={pal.accent} />
           {/* A bordered, filled pill rather than a bare text link — the
               ghost version vanished into the field behind it. */}
           <a
