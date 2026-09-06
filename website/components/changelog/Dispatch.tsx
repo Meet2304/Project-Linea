@@ -28,9 +28,42 @@ interface Props {
   accentHex: string
 }
 
+/**
+ * The corner plate, retuned.
+ *
+ * A real plate does not change colour or change what it is when you drive it
+ * harder — it re-forms into a different mode. So hovering keeps the style and
+ * the jewel (those are the section's identity, and assignSongVisuals
+ * guarantees no two releases share them) and moves only the figure: new modal
+ * numbers, new phases.
+ *
+ * Both halves matter. chladni and radial are drawn from n and m; ripple,
+ * lattice and flow have no modal numbers at all and are told apart purely by
+ * their phases, which is what the seed reseeds. Changing one without the
+ * other would leave three of the five styles sitting perfectly still.
+ *
+ * Step 0 must reproduce the assigned figure exactly, or a section would come
+ * up wearing something other than its own plate before anyone touched it.
+ */
+function figureFor(
+  song: SongVisuals | undefined,
+  step: number
+): { n: number; m: number; seed: number } {
+  // A songless release keeps the radial fallback documented below.
+  const base = song ? song.seed : 5
+  if (step === 0) return { n: song?.n ?? 4, m: song?.m ?? 6, seed: song ? song.seed % 100_000 : 5 }
+
+  // Golden-ratio stride: consecutive steps land far apart in the modal
+  // numbers rather than walking 2, 3, 4 up the scale.
+  const seed = (base + step * 0x9e3779b1) >>> 0
+  return { n: 2 + (seed % 5), m: 3 + ((seed + 2) % 6), seed: seed % 100_000 }
+}
+
 export default function Dispatch({ release: r, song, accentHex }: Props) {
   const [open, setOpen] = useState(false)
   const [shown, setShown] = useState(false)
+  // How many times the plate has been retuned by the pointer.
+  const [tuning, setTuning] = useState(0)
   const ref = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -51,6 +84,7 @@ export default function Dispatch({ release: r, song, accentHex }: Props) {
 
   const accent = accentVar(r, song)
   const standin = (r.track && STANDINS[r.track.key]) || EMPTY_STANDIN
+  const figure = figureFor(song, tuning)
 
   return (
     <section
@@ -74,9 +108,12 @@ export default function Dispatch({ release: r, song, accentHex }: Props) {
         // It is also the one style no song hashes to, so a songless dispatch
         // can never turn up wearing a tracked release's plate.
         style={song?.style ?? 'radial'}
-        n={song?.n ?? 4}
-        m={song?.m ?? 6}
-        seed={song ? song.seed % 100_000 : 5}
+        // The figure answers the pointer; the style and the jewel do not.
+        // These now reach the running field through setPattern rather than
+        // remounting it, so a retune re-forms the plate instead of blinking.
+        n={figure.n}
+        m={figure.m}
+        seed={figure.seed}
         scale={1.5}
         speed={0.9}
         dither={0.5}
@@ -85,6 +122,21 @@ export default function Dispatch({ release: r, song, accentHex }: Props) {
         color={accentHex}
         patternKey={r.version}
       />
+
+      {/* The plate is `pointer-events: none` and has to stay that way — it
+          lies under the letter, and catching the pointer there would make the
+          text unselectable. This is the one thing on the screen you can
+          actually aim at, sized and placed over the plate's visible core.
+          Decoration, so it is aria-hidden and takes no tab stop; the hint
+          only appears once a cursor is already on it. */}
+      <div
+        className={s.tuner}
+        aria-hidden="true"
+        onPointerEnter={() => setTuning((v) => v + 1)}
+        onClick={() => setTuning((v) => v + 1)}
+      >
+        <span className={`mono ${s.tunerHint}`}>retune ↻</span>
+      </div>
 
       <div className={s.ghost} aria-hidden="true">
         {r.version}

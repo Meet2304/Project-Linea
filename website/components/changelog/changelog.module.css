@@ -101,6 +101,56 @@
   -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 40%, transparent 76%);
 }
 
+/* The plate's hit area.
+
+   The plate cannot take the pointer itself: it spans most of the screen and
+   lies under the letter, so a pointer-catching layer there would swallow text
+   selection. This sits over the plate's visible core in the corner instead —
+   large enough to find without hunting for it, and stopping well short of the
+   headline's measure.
+
+   Mouse and desktop only. Below 900px the plate widens and slides, the panel
+   comes inline underneath the letter, and there is no longer a corner that
+   belongs to nobody; on a touchscreen there is no hover to answer at all. */
+.tuner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(46vh, 34%);
+  aspect-ratio: 1 / 1;
+  z-index: 3;
+  display: none;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: clamp(18px, 3vh, 34px) clamp(18px, 2.4vw, 40px);
+  cursor: crosshair;
+}
+
+@media (min-width: 901px) and (pointer: fine) {
+  .tuner {
+    display: flex;
+  }
+}
+
+/* An ornament nobody knows is interactive is just an ornament. The label
+   only shows up once a cursor is already inside, so it reads as a reward for
+   arriving rather than an instruction on the page. */
+.tunerHint {
+  color: var(--accent-c);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  white-space: nowrap;
+  transition:
+    opacity var(--dur) var(--ease),
+    transform var(--dur) var(--ease);
+}
+
+.tuner:hover .tunerHint {
+  opacity: 0.72;
+  transform: translateY(0);
+}
+
 /* The version, set enormous and nearly invisible, seated on the bottom-left
    corner and bleeding a touch off the left edge — the way a plate number sits
    on an engraving. It is the only ornament on the page and it carries the
@@ -807,5 +857,12 @@
 
   .hint {
     animation: none;
+  }
+
+  /* The field renders one still frame and drops pointer reactivity under
+     reduced motion (see cymatics-live.ts), so retuning would mean the plate
+     silently jumping between stills. Take the hit area away instead. */
+  .tuner {
+    display: none;
   }
 }

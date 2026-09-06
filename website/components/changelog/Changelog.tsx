@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Dispatch from './Dispatch'
 import Interlude from './Interlude'
-import { assignSongVisuals } from './song'
+import { assignSongVisuals, tokenOf } from './song'
 import { RELEASES, type Release } from './releases'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { REPO_URL, RELEASES_URL } from '@/lib/release'
@@ -58,24 +58,11 @@ const NUMBER_WORDS = [
 
 const spell = (n: number): string => NUMBER_WORDS[n] ?? String(n)
 
-/**
- * 'var(--emerald)' -> 'emerald'. A release with no song paints from its own
- * accent, and the canvas needs that as a literal like any other jewel —
- * without this it fell through to the amethyst fallback, so the plate and the
- * type it sits behind disagreed.
- */
-function tokenOf(accent: string): string | undefined {
-  const m = /^var\(--([\w-]+)\)$/.exec(accent.trim())
-  return m?.[1]
-}
-
 /** Jewel tokens differ between the ramps, so read the live value back. */
 function jewelHex(name: string | undefined, fallback: string): string {
   if (typeof window === 'undefined') return fallback
   if (!name) return fallback
-  return (
-    getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim() || fallback
-  )
+  return getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim() || fallback
 }
 
 export default function Changelog() {

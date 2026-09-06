@@ -24,6 +24,29 @@ export interface StandIn {
 }
 
 export const STANDINS: Record<string, StandIn> = {
+  'Starlight — Sofia Camara': {
+    durationMs: 174_000,
+    lines: cue(
+      [
+        'Waiting on the words',
+        'though 0.2.0 is the release that stopped asking permission',
+        'The old build wanted a Spotify login first',
+        'against an app that could only ever admit five people',
+        'Everyone else got as far as the button',
+        'Windows already knows what is playing',
+        'It has known the whole time',
+        'So Linea asks the desktop instead of the internet',
+        'Spotify, a browser tab, whatever holds the media keys',
+        'No account, no token, nothing to be let into',
+        'The lyrics still come from lrclib, the way they always did',
+        'This one is Windows only for now',
+        'and it says so out loud on a Mac'
+      ],
+      1000,
+      4300
+    )
+  },
+
   'Badlands — Mumford & Sons, Gracie Abrams': {
     durationMs: 176_000,
     lines: cue(
@@ -94,4 +117,7 @@ export const STANDINS: Record<string, StandIn> = {
   }
 }
 
-export const EMPTY_STANDIN: StandIn = { lines: cue(['Waiting on the words'], 0, 1000), durationMs: 60_000 }
+export const EMPTY_STANDIN: StandIn = {
+  lines: cue(['Waiting on the words'], 0, 1000),
+  durationMs: 60_000
+}
