@@ -60,8 +60,9 @@ describe('scoreCandidate', () => {
   it('allows a larger duration gap when title and artist are both exact', () => {
     // 20s apart: rejected for a fuzzy name match, allowed for an exact one.
     expect(scoreCandidate(candidate({ durationSec: 374 }), QUERY)).toBeGreaterThan(0)
-    expect(scoreCandidate(candidate({ durationSec: 374, trackName: 'Bohemian Rap City' }), QUERY))
-      .toBe(0)
+    expect(
+      scoreCandidate(candidate({ durationSec: 374, trackName: 'Bohemian Rap City' }), QUERY)
+    ).toBe(0)
   })
 
   it('rejects a different song by the same artist', () => {
@@ -73,7 +74,9 @@ describe('scoreCandidate', () => {
   })
 
   it('accepts a provider listing extra credited artists', () => {
-    expect(scoreCandidate(candidate({ artistName: 'Queen, David Bowie' }), QUERY)).toBeGreaterThan(0)
+    expect(scoreCandidate(candidate({ artistName: 'Queen, David Bowie' }), QUERY)).toBeGreaterThan(
+      0
+    )
   })
 
   it('treats an unreported duration as neutral rather than disqualifying', () => {
@@ -138,4 +141,8 @@ describe('pickBest', () => {
     const realButLooser = candidate({ artistName: 'Queen, David Bowie', durationSec: 360 })
     expect(pickBest([karaoke, realButLooser], QUERY, 0.72)?.index).toBe(1)
   })
+})
+
+it('does not reject an unknown query duration using the NetEase cutoff', () => {
+  expect(pickBest([candidate()], { ...QUERY, durationSec: 0 }, 0.7, 25)).not.toBeNull()
 })

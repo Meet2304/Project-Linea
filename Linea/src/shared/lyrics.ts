@@ -77,11 +77,23 @@ export function getCurrentLineIndex(lines: LyricLine[], positionMs: number): num
   return index
 }
 
-export function estimatePositionMs(params: {
-  progressMs: number
-  fetchedAt: number
-  isPlaying: boolean
-}): number {
-  if (!params.isPlaying) return params.progressMs
-  return params.progressMs + (Date.now() - params.fetchedAt)
+export function estimatePositionMs(
+  params: {
+    progressMs: number
+    fetchedAt: number
+    isPlaying: boolean
+    playbackRate?: number
+    durationMs?: number
+    timelineValid?: boolean
+  },
+  now = Date.now()
+): number {
+  if (params.timelineValid === false) return 0
+  const elapsed = params.isPlaying
+    ? Math.max(0, now - params.fetchedAt) * (params.playbackRate ?? 1)
+    : 0
+  const position = Math.max(0, params.progressMs + elapsed)
+  return params.durationMs && params.durationMs > 0
+    ? Math.min(params.durationMs, position)
+    : position
 }

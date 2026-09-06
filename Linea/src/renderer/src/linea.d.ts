@@ -1,22 +1,18 @@
 import type {
   ApiResult,
-  PlayerCommand,
+  PlayerCommandRequest,
   PlayerErrorEvent,
-  PlayerState,
+  PlaybackSnapshot,
   Prefs,
   UpdateState
 } from '../../shared/types'
-import type { LyricsResult } from '../../shared/lyrics'
 
 interface LineaAPI {
   toggleClickThrough: () => Promise<boolean>
   getClickThroughState: () => Promise<boolean>
   setPointerOverPanel: (over: boolean) => Promise<void>
-  login: () => Promise<boolean>
-  logout: () => Promise<void>
-  getAuthState: () => Promise<boolean>
-  playerCommand: (command: PlayerCommand) => Promise<ApiResult<null>>
-  toggleLike: () => Promise<ApiResult<boolean>>
+  getPlaybackSnapshot: () => Promise<PlaybackSnapshot>
+  playerCommand: (command: PlayerCommandRequest) => Promise<ApiResult<null>>
   setPinned: (pinned: boolean) => Promise<void>
   resizeTo: (height: number) => Promise<void>
   getWindowBounds: () => Promise<{ x: number; y: number; width: number; height: number }>
@@ -27,8 +23,8 @@ interface LineaAPI {
     height: number
   }) => Promise<void>
   closeWindow: () => Promise<void>
-  onNowPlaying: (callback: (data: PlayerState | null) => void) => () => void
-  onLyricsUpdate: (callback: (result: LyricsResult) => void) => () => void
+  onNowPlaying: (callback: (data: PlaybackSnapshot) => void) => () => void
+  onLyricsUpdate: (callback: (result: PlaybackSnapshot) => void) => () => void
   onClickThroughChanged: (callback: (on: boolean) => void) => () => void
   onWindowFocusChanged: (callback: (focused: boolean) => void) => () => void
   onPlayerError: (callback: (event: PlayerErrorEvent) => void) => () => void

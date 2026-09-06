@@ -16,9 +16,12 @@ export class LyricScheduler {
   /** Re-sync after any state change (poll push, seek, play/pause, new lyrics). */
   sync(lines: LyricLine[], player: PlayerState | null): void {
     this.stop()
-    if (!player || lines.length === 0) return
+    if (!player || !player.timelineValid || lines.length === 0) {
+      this.onLine(-1)
+      return
+    }
     this.onLine(getCurrentLineIndex(lines, estimatePositionMs(player)))
-    if (player.isPlaying) this.arm(lines, player)
+    if (player.isPlaying && player.playbackRate > 0) this.arm(lines, player)
   }
 
   stop(): void {
@@ -32,9 +35,12 @@ export class LyricScheduler {
     const boundary = nextBoundary(lines, estimatePositionMs(player))
     if (!boundary) return
     // +15ms so the timer fires just past the boundary, never before it.
-    this.timer = setTimeout(() => {
-      this.onLine(boundary.index)
-      this.arm(lines, player)
-    }, boundary.delayMs + 15)
+    this.timer = setTimeout(
+      () => {
+        this.onLine(boundary.index)
+        this.arm(lines, player)
+      },
+      boundary.delayMs / player.playbackRate + 15
+    )
   }
 }

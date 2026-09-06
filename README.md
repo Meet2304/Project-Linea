@@ -1,75 +1,67 @@
-# Project-Linea
+# Linea
 
-<p align = 'center'>
-  <img src = 'https://github.com/Meet2304/Project-Linea/blob/main/Project%20Linea%20Header_v0.2.png'>
-</p>
+A small, always-on-top lyrics overlay. The **0.2.0 Windows beta** follows local
+Windows media sessions instead of Spotify's Web API.
 
-<h1 align="center">Linea</h1>
+Play a song in Spotify desktop or another compatible Windows player. Linea shows
+its title and artist, finds synced lyrics through LRCLIB with a NetEase fallback,
+and follows the player's timeline. No Spotify login, developer registration,
+Premium check, or additional runtime installation is required by Linea.
 
-<p align = 'justify'>
-Linea is a lightweight desktop overlay that displays the lyrics of your currently playing songs from Spotify in real time—right on your screen.
+## Windows beta
 
-No switching tabs. No searching manually. No interruptions.
+Windows 10 version 1809 or newer / Windows 11, x64.
+Install the beta executable from the
+[0.2.0-beta.1 release](https://github.com/Meet2304/Project-Linea/releases/tag/v0.2.0-beta.1)
+once published. During development, build it using the instructions in
+[Linea/README.md](./Linea/README.md).
 
-Just a minimal, floating window that stays out of your way while keeping you connected to the words behind the music.
-
-> Your music, as a quiet layer.
+The existing stable downloads still use the legacy Spotify integration and its
+account restrictions. The beta is a separate prerelease; stable installations
+will not automatically receive it. macOS playback is not included in this beta;
+a locally built Mac version opens with an explicit unsupported message.
 
 ## Features
 
-- **Scrollable synced lyrics** — timestamped LRC lyrics from lrclib, highlighted in time with playback; scroll to read ahead and tap the minimal "now" button to snap back to the current line
-- **Lyrics-first, landscape overlay** — a compact, freely resizable window that fills to your size; drag any edge or corner to resize, drag the top bar to move
-- **Full transport** — play/pause, skip, seek, shuffle, and repeat right from the overlay (playback control requires Spotify Premium)
-- **Cymatic thumbnail** — a small procedurally-generated standing-wave tile beside the title, unique per track and evolving while the song plays
-- **Light & dark themes** — pure-white "quiet layer" or near-black glass, one toggle away
-- **Personalizable** — pin on top and close from the top bar; three lyric-size presets (with a live preview), and optional lyric timestamps in settings
-- **Click-through mode** — let clicks pass through the overlay (`Ctrl+Shift+.`)
-- **Always reachable** — a system-tray icon and a summon shortcut (`Ctrl+Shift+L`) bring the window back to the front even when it's unpinned and buried behind other apps
-- **Fast by design** — event-driven lyric scheduling (no always-on loop), adaptive polling that backs off when idle, and crash-resilient main/renderer error handling
-</p>
+- Synced, scrollable lyrics, optional timestamps, and a jump-to-current-line button.
+- Play/pause, next/previous and seek where the selected media session supports them.
+- Shuffle and repeat when the player exposes both the controls and their state.
+- Music sessions take priority over videos; no manual session picker in this beta.
+- Resizable overlay, themes, lyric sizes, opacity preferences, pinning and click-through.
+- Per-track cymatic artwork, tray access, and saved window placement.
+- Toggle click-through with Ctrl+Shift+. and summon Linea with Ctrl+Shift+L.
+- Local lyric cache, provider fallback, and Windows beta updates.
 
-## "Nothing playing" after connecting
+Missing controls are disabled or hidden. A player without a usable timeline can
+still show metadata and matched lyrics, but Linea does not invent progress or
+highlight lines against an unknown position. Players must expose a session on
+this PC; this is not a remote-device controller or a Spotify library manager.
+Browser music services, ads and incomplete metadata may have limited support.
 
-Linea's Spotify app is in **Development Mode**, which is the default for every
-Spotify app and admits only accounts the developer has added by hand — up to 25
-of them. Any other account finishes the login normally, then gets `403` on every
-API call, so the overlay connects and then never shows a song.
+## Nothing playing?
 
-If that is you, the panel now says so instead of sitting on "Nothing playing".
-[Open an issue](https://github.com/Meet2304/Project-Linea/issues) with the email
-on your Spotify account and it can be added.
+Start playback in a desktop media player. If Windows cannot see that player's
+media session, Linea cannot see it either. When more than one player is open,
+Linea prefers actively playing music. Paused tracks stay visible until another
+session takes priority.
 
-Two things to rule out first, because they look identical:
+A persistent media-access message means the helper is reconnecting. Missing
+lyrics and unreachable lyric providers have separate messages; cached lyrics
+remain usable offline. If reporting a problem, include Windows version, player,
+song, available controls and reproduction steps, rather than account credentials.
 
-- **Private session.** Spotify reports no playback at all while one is on, so
-  there is genuinely nothing for Linea to read. Turn it off and play something.
-- **Nothing actually playing on a device Spotify knows about.** Web-player-only
-  playback sometimes does not register; play from the desktop or phone app.
+## Development and validation
 
-Lifting the 25-account limit needs Spotify to grant **Extended Quota Mode**,
-which is a manual review. Until then the allowlist is the ceiling.
+- [App setup and native build](./Linea/README.md)
+- [Migration implementation and validation record](./documentation/linea-smtc-implementation.md)
+- [Website setup](./website/README.md)
 
-## Repository layout
-
-| Path             | What it is                                                                    |
-| ---------------- | ----------------------------------------------------------------------------- |
-| `Linea/`         | The Electron app                                                              |
-| `website/`       | The marketing site (Next.js) — see [`website/README.md`](./website/README.md) |
-| `documentation/` | Internal design and build notes                                               |
-
-## Website
-
-```bash
-cd website
-bun install
-bun run dev        # http://localhost:3000
-```
+The Windows helper uses C++/WinRT from the Windows SDK and the static C++ runtime.
+No npm runtime dependency was added for this migration. Metadata stays local for
+playback; song title, artist, album and duration are sent to lyric providers.
+GitHub is used for application updates.
 
 ## License
 
-Linea is [MIT licensed](./LICENSE). Third-party attributions — Electron, the
-Outfit and Space Mono typefaces, Lucide icons, and lyrics from
-[lrclib.net](https://lrclib.net) — are listed in [NOTICE.md](./NOTICE.md).
-
-Linea is an independent project and is not affiliated with, endorsed by, or
-sponsored by Spotify AB.
+Linea is [MIT licensed](./LICENSE). See [NOTICE.md](./NOTICE.md) for third-party
+attributions. Linea is independent and is not affiliated with Spotify AB.

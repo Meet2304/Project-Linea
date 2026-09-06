@@ -6,6 +6,12 @@ import '@fontsource/outfit/700.css'
 import '@fontsource/space-mono/400.css'
 import '@fontsource/space-mono/700.css'
 
+import {
+  optimisticPlayer,
+  keepFeedback,
+  mergeFeedback,
+  type PlaybackFeedback
+} from '../../shared/playbackFeedback'
 import { estimatePositionMs } from '../../shared/lyrics'
 import type { LyricLine } from '../../shared/lyrics'
 import type {
@@ -13,6 +19,8 @@ import type {
   PlayerCommand,
   PlayerErrorReason,
   PlayerState,
+  PlaybackSnapshot,
+  SourceStatus,
   Prefs
 } from '../../shared/types'
 import { renderThumb, hashSeed } from './cymatics'
@@ -20,7 +28,6 @@ import {
   el,
   LYRICS_PRESETS,
   injectStaticIcons,
-  showView,
   renderHeader,
   renderTransport,
   renderScrubber,
@@ -37,7 +44,6 @@ import {
   reflectPrefs,
   reflectClickThrough,
   toggleSettings,
-  closeSettings,
   openSettings
 } from './settingsUi'
 import { initUpdateUi, reflectUpdateState } from './updateUi'
@@ -45,7 +51,13 @@ import { initUpdateUi, reflectUpdateState } from './updateUi'
 // ------------------------------------------------------------------
 // State
 // ------------------------------------------------------------------
-let connected = false
+let sourceStatus: SourceStatus = 'idle'
+let lastRevision = -1
+let lyricContent = ''
+let authoritativePlayer: PlayerState | null = null
+let feedback: PlaybackFeedback | null = null
+let feedbackTimer: ReturnType<typeof setTimeout> | null = null
+let commandBusy = false
 let player: PlayerState | null = null
 let lines: LyricLine[] = []
 let prefs: Prefs = {
@@ -58,10 +70,7 @@ let prefs: Prefs = {
   windowBounds: null
 }
 let dragging = false
-let seekHoldUntil = 0
 let ticker: ReturnType<typeof setInterval> | null = null
-/** Window height (px) while lyrics are shown — restored when re-expanding. */
-let lastExpandedHeight = 0
 /** Whether the lyrics view auto-follows the current line (vs. free reading). */
 let following = true
 let autoScrolling = false
@@ -204,7 +213,7 @@ function thumbFrame(ts: number): void {
 /** Animate only while a track is playing; otherwise hold a still frame. */
 function updateThumb(): void {
   refreshThumbMeta()
-  const playing = connected && (player?.isPlaying ?? false)
+  const playing = player?.isPlaying ?? false
   if (playing && !reducedMotion) {
     if (!thumbRaf) {
       thumbLast = 0
@@ -408,7 +417,7 @@ function wireCornerHints(): void {
 }
 
 // ------------------------------------------------------------------
-// Custom window drag (top bar / connect view). CSS -webkit-app-region
+// Custom window drag (top bar). CSS -webkit-app-region
 // drag breaks under selective setIgnoreMouseEvents for the shadow gutter,
 // so placement is driven through SET_WINDOW_BOUNDS instead.
 // ------------------------------------------------------------------
@@ -423,7 +432,7 @@ let suppressPlayPauseClick = false
 
 async function beginWindowDrag(event: PointerEvent): Promise<void> {
   event.preventDefault()
-  // Top bar / connect are move handles — never treat the gesture as play/pause,
+  // Top bar are move handles — never treat the gesture as play/pause,
   // even when the pointer barely moves (a plain click on the drag surface).
   suppressPlayPauseClick = true
   void window.linea.setPointerOverPanel(true)
@@ -527,26 +536,29 @@ function wireResizeGrips(): void {
 // Rendering
 // ------------------------------------------------------------------
 function refreshPlayerUi(): void {
-  renderHeader(player)
+  renderHeader(player, sourceStatus)
   renderTransport(player)
   if (player) {
     renderScrubber(estimatePositionMs(player), player.durationMs)
   } else {
     renderScrubber(0, 0)
   }
-  el.seek.disabled = !player
+  if (player && !player.timelineValid) {
+    el.timeElapsed.textContent = '--:--'
+    el.timeRemaining.textContent = '--:--'
+  }
   scheduler.sync(lines, player)
   updateTicker()
   updateThumb()
 }
 
 function tick(): void {
-  if (!player || dragging) return
+  if (!player?.timelineValid || dragging) return
   renderScrubber(estimatePositionMs(player), player.durationMs)
 }
 
 function updateTicker(): void {
-  const shouldRun = connected && (player?.isPlaying ?? false)
+  const shouldRun = (player?.isPlaying ?? false) && (player?.timelineValid ?? false)
   if (shouldRun && ticker === null) ticker = setInterval(tick, 500)
   if (!shouldRun && ticker !== null) {
     clearInterval(ticker)
@@ -556,13 +568,12 @@ function updateTicker(): void {
 
 function toastForReason(reason: PlayerErrorReason): void {
   const messages: Record<PlayerErrorReason, string> = {
-    premium_required: 'Spotify Premium is required for playback controls',
-    no_device: 'No active Spotify device — start playback on a device first',
-    rate_limited: 'Spotify is rate-limiting requests — try again shortly',
-    auth_expired: 'Spotify session expired — reconnect in settings',
-    insufficient_scope: 'Reconnect Spotify to enable playback controls',
-    not_registered: 'This Spotify account is not approved for Linea — contact the developer',
-    network: 'Could not reach Spotify'
+    source_unavailable: 'Media access is unavailable ? retrying',
+    session_unavailable: 'The song or player changed ? try again',
+    unsupported_command: 'This player does not support that control',
+    command_rejected: 'The player could not perform that action',
+    timeout: 'The player took too long to respond',
+    invalid_request: 'That playback action is not available'
   }
   showToast(messages[reason])
 }
@@ -570,42 +581,61 @@ function toastForReason(reason: PlayerErrorReason): void {
 // ------------------------------------------------------------------
 // Commands (optimistic apply → invoke → revert on failure)
 // ------------------------------------------------------------------
-async function sendCommand(
-  cmd: PlayerCommand,
-  optimistic?: () => void,
-  revert?: () => void
-): Promise<void> {
-  optimistic?.()
-  refreshPlayerUi()
-  const result = await window.linea.playerCommand(cmd)
-  if (!result.ok) {
-    revert?.()
+async function sendCommand(cmd: PlayerCommand): Promise<void> {
+  if (!player || commandBusy || !player.capabilities[cmd.type]) return
+  const target = player
+  commandBusy = true
+  clearFeedback()
+  const pending: PlaybackFeedback = {
+    command: cmd,
+    player: optimisticPlayer(target, cmd),
+    expiresAt: Date.now() + 1500
+  }
+  feedback = pending
+  player = pending.player
+  feedbackTimer = setTimeout(() => {
+    if (feedback !== pending) return
+    clearFeedback()
+    player = authoritativePlayer
     refreshPlayerUi()
-    toastForReason(result.reason)
+  }, 1500)
+  refreshPlayerUi()
+  try {
+    const result = await window.linea.playerCommand({
+      sessionId: target.sessionId,
+      trackId: target.trackId,
+      mediaRevision: target.mediaRevision,
+      command: cmd
+    })
+    if (!result.ok) {
+      if (feedback === pending) {
+        clearFeedback()
+        player = authoritativePlayer
+        refreshPlayerUi()
+      }
+      toastForReason(result.reason)
+    }
+  } catch {
+    if (feedback === pending) {
+      clearFeedback()
+      player = authoritativePlayer
+      refreshPlayerUi()
+    }
+    toastForReason('source_unavailable')
+  } finally {
+    commandBusy = false
   }
 }
 
-function anchorPosition(): void {
-  if (!player) return
-  player = { ...player, progressMs: estimatePositionMs(player), fetchedAt: Date.now() }
+function clearFeedback(): void {
+  feedback = null
+  if (feedbackTimer) clearTimeout(feedbackTimer)
+  feedbackTimer = null
 }
 
 function togglePlayPause(): void {
-  if (!connected || !player || el.playerView.hidden) return
-  // Settings occupies the same surface — don't hijack its clicks.
-  if (!el.settingsView.hidden) return
-  const wasPlaying = player.isPlaying
-  void sendCommand(
-    { type: wasPlaying ? 'pause' : 'play' },
-    () => {
-      if (!player) return
-      anchorPosition()
-      player = { ...player, isPlaying: !wasPlaying }
-    },
-    () => {
-      if (player) player = { ...player, isPlaying: wasPlaying }
-    }
-  )
+  if (!player || el.playerView.hidden || !el.settingsView.hidden) return
+  void sendCommand({ type: player.isPlaying ? 'pause' : 'play' })
 }
 
 function wireTransport(): void {
@@ -618,30 +648,12 @@ function wireTransport(): void {
   el.btnPrev.addEventListener('click', () => void sendCommand({ type: 'previous' }))
 
   el.btnShuffle.addEventListener('click', () => {
-    const was = player?.shuffle ?? false
-    void sendCommand(
-      { type: 'shuffle', state: !was },
-      () => {
-        if (player) player = { ...player, shuffle: !was }
-      },
-      () => {
-        if (player) player = { ...player, shuffle: was }
-      }
-    )
+    if (player?.shuffle !== null) void sendCommand({ type: 'shuffle', state: !player?.shuffle })
   })
-
   el.btnRepeat.addEventListener('click', () => {
-    const was = player?.repeat ?? 'off'
-    const next = was === 'off' ? 'context' : was === 'context' ? 'track' : 'off'
-    void sendCommand(
-      { type: 'repeat', mode: next },
-      () => {
-        if (player) player = { ...player, repeat: next }
-      },
-      () => {
-        if (player) player = { ...player, repeat: was }
-      }
-    )
+    if (!player || player.repeat === null) return
+    const mode = player.repeat === 'off' ? 'context' : player.repeat === 'context' ? 'track' : 'off'
+    void sendCommand({ type: 'repeat', mode })
   })
 
   el.btnPin.addEventListener('click', () => {
@@ -654,10 +666,9 @@ function wireTransport(): void {
   el.btnSettings.addEventListener('click', () => toggleSettings())
 
   el.btnClose.addEventListener('click', () => void window.linea.closeWindow())
-  el.btnCloseConnect.addEventListener('click', () => void window.linea.closeWindow())
 
   // Click lyrics / empty chrome to play or pause — never the drag handles
-  // (top bar / connect) or real controls, and never after a move/resize.
+  // (top bar) or real controls, and never after a move/resize.
   el.app.addEventListener('click', (event) => {
     if (suppressPlayPauseClick) {
       suppressPlayPauseClick = false
@@ -667,7 +678,7 @@ function wireTransport(): void {
     if (!(target instanceof Element)) return
     if (
       target.closest(
-        'button, input, a, label, .grip, .corner, .switch, .segmented, .theme-toggle, #settings-view, .controls, .topbar, .connect'
+        'button, input, a, label, .grip, .corner, .switch, .segmented, .theme-toggle, #settings-view, .controls, .topbar'
       )
     ) {
       return
@@ -696,21 +707,32 @@ function wireTransport(): void {
 }
 
 function wireSeek(): void {
+  let target: { sessionId: string; trackId: string | null } | null = null
   el.seek.addEventListener('input', () => {
+    if (!player?.capabilities.seek) return
+    if (!dragging) target = { sessionId: player.sessionId, trackId: player.trackId }
     dragging = true
-    if (!player) return
-    const positionMs = (Number(el.seek.value) / 1000) * player.durationMs
-    el.seek.style.setProperty('--fill', String(Number(el.seek.value) / 10))
-    renderScrubber(positionMs, player.durationMs)
+    renderScrubber((Number(el.seek.value) / 1000) * player.durationMs, player.durationMs)
   })
   el.seek.addEventListener('change', () => {
     dragging = false
-    if (!player) return
-    const positionMs = Math.round((Number(el.seek.value) / 1000) * player.durationMs)
-    seekHoldUntil = Date.now() + 1200
-    void sendCommand({ type: 'seek', positionMs }, () => {
-      if (player) player = { ...player, progressMs: positionMs, fetchedAt: Date.now() }
-    })
+    if (
+      !player?.capabilities.seek ||
+      target?.sessionId !== player.sessionId ||
+      target.trackId !== player.trackId
+    ) {
+      target = null
+      refreshPlayerUi()
+      return
+    }
+    const positionMs = Math.round(
+      Math.max(
+        player.seekMinMs,
+        Math.min(player.seekMaxMs, (Number(el.seek.value) / 1000) * player.durationMs)
+      )
+    )
+    target = null
+    void sendCommand({ type: 'seek', positionMs })
   })
 }
 
@@ -743,7 +765,6 @@ function applyLyricsSize(size: LyricsSize): void {
   queuePrefs({ lyricsSize: size })
   applyPrefsToDom(prefs)
   const h = presetWindowHeight(size)
-  lastExpandedHeight = h
   void window.linea.resizeTo(h)
   requestAnimationFrame(() => {
     updateLyricPadding()
@@ -752,48 +773,30 @@ function applyLyricsSize(size: LyricsSize): void {
   })
 }
 
-// ------------------------------------------------------------------
-// Auth
-// ------------------------------------------------------------------
-function setConnected(isConnected: boolean): void {
-  connected = isConnected
-  showView(isConnected ? 'player' : 'connect')
-  if (!isConnected) {
-    player = null
-    lines = []
-    closeSettings()
-    scheduler.stop()
-    updateTicker()
-  }
-  if (isConnected) {
-    // Player view is now visible and measurable — size to the preset.
+function applySnapshot(snapshot: PlaybackSnapshot): void {
+  if (snapshot.revision <= lastRevision) return
+  lastRevision = snapshot.revision
+  sourceStatus = snapshot.sourceStatus
+  authoritativePlayer = snapshot.player
+  if (feedback && !keepFeedback(feedback, authoritativePlayer)) clearFeedback()
+  player =
+    authoritativePlayer && feedback
+      ? mergeFeedback(authoritativePlayer, feedback)
+      : authoritativePlayer
+  const content = JSON.stringify(snapshot.lyrics)
+  if (content !== lyricContent) {
+    lyricContent = content
+    lines = snapshot.lyrics.lines
+    renderAllLyrics(lines, snapshot.lyrics.status)
+    following = true
+    el.btnJump.hidden = true
     requestAnimationFrame(() => {
-      lastExpandedHeight = presetWindowHeight(prefs.lyricsSize)
-      void window.linea.resizeTo(lastExpandedHeight)
-      requestAnimationFrame(() => {
-        updateLyricPadding()
-        updateScrollFades()
-        centerActiveLyric(false)
-        updateThumb()
-      })
+      updateLyricPadding()
+      updateScrollFades()
+      centerActiveLyric(false)
     })
-  } else {
-    updateThumb()
   }
-}
-
-async function connect(): Promise<void> {
-  try {
-    el.connectBtn.disabled = true
-    el.connectStatus.textContent = 'Waiting for Spotify…'
-    const ok = await window.linea.login()
-    el.connectStatus.textContent = ''
-    setConnected(ok)
-  } catch (error) {
-    el.connectStatus.textContent = error instanceof Error ? error.message : 'Login failed'
-  } finally {
-    el.connectBtn.disabled = false
-  }
+  refreshPlayerUi()
 }
 
 // ------------------------------------------------------------------
@@ -808,9 +811,6 @@ async function init(): Promise<void> {
 
   const topbar = el.playerView.querySelector<HTMLElement>('.topbar')
   if (topbar) wireWindowDrag(topbar)
-  wireWindowDrag(el.connectView)
-
-  el.connectBtn.addEventListener('click', () => void connect())
 
   initSettings({
     onTheme: applyTheme,
@@ -820,35 +820,11 @@ async function init(): Promise<void> {
       queuePrefs({ showTimestamps: show })
       applyPrefsToDom(prefs)
     },
-    onViewChange: () => {},
-    onDisconnect: () => {
-      void window.linea.logout().then(() => setConnected(false))
-    }
+    onViewChange: () => {}
   })
 
-  window.linea.onNowPlaying((data) => {
-    if (data && player && Date.now() < seekHoldUntil) {
-      // A seek was just issued — keep the optimistic position until
-      // Spotify's eventually-consistent progress catches up.
-      player = { ...data, progressMs: player.progressMs, fetchedAt: player.fetchedAt }
-    } else {
-      player = data
-    }
-    refreshPlayerUi()
-  })
-
-  window.linea.onLyricsUpdate(({ lines: newLines, status }) => {
-    lines = newLines
-    renderAllLyrics(newLines, status)
-    following = true
-    el.btnJump.hidden = true
-    scheduler.sync(lines, player)
-    requestAnimationFrame(() => {
-      updateLyricPadding()
-      updateScrollFades()
-      centerActiveLyric(false)
-    })
-  })
+  window.linea.onNowPlaying(applySnapshot)
+  window.linea.onLyricsUpdate(applySnapshot)
 
   window.linea.onClickThroughChanged((on) => {
     reflectClickThrough(on)
@@ -877,16 +853,12 @@ async function init(): Promise<void> {
   initUpdateUi({ onOpenSettings: openSettings })
   window.linea.onUpdateState(reflectUpdateState)
 
-  // Both views start hidden, so a rejection here would paint an empty panel
-  // with no way back. Fall back to defaults and show the connect view — a
-  // reachable "Connect Spotify" beats a blank rectangle.
+  // Show the player even when preference loading fails.
   let loadedPrefs = prefs
-  let authState = false
   let clickThrough = false
   try {
-    ;[loadedPrefs, authState, clickThrough] = await Promise.all([
+    ;[loadedPrefs, clickThrough] = await Promise.all([
       window.linea.getPrefs(),
-      window.linea.getAuthState(),
       window.linea.getClickThroughState()
     ])
   } catch (error) {
@@ -904,7 +876,12 @@ async function init(): Promise<void> {
   const hovering = el.app.matches(':hover')
   setPointerInside(hovering)
   void window.linea.setPointerOverPanel(hovering)
-  setConnected(authState)
+  el.playerView.hidden = false
+  try {
+    applySnapshot(await window.linea.getPlaybackSnapshot())
+  } catch {
+    sourceStatus = 'unavailable'
+  }
   refreshPlayerUi()
 
   // Deliberately outside the Promise.all above: the updater is a convenience,

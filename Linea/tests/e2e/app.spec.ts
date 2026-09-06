@@ -1,6 +1,9 @@
 import { test, expect, _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { join } from 'node:path'
+import { mkdtempSync, mkdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+const rendererErrors: string[] = []
 
 let app: ElectronApplication
 let page: Page
@@ -9,9 +12,16 @@ test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async () => {
   app = await electron.launch({
-    args: [join(process.cwd(), 'out/main/index.js')]
+    args: [join(process.cwd(), 'out/main/index.js')],
+    env: {
+      ...process.env,
+      LINEA_TEST_NO_MEDIA: '1',
+      LINEA_TEST_USER_DATA: mkdtempSync(join(tmpdir(), 'linea-e2e-'))
+    }
   })
+  mkdirSync('output/playwright', { recursive: true })
   page = await app.firstWindow()
+  page.on('pageerror', (error) => rendererErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
 })
 
@@ -103,10 +113,10 @@ test('renderer exposes window.linea but not window.require', async () => {
   expect(requireApi).toBe('undefined')
 })
 
-test('shows either the connect view or the player view', async () => {
-  const connectVisible = await page.locator('#connect-view').isVisible()
-  const playerVisible = await page.locator('#player-view').isVisible()
-  expect(connectVisible || playerVisible).toBe(true)
+test('opens directly into the player with no Spotify login', async () => {
+  await expect(page.locator('#player-view')).toBeVisible()
+  await expect(page.locator('#connect-view')).toHaveCount(0)
+  expect(await page.evaluate(() => 'login' in window.linea)).toBe(false)
 })
 
 test('click-through state changes via IPC', async () => {
@@ -189,4 +199,159 @@ test('pin toggle updates always-on-top', async () => {
   await page.evaluate(async (original) => {
     await window.linea.setPinned(original)
   }, pinned)
+})
+
+test('capabilities and timing survive bootstrap and renderer reload', async () => {
+  const { SessionMapper } = await import('../../src/main/smtcState')
+  const { media } = await import('../fixtures/media')
+  const player = new SessionMapper().map(
+    media({
+      timeline: {
+        startMs: 0,
+        endMs: 180000,
+        positionMs: 10000,
+        updatedAt: Date.now(),
+        minSeekMs: 0,
+        maxSeekMs: 180000
+      }
+    })
+  )
+  const snapshot = {
+    revision: 100,
+    player,
+    lyrics: {
+      status: 'ok' as const,
+      lines: [
+        { timeMs: 0, text: 'Original test lyrics' },
+        { timeMs: 30000, text: 'Another original line' }
+      ]
+    },
+    sourceStatus: 'ready' as const
+  }
+  await app.evaluate(({ ipcMain }, value) => {
+    ipcMain.removeHandler('linea:get-playback-snapshot')
+    ipcMain.handle('linea:get-playback-snapshot', () => value)
+  }, snapshot)
+  await page.reload()
+  await expect(page.locator('#track-title')).toHaveText('Original Song')
+  await expect(page.locator('#btn-play')).toBeEnabled()
+  await page.evaluate(() => (document.getElementById('app')!.dataset.pointerInside = 'true'))
+  await expect(page.locator('#btn-shuffle')).not.toHaveAttribute('hidden')
+  await expect(page.locator('#seek')).toBeEnabled()
+  await expect(page.locator('.lyric-row')).toHaveCount(2)
+
+  const unavailable = {
+    ...snapshot,
+    revision: 101,
+    player: {
+      ...player,
+      timelineValid: false,
+      capabilities: {
+        ...player.capabilities,
+        play: false,
+        pause: false,
+        seek: false,
+        shuffle: false,
+        repeat: false
+      }
+    }
+  }
+  await app.evaluate(
+    ({ BrowserWindow }, value) =>
+      BrowserWindow.getAllWindows()[0].webContents.send('linea:now-playing', value),
+    unavailable
+  )
+  await expect(page.locator('#btn-play')).toBeDisabled()
+  await expect(page.locator('#seek')).toBeDisabled()
+  await expect(page.locator('#btn-shuffle')).toHaveAttribute('hidden')
+  await expect(page.locator('#btn-repeat')).toHaveAttribute('hidden')
+  await expect(page.locator('#time-elapsed')).toHaveText('--:--')
+  await expect(page.locator('.lyric-row[data-pos="active"]')).toHaveCount(0)
+
+  // A delayed older event cannot replace the current source state.
+  await app.evaluate(
+    ({ BrowserWindow }, value) =>
+      BrowserWindow.getAllWindows()[0].webContents.send('linea:now-playing', value),
+    snapshot
+  )
+  await expect(page.locator('#seek')).toBeDisabled()
+  await page.screenshot({ path: 'output/playwright/timing-unavailable.png' })
+})
+
+test('media failure and idle keep settings and close reachable', async () => {
+  for (const [revision, status, copy] of [
+    [102, 'unavailable', 'Media access unavailable'],
+    [103, 'idle', 'Play a song']
+  ] as const) {
+    await app.evaluate(
+      ({ BrowserWindow }, value) =>
+        BrowserWindow.getAllWindows()[0].webContents.send('linea:now-playing', value),
+      { revision, player: null, lyrics: { lines: [], status: 'none' }, sourceStatus: status }
+    )
+    await expect(page.locator('#track-artist')).toContainText(copy)
+    await expect(page.locator('#player-view')).toBeVisible()
+    await expect(page.locator('#btn-play')).toBeDisabled()
+    await expect(page.locator('#btn-close')).toBeAttached()
+    await expect(page.locator('#btn-settings')).toBeAttached()
+  }
+})
+
+test('rejected commands restore actual playback without changing a replacement track', async () => {
+  const { SessionMapper } = await import('../../src/main/smtcState')
+  const { media } = await import('../fixtures/media')
+  const player = new SessionMapper().map(
+    media({
+      timeline: {
+        startMs: 0,
+        endMs: 180000,
+        positionMs: 10000,
+        updatedAt: Date.now(),
+        minSeekMs: 0,
+        maxSeekMs: 180000
+      }
+    })
+  )
+  const snapshot = {
+    revision: 104,
+    player,
+    lyrics: { lines: [], status: 'none' as const },
+    sourceStatus: 'ready' as const
+  }
+  await app.evaluate(({ ipcMain, BrowserWindow }, value) => {
+    ipcMain.removeHandler('linea:player-command')
+    ipcMain.handle('linea:player-command', () => ({ ok: false, reason: 'command_rejected' }))
+    BrowserWindow.getAllWindows()[0].webContents.send('linea:now-playing', value)
+  }, snapshot)
+  await page.locator('#app').hover()
+  await page.locator('#btn-play').click()
+  await expect(page.locator('#toast')).toContainText('could not perform')
+  await expect(page.locator('#btn-play')).toHaveAttribute('aria-label', 'Pause')
+  await app.evaluate(
+    ({ ipcMain, BrowserWindow }, value) => {
+      ipcMain.removeHandler('linea:player-command')
+      ipcMain.handle('linea:player-command', async () => {
+        BrowserWindow.getAllWindows()[0].webContents.send('linea:now-playing', value)
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        return { ok: false, reason: 'session_unavailable' }
+      })
+    },
+    {
+      ...snapshot,
+      revision: 105,
+      player: {
+        ...player,
+        trackId: 'replacement',
+        trackName: 'Replacement track',
+        isPlaying: false
+      }
+    }
+  )
+  await page.locator('#btn-play').click()
+  await expect(page.locator('#track-title')).toHaveText('Replacement track')
+  await expect(page.locator('#toast')).toContainText('song or player changed')
+  await expect(page.locator('#btn-play')).toHaveAttribute('aria-label', 'Play')
+})
+
+test('renderer reports no unhandled script errors', () => {
+  expect(rendererErrors).toEqual([])
 })

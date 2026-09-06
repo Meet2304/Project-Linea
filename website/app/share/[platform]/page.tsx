@@ -4,7 +4,7 @@ import HomePage from '@/app/page'
 
 const TITLE = 'Linea — know every word'
 const DESCRIPTION =
-  'Live Spotify lyrics, floating over everything you do. A lightweight, open-source desktop overlay for Windows and macOS.'
+  'Live song lyrics, floating over everything you do. A lightweight, open-source desktop overlay with a Windows media-session beta.'
 
 const shareImages = {
   whatsapp: { image: '/social/linea-whatsapp-og.png', width: 1200, height: 630 },

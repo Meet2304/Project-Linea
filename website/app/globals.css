@@ -28,6 +28,12 @@
   --color-emerald: #3a7a5c;
   --color-garnet: #9a4552;
   --color-citrine: #b1873a;
+  /* The changelog needs more than one colour per release and there were only
+     six. These three fill the gaps left in the hue wheel — yellow-green,
+     magenta and burnt orange — so a plate never has to repeat a neighbour. */
+  --color-peridot: #6f8f3a;
+  --color-tourmaline: #9c4382;
+  --color-carnelian: #a85a37;
 
   --color-sapphire-wash: #eaeff6;
   --color-amethyst-wash: #efecf5;
@@ -35,6 +41,9 @@
   --color-emerald-wash: #e9f2ec;
   --color-garnet-wash: #f6ebed;
   --color-citrine-wash: #f6f0e4;
+  --color-peridot-wash: #f0f3e6;
+  --color-tourmaline-wash: #f6ebf3;
+  --color-carnelian-wash: #f7eee8;
 
   /* --- Type --- */
   --font-sans: var(--font-outfit), system-ui, -apple-system, sans-serif;
@@ -107,6 +116,9 @@
   --emerald: #3a7a5c;
   --garnet: #9a4552;
   --citrine: #b1873a;
+  --peridot: #6f8f3a;
+  --tourmaline: #9c4382;
+  --carnelian: #a85a37;
 
   --sapphire-wash: #eaeff6;
   --amethyst-wash: #efecf5;
@@ -114,6 +126,9 @@
   --emerald-wash: #e9f2ec;
   --garnet-wash: #f6ebed;
   --citrine-wash: #f6f0e4;
+  --peridot-wash: #f0f3e6;
+  --tourmaline-wash: #f6ebf3;
+  --carnelian-wash: #f7eee8;
 
   /* The demo's fixed lyric color. Deep enough to read on white, bright
      enough to hold up on near-black. */
@@ -194,6 +209,9 @@
   --emerald: #6fb08e;
   --garnet: #d17d89;
   --citrine: #d3a862;
+  --peridot: #a9c470;
+  --tourmaline: #cf87ba;
+  --carnelian: #dd9068;
 
   --sapphire-wash: #1a2130;
   --amethyst-wash: #201d2e;
@@ -201,6 +219,9 @@
   --emerald-wash: #152720;
   --garnet-wash: #2a1a1f;
   --citrine-wash: #29231a;
+  --peridot-wash: #1f2618;
+  --tourmaline-wash: #291a25;
+  --carnelian-wash: #2a1e18;
 
   --panel-bg-base: #0a0b0d;
   --panel-border: #212329;

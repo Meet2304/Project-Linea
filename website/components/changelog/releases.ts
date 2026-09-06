@@ -66,6 +66,47 @@ const REPO = 'https://github.com/Meet2304/Project-Linea/releases/tag/'
 
 export const RELEASES: Release[] = [
   {
+    // Displayed as 0.2.0 — `version` is the poster-sized ghost numeral behind
+    // the letter, and the full pre-release tag does not fit it. The tag is
+    // what gets signed at the bottom, and it stays exact.
+    version: '0.2.0',
+    tag: 'v0.2.0-beta.1',
+    date: '2026-09-06',
+    dateLong: '6 September 2026',
+    title: 'Windows media sessions',
+    kind: 'feature',
+    accent: 'var(--citrine)',
+    track: {
+      key: 'Starlight — Sofia Camara',
+      title: 'Starlight',
+      artist: 'Sofia Camara'
+    },
+
+    headline: 'No sign-in. At all.',
+    lede: 'Linea follows whatever Windows is already playing.',
+    note: 'The old build needed a Spotify account I had added by hand. The cap was five people.',
+
+    points: [
+      {
+        h: 'Whatever is playing',
+        d: 'Spotify, a browser tab, anything holding the media keys. If Windows knows the song, Linea does.'
+      },
+      {
+        h: 'Nothing to connect',
+        d: 'No login, no token, no waiting to be let in. Open it and it is already following along.'
+      },
+      {
+        h: 'Windows first',
+        d: 'A Windows beta. macOS opens and says the source is not there yet rather than pretending.'
+      }
+    ],
+    // Points at the releases index, not the tag: v0.2.0-beta.1 is built but
+    // not published, and a tag URL would 404. Swap it for REPO + tag the day
+    // it ships.
+    url: 'https://github.com/Meet2304/Project-Linea/releases'
+  },
+
+  {
     version: '0.1.6',
     tag: 'v0.1.6',
     date: '2026-07-28',

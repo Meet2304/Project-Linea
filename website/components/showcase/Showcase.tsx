@@ -12,7 +12,6 @@ import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { ArrowRightIcon } from '@/components/animate-ui/icons/arrow-right'
 import { useTheme } from '../theme/ThemeProvider'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
-import type { ReleaseInfo } from '@/lib/release'
 
 /**
  * The hero and the feature walkthrough, as one continuous shot.
@@ -64,7 +63,7 @@ function ActCopy({ act }: { act: Act }) {
   )
 }
 
-export default function Showcase({ release }: { release: ReleaseInfo }) {
+export default function Showcase() {
   const rootRef = useRef<HTMLElement>(null)
   const heroRef = useRef<HTMLDivElement>(null)
   const actRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -236,12 +235,12 @@ export default function Showcase({ release }: { release: ReleaseInfo }) {
 
             <h1 className={s.heroTitle}>Know every word.</h1>
 
-            <p className={s.heroSub}>Live Spotify lyrics, floating over everything you do.</p>
+            <p className={s.heroSub}>Live song lyrics, floating over everything you do.</p>
 
             <div className={s.heroCta}>
               {/* No accent override: the default is --ink, which is also what
                   the closing call to action uses. */}
-              <DownloadButton release={release} className={s.heroDownload} />
+              <DownloadButton className={s.heroDownload} />
               {/* Animate UI's own way of driving an icon from something
                   bigger than itself: asChild puts the hover handlers on the
                   anchor, so the arrow answers the whole button. */}

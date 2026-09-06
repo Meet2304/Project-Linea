@@ -174,7 +174,11 @@ export function pickBest(
   for (let index = 0; index < candidates.length; index++) {
     const candidate = candidates[index]
     if (!candidate?.hasSynced) continue
-    if (candidate.durationSec > 0 && durationDeltaSec(candidate, query) > maxDurationDeltaSec) {
+    if (
+      candidate.durationSec > 0 &&
+      query.durationSec > 0 &&
+      durationDeltaSec(candidate, query) > maxDurationDeltaSec
+    ) {
       continue
     }
 

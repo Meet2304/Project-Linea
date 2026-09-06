@@ -59,11 +59,24 @@ export default function CymaticField({
       instRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patternKey, opts.style, opts.n, opts.m, opts.scale, opts.seed])
+  }, [patternKey, opts.scale])
 
   useEffect(() => {
     instRef.current?.setColors(opts.color ?? '#1a1a1e', opts.color2 ?? null)
   }, [opts.color, opts.color2])
+
+  // Pattern is applied imperatively for the same reason color is: the
+  // changelog's corner plate retunes on hover, and rebuilding the canvas for
+  // that blinks. `scale` is not here — it changes the render geometry, and
+  // nothing animates it, so it stays a remount above.
+  useEffect(() => {
+    instRef.current?.setPattern({
+      style: opts.style,
+      n: opts.n,
+      m: opts.m,
+      seed: opts.seed
+    })
+  }, [opts.style, opts.n, opts.m, opts.seed])
 
   useEffect(() => {
     const inst = instRef.current

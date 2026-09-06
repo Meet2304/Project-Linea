@@ -89,15 +89,15 @@ async function search(
   if (response.kind === 'transport') return 'unreachable'
   if (response.kind === 'http') return response.status === 404 ? [] : 'unreachable'
   if (!Array.isArray(response.body)) return []
-  return response.body.slice(0, MAX_CANDIDATES).map(asTrack).filter((t): t is LrcLibTrack => !!t)
+  return response.body
+    .slice(0, MAX_CANDIDATES)
+    .map(asTrack)
+    .filter((t): t is LrcLibTrack => !!t)
 }
 
 async function fuzzySearch(query: LyricsQuery, signal: AbortSignal): Promise<ProviderOutcome> {
   // Structured first (higher precision), then one broader free-text retry.
-  let tracks = await search(
-    { track_name: query.trackName, artist_name: query.artistName },
-    signal
-  )
+  let tracks = await search({ track_name: query.trackName, artist_name: query.artistName }, signal)
   if (tracks === 'unreachable') return { kind: 'unreachable' }
 
   if (tracks.length === 0) {
@@ -120,7 +120,8 @@ async function fuzzySearch(query: LyricsQuery, signal: AbortSignal): Promise<Pro
 export const lrclibProvider: LyricsProvider = {
   id: 'lrclib',
   async lookup(query, signal) {
-    const exact = await exactGet(query, signal)
+    const exact: ExactResult =
+      query.durationSec > 0 ? await exactGet(query, signal) : { kind: 'try-search' }
     if (exact.kind !== 'try-search') return exact
     return fuzzySearch(query, signal)
   }

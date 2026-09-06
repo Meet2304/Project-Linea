@@ -16,7 +16,7 @@ import type { LyricsProvider, ProviderId } from './lyrics/types'
  */
 export const DEFAULT_PROVIDERS: readonly LyricsProvider[] = [lrclibProvider, neteaseProvider]
 
-// Spotify track IDs are base62. The ID becomes a filename, so reject
+// Generated media identities are hexadecimal. The ID becomes a filename, so reject
 // anything else — a hostile value like "../.." must never reach join().
 const TRACK_ID_RE = /^[A-Za-z0-9]{1,64}$/
 

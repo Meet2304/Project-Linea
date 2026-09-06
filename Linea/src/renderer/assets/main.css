@@ -46,7 +46,7 @@ body {
   border: 1px solid transparent;
   border-radius: var(--panel-radius);
   box-shadow: none;
-  /* Drag is handled in JS on the top bar / connect view (not a blanket
+  /* Drag is handled in JS on the top bar (not a blanket
      -webkit-app-region) so lyrics and controls stay clickable/scrollable. */
   transition: opacity var(--dur) var(--ease);
 }
@@ -166,117 +166,6 @@ input:focus-visible {
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-mono);
   text-transform: uppercase;
-}
-
-/* ------------------------------------------------------------
-   Connect (disconnected) view
-   ------------------------------------------------------------ */
-.connect {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  text-align: center;
-  /* Drag handle while disconnected (wired in JS — there's no top bar here). */
-  cursor: grab;
-}
-
-.connect:active {
-  cursor: grabbing;
-}
-
-/* Close, while disconnected. The top bar — and with it the only close
-   button — belongs to the player view, so a frameless window with no
-   Spotify session could not be shut without the tray.
-   .connect fills the stack, so top/right 0 lands it exactly where the
-   top bar's close button sits once connected. Hover-revealed on the same
-   clocks as .topbar-actions, but gated on the pointer alone: there is no
-   lyrics mode to qualify it here. */
-.connect-close {
-  position: absolute;
-  /* The top bar is a ~32px row centring a 26px button, which leaves its
-     close button 3px down from the stack. Matching that here keeps the X
-     in one place when a session connects and the player view takes over. */
-  top: 3px;
-  right: 0;
-  z-index: 3;
-  opacity: 0;
-  transform: translateY(-3px);
-  pointer-events: none;
-  transition:
-    opacity var(--chrome-dur-out) var(--ease),
-    transform var(--chrome-dur-out) var(--ease);
-}
-
-#app[data-pointer-inside='true'] .connect-close,
-#app:focus-within .connect-close {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-  transition:
-    opacity var(--chrome-dur) var(--chrome-ease),
-    transform var(--chrome-dur) var(--chrome-ease);
-}
-
-.wordmark {
-  font-size: 24px;
-  font-weight: var(--w-medium);
-  letter-spacing: -0.03em;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.wordmark::after {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-left: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.connect-tag {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-mono);
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-
-.btn-primary {
-  margin-top: 6px;
-  padding: 8px 20px;
-  border-radius: var(--radius-round);
-  background: var(--accent);
-  color: var(--text-on-accent);
-  font-size: var(--text-sm);
-  font-weight: var(--w-medium);
-  transition:
-    transform var(--dur-fast) var(--ease),
-    filter var(--dur-fast) var(--ease);
-}
-
-.btn-primary:hover {
-  filter: brightness(1.08);
-}
-
-.btn-primary:active {
-  transform: translateY(1px);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.connect-status {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  min-height: 1.4em;
 }
 
 /* ------------------------------------------------------------
@@ -538,8 +427,7 @@ input:focus-visible {
   animation: icon-pin-wiggle 1s ease-in-out forwards;
 }
 
-/* Keyed on the class, not the id — the disconnected view carries a second
-   close button and it should behave like the one in the top bar. */
+/* Preserve the close-button animation in the player and idle states. */
 .btn-close:hover .icon-anim-x-a,
 .btn-close:focus-visible .icon-anim-x-a {
   animation: icon-x-spin 0.4s ease-in-out forwards;
@@ -628,10 +516,6 @@ input:focus-visible {
   .btn-pin,
   .btn-settings,
   .btn-update {
-    transition-duration: var(--dur-fast);
-  }
-
-  .connect-close {
     transition-duration: var(--dur-fast);
   }
 }

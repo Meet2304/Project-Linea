@@ -1,4 +1,10 @@
-import { EMPTY_RELEASE, REPO_NAME, REPO_OWNER, type ReleaseAsset, type ReleaseInfo } from './release'
+import {
+  EMPTY_RELEASE,
+  REPO_NAME,
+  REPO_OWNER,
+  type ReleaseAsset,
+  type ReleaseInfo
+} from './release'
 
 /**
  * Server-only GitHub lookups. Kept out of lib/release.ts because that module
@@ -27,6 +33,8 @@ interface GhAsset {
 interface GhRelease {
   tag_name?: string
   published_at?: string
+  created_at?: string
+  draft?: boolean
   assets?: GhAsset[]
 }
 
@@ -38,32 +46,47 @@ function pick(assets: GhAsset[], ext: string): ReleaseAsset | undefined {
   return hit ? { url: hit.browser_download_url, size: hit.size, name: hit.name } : undefined
 }
 
+/** Newest first by publish date — `/releases` comes back in creation order. */
+function stamp(rel: GhRelease): number {
+  return Date.parse(rel.published_at ?? rel.created_at ?? '') || 0
+}
+
 /**
- * `/releases/latest` already excludes drafts and pre-releases, so demoting a
- * bad build to pre-release on GitHub is enough to pull it from the site.
+ * The newest published release, pre-releases included.
+ *
+ * `/releases/latest` deliberately skips pre-releases, which is the wrong
+ * answer while a beta is the build we want people on: it would keep handing
+ * out the last stable installer after the beta shipped. So we list releases
+ * and take the newest non-draft one instead.
+ *
+ * The trade-off is that demoting a bad build to pre-release no longer pulls
+ * it from the site — delete it, or turn it back into a draft, to do that.
  *
  * `cache: 'no-store'` is for the download redirect, which must resolve the
  * current release at click time — a cached answer there is exactly the bug
  * that shipped v0.1.0's installer to visitors after v0.1.1 was out.
  */
-export async function fetchLatestRelease(opts?: { fresh?: boolean }): Promise<GhRelease | null> {
+export async function fetchNewestRelease(opts?: { fresh?: boolean }): Promise<GhRelease | null> {
   const cache: RequestInit & { next?: { revalidate: number } } = opts?.fresh
     ? { cache: 'no-store' }
     : { next: { revalidate: RELEASE_REVALIDATE_SECONDS } }
 
   try {
-    const res = await fetch(`${API_BASE}/releases/latest`, { headers: headers(), ...cache })
-    // 404 is the expected response until the first release is tagged.
+    const res = await fetch(`${API_BASE}/releases?per_page=30`, { headers: headers(), ...cache })
+    // 404 is the expected response until the repo is reachable; an empty
+    // array is what comes back once it is but nothing has been tagged.
     if (!res.ok) return null
-    return (await res.json()) as GhRelease
+    const all = (await res.json()) as GhRelease[]
+    // Drafts are visible only with a token, and have no public assets.
+    return all.filter((rel) => !rel.draft).sort((a, b) => stamp(b) - stamp(a))[0] ?? null
   } catch {
     return null
   }
 }
 
-/** Download URL for the latest build on `platform`, or null if there isn't one. */
+/** Download URL for the newest build on `platform`, or null if there isn't one. */
 export async function latestAssetUrl(platform: 'win' | 'mac'): Promise<string | null> {
-  const rel = await fetchLatestRelease({ fresh: true })
+  const rel = await fetchNewestRelease({ fresh: true })
   return pick(rel?.assets ?? [], EXTENSION[platform])?.url ?? null
 }
 
@@ -88,7 +111,7 @@ async function fetchRepoStats(): Promise<{ stars?: number; forks?: number }> {
  * The two lookups are independent so one failing cannot blank the other.
  */
 export async function getReleaseInfo(): Promise<ReleaseInfo> {
-  const [stats, rel] = await Promise.all([fetchRepoStats(), fetchLatestRelease()])
+  const [stats, rel] = await Promise.all([fetchRepoStats(), fetchNewestRelease()])
 
   const info: ReleaseInfo = { ...EMPTY_RELEASE, assets: {}, ...stats }
   if (rel) {

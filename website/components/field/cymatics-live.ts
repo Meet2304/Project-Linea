@@ -76,6 +76,16 @@ export interface FieldOptions {
 export interface FieldInstance {
   canvas: HTMLCanvasElement
   setColors: (c1: string, c2?: string | null) => void
+  /**
+   * Retune the plate without rebuilding it.
+   *
+   * Remounting to change a pattern tears the canvas out and puts a new one
+   * back, which blinks — fine when a whole section changes, useless for the
+   * changelog's corner plate, where the pattern answers the pointer and a
+   * blink per hover would read as a glitch. The phases are reseeded with the
+   * numbers so the plate genuinely re-forms rather than sliding.
+   */
+  setPattern: (p: { style?: FieldStyle; n?: number; m?: number; seed?: number }) => void
   pause: () => void
   resume: () => void
   destroy: () => void
@@ -124,7 +134,8 @@ export function prefersReducedMotion(): boolean {
 }
 
 export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInstance {
-  const style = opts.style || 'chladni'
+  // Mutable so setPattern can retune the plate in place; see FieldInstance.
+  let style = opts.style || 'chladni'
   let color = hexToRgb(opts.color)
   let color2 = opts.color2 ? hexToRgb(opts.color2) : null
 
@@ -146,16 +157,20 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
   // would be the only thing moving — drop it too.
   const ptAmt = reduced ? 0 : (opts.ptAmt ?? 1)
 
-  const rand = mulberry32(seed)
-  const P = {
-    p1: rand() * 6.28,
-    p2: rand() * 6.28,
-    p3: rand() * 6.28,
-    p4: rand() * 6.28,
-    p5: rand() * 6.28
+  function phasesFor(s: number): { p1: number; p2: number; p3: number; p4: number; p5: number } {
+    const rand = mulberry32(s)
+    return {
+      p1: rand() * 6.28,
+      p2: rand() * 6.28,
+      p3: rand() * 6.28,
+      p4: rand() * 6.28,
+      p5: rand() * 6.28
+    }
   }
-  const n0 = opts.n ?? 2 + (density % 5)
-  const m0 = opts.m ?? 3 + ((density + 2) % 6)
+
+  let P = phasesFor(seed)
+  let n0 = opts.n ?? 2 + (density % 5)
+  let m0 = opts.m ?? 3 + ((density + 2) % 6)
   const band = 0.06 + dither * 0.9
 
   if (getComputedStyle(el).position === 'static') el.style.position = 'relative'
@@ -468,6 +483,16 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
       color = hexToRgb(c1)
       color2 = c2 ? hexToRgb(c2) : null
       // Repaint immediately so a palette change lands even while parked.
+      if (!running) drawOnce()
+    },
+    setPattern(p: { style?: FieldStyle; n?: number; m?: number; seed?: number }) {
+      if (p.style) style = p.style
+      if (p.n !== undefined) n0 = p.n
+      if (p.m !== undefined) m0 = p.m
+      // A new seed means a new set of phases, which is what makes ripple and
+      // flow — the two styles with no modal numbers to change — actually look
+      // like a different plate rather than the same one still running.
+      if (p.seed !== undefined) P = phasesFor(p.seed)
       if (!running) drawOnce()
     },
     pause() {

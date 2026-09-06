@@ -2,14 +2,13 @@ import CymaticField from './field/CymaticField'
 import DownloadButton from './DownloadButton'
 import Mono from './ui/Mono'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
-import type { ReleaseInfo } from '@/lib/release'
 
 /**
  * The landing. After a page of motion, this one is nearly still: the plate
  * runs at a fraction of its usual speed, and the only movement left is a
  * slow ring breathing out of the download button.
  */
-export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
+export default function DownloadCTA() {
   const pal = PALETTES.ink
   const pat = PATTERNS.star
 
@@ -72,7 +71,7 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
             color: 'var(--steel)'
           }}
         >
-          Free and open source. Windows and macOS.
+          Free and open source. Try the new Windows beta.
         </p>
 
         <div
@@ -84,7 +83,7 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
           }}
         >
           <span className="cta-halo">
-            <DownloadButton release={release} />
+            <DownloadButton />
           </span>
         </div>
 
@@ -97,7 +96,8 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
             color: 'var(--slate)'
           }}
         >
-          Needs Spotify — Premium to control playback, lyrics on any plan.
+          The beta follows compatible Windows media players. Available controls depend on the
+          player.
         </p>
       </div>
 

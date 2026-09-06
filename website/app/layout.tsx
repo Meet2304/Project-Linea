@@ -19,7 +19,7 @@ const spaceMono = Space_Mono({
 
 const TITLE = 'Linea — know every word'
 const DESCRIPTION =
-  'Live Spotify lyrics, floating over everything you do. A lightweight, open-source desktop overlay for Windows and macOS.'
+  'Live song lyrics, floating over everything you do. A lightweight, open-source desktop overlay with a Windows media-session beta.'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://project-linea.vercel.app'),
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'Meet Bhatt', url: 'https://github.com/Meet2304' }],
   keywords: [
     'Linea',
-    'Spotify lyrics',
+    'Windows lyrics overlay',
     'lyrics overlay',
     'desktop overlay',
     'synced lyrics',
