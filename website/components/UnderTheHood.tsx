@@ -17,11 +17,11 @@ const ITEMS: Item[] = [
   {
     glyph: 'shield',
     eyebrow: '// local-first',
-    title: 'Nothing leaves your machine',
-    body: 'No account, no server in the middle, no analytics — Linea talks to Spotify and lrclib, and nothing else.',
+    title: 'Playback stays on your machine',
+    body: 'The Windows beta reads playback locally. Song metadata goes to LRCLIB and the NetEase fallback for lyrics; GitHub supplies application updates.',
     points: [
-      'OAuth with PKCE, no client secret',
-      'Tokens sealed in the OS keychain',
+      'No Spotify login or developer registration',
+      'No added runtime to install',
       'Lyrics cached on your own disk'
     ],
     palette: PALETTES.fern
@@ -30,9 +30,9 @@ const ITEMS: Item[] = [
     glyph: 'bolt',
     eyebrow: '// fast by design',
     title: 'Still when nothing is happening',
-    body: 'One timer, armed for the next lyric — nothing ticks between lines, and nothing at all while paused.',
+    body: 'One timer follows lyric boundaries. Playback reads back off when idle, and the animated thumbnail rests while paused.',
     points: [
-      'No per-frame loops',
+      'One timer per lyric boundary',
       'Polling backs off when you idle',
       'Recovers itself after a crash'
     ],

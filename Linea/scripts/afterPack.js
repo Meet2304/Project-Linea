@@ -21,7 +21,13 @@ const WEBGPU_DLLS = ['dxcompiler.dll', 'dxil.dll']
  * @param {import('electron-builder').AfterPackContext} context
  */
 module.exports = async function afterPack(context) {
+  const expectedChannel = /-beta\.\d+$/.test(context.packager.appInfo.version) ? 'beta' : 'latest'
+  if (context.packager.config.publish?.channel !== expectedChannel) {
+    throw new Error('Use the package scripts so update metadata matches the release channel')
+  }
   if (context.electronPlatformName !== 'win32') return
+
+  await stat(join(context.appOutDir, 'resources', 'smtc', 'linea-smtc.exe'))
 
   let freed = 0
   for (const dll of WEBGPU_DLLS) {

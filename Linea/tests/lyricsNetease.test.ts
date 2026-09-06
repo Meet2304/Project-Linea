@@ -106,14 +106,17 @@ describe('neteaseProvider', () => {
   // NetEase answers nonsense queries with real tracks, so the duration
   // ceiling is what stops the wrong lyrics from being rendered.
   it('rejects a confident-looking hit whose duration is too far off', async () => {
-    const { calls } = route({ search: () => json({ result: { songs: [song({ duration: 300_000 })] } }) })
+    const { calls } = route({
+      search: () => json({ result: { songs: [song({ duration: 300_000 })] } })
+    })
     expect(await run()).toEqual({ kind: 'no-match' })
     expect(calls).toHaveLength(1) // never bothered fetching the lyric
   })
 
   it('rejects an unrelated track returned for a loose query', async () => {
     route({
-      search: () => json({ result: { songs: [song({ name: 'Fever Pt.2', artists: [{ name: 'ZXXXQ' }] })] } })
+      search: () =>
+        json({ result: { songs: [song({ name: 'Fever Pt.2', artists: [{ name: 'ZXXXQ' }] })] } })
     })
     expect(await run()).toEqual({ kind: 'no-match' })
   })
@@ -144,7 +147,8 @@ describe('neteaseProvider', () => {
   it('reports no-match when the lyric text carries no usable timings', async () => {
     route({
       search: () => json({ result: { songs: [song()] } }),
-      lyric: () => json({ code: 200, lrc: { lyric: 'Is this the real life?\nIs this just fantasy?' } })
+      lyric: () =>
+        json({ code: 200, lrc: { lyric: 'Is this the real life?\nIs this just fantasy?' } })
     })
     expect(await run()).toEqual({ kind: 'no-match' })
   })
@@ -177,4 +181,14 @@ describe('neteaseProvider', () => {
     route({ search: () => json({ code: 400 }) })
     expect(await run()).toEqual({ kind: 'no-match' })
   })
+})
+
+it('can match a session without duration', async () => {
+  route({
+    search: () => json({ result: { songs: [song()] } }),
+    lyric: () => json({ lrc: { lyric: LYRIC_TEXT } })
+  })
+  expect(
+    await neteaseProvider.lookup({ ...QUERY, durationSec: 0 }, new AbortController().signal)
+  ).toMatchObject({ kind: 'lyrics' })
 })

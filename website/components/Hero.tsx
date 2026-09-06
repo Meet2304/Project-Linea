@@ -94,7 +94,7 @@ export default function Hero({ release }: { release: ReleaseInfo }) {
             color: 'var(--text-body)'
           }}
         >
-          Live Spotify lyrics, floating over everything you do.
+          Live song lyrics, floating over everything you do.
         </p>
 
         <div

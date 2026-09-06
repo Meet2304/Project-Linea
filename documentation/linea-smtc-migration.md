@@ -1,9 +1,9 @@
 # Linea — SMTC Playback Source (Windows)
 
-**Status:** Spec / not implemented  
+**Status:** Historical proposal; superseded by the approved plan and [implementation record](./linea-smtc-implementation.md)
 **Written:** 2026-09-01  
 **Application path:** `Linea/` (within `Project-Linea`)  
-**Current shipped version:** `0.1.6` (`Linea/package.json`)  
+**Shipped version when written:** `0.1.6` (`Linea/package.json`)
 **Code snapshot this spec was checked against:** `4fede41` (playback-failure surfacing) on top of the v0.1.6 line; `origin/main` already contains that work via PR #35  
 **Audience:** implementation handoff  
 **Related:** [Stage 2 completion](./linea-stage2-completion.md) (Spotify OAuth as built), [Stage 3 completion](./linea-stage3-completion.md) (packaging; Extended Quota left optional), [README](../README.md) Development Mode section

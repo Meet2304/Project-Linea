@@ -107,6 +107,17 @@ export default function DownloadButton({
         </a>
       </AnimateIcon>
 
+      <a
+        href={RELEASES_URL + '/tag/v0.2.0-beta.1'}
+        style={{ color: 'var(--steel)', fontSize: 'var(--text-sm)', textUnderlineOffset: 3 }}
+      >
+        Windows beta 0.2.0 — no Spotify login
+      </a>
+      <span style={{ color: 'var(--slate)', fontSize: 'var(--text-xs)', maxWidth: 320 }}>
+        The stable download above uses the legacy Spotify integration and requires an approved
+        account.
+      </span>
+
       {/* Only render the meta line when it actually says something. With no
           release there is no version or size to report, and a placeholder
           there just reads as an apology under the main CTA. */}

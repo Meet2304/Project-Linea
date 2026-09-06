@@ -1,6 +1,7 @@
 import { app, shell } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { is } from '@electron-toolkit/utils'
+import { updatePolicy } from '../shared/updatePolicy'
 import { IPC } from '../shared/ipcChannels'
 import type { UpdateState } from '../shared/types'
 
@@ -20,6 +21,7 @@ const RECHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
  * downloading there would fail at the signature check, so we never start one.
  */
 const canSelfUpdate = process.platform === 'win32'
+const policy = updatePolicy(app.getVersion(), process.platform)
 
 let state: UpdateState = { status: 'idle', version: app.getVersion() }
 let send: (channel: string, payload: unknown) => void = () => {}
@@ -37,6 +39,11 @@ export function getUpdateState(): UpdateState {
 
 export function initAutoUpdater(sendToRenderer: (channel: string, payload: unknown) => void): void {
   send = sendToRenderer
+  if (!policy.enabled) return
+  autoUpdater.channel = policy.channel
+  autoUpdater.allowPrerelease = policy.allowPrerelease
+  // Assign after channel: its setter enables downgrades by default.
+  autoUpdater.allowDowngrade = policy.allowDowngrade
 
   // The updater has no feed in dev. LINEA_DEV_UPDATER=1 opts in via
   // dev-app-update.yml, which is the only way to exercise this end to end
@@ -90,6 +97,7 @@ export function initAutoUpdater(sendToRenderer: (channel: string, payload: unkno
 }
 
 export function checkForUpdate(): void {
+  if (!policy.enabled) return
   // Nothing to re-check once an update is in hand, and a check would restart
   // a download that is already finished.
   if (state.status === 'checking' || state.status === 'downloading') return

@@ -28,6 +28,7 @@ files:
   # icon.png, so the folder must ship inside the asar — without it Tray()
   # throws on launch and takes the rest of app-ready down with it.
   - resources/**
+  - '!resources/smtc/**'
   - package.json
 
 mac:
@@ -38,6 +39,9 @@ mac:
   notarize: false
 
 win:
+  extraResources:
+    - from: resources/smtc/linea-smtc.exe
+      to: smtc/linea-smtc.exe
   target:
     - target: nsis
       arch: [x64]

@@ -8,36 +8,18 @@ import {
   Tray,
   Menu,
   nativeImage,
-  session
+  session,
+  powerMonitor
 } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { IPC } from '../shared/ipcChannels'
-import type {
-  ApiResult,
-  PlayerCommand,
-  PlayerErrorReason,
-  PlayerState,
-  Prefs,
-  WindowBounds
-} from '../shared/types'
-import type { LyricsResult } from '../shared/lyrics'
-import { estimatePositionMs } from '../shared/lyrics'
-import { nextPollDelay } from '../shared/pollPolicy'
+import type { ApiResult, Prefs, WindowBounds } from '../shared/types'
+import { unlinkSync } from 'node:fs'
+import { PlaybackController } from './playbackController'
+import { SmtcBridge } from './smtcBridge'
 import { nextClickThroughState } from './clickThrough'
-import {
-  generateCodeVerifier,
-  generateCodeChallenge,
-  generateState,
-  buildAuthUrl,
-  exchangeCodeForTokens
-} from './spotifyAuth'
-import { startLoopbackServer } from './loopbackServer'
-import { saveRefreshToken, clearRefreshToken } from './tokenStore'
-import { SPOTIFY_CLIENT_ID, SPOTIFY_REDIRECT_URI, SPOTIFY_SCOPE, LOOPBACK_PORT } from './config'
-import { setAccessToken, clearAccessToken, hasAuth } from './spotifyClient'
-import * as player from './spotifyPlayer'
 import { getLyricsForTrack } from './lyricsCache'
 import { loadPrefs, savePrefs } from './prefs'
 import {
@@ -65,40 +47,7 @@ let tray: Tray | null = null
 let clickThrough = false
 /** True while the cursor is over the visible panel (not the shadow gutter). */
 let pointerOverPanel = false
-let lastState: PlayerState | null = null
-let pollTimer: ReturnType<typeof setTimeout> | null = null
-/** Old refresh tokens lack the transport scopes — degrade to read-only. */
-let scopeLimited = false
-let scopeToastShown = false
-/** Consecutive failed polls; reset by the first success. */
-let pollFailures = 0
-/** Which reason has already been reported, so a stuck poll toasts once. */
-let pollFailureToast: PlayerErrorReason | null = null
-
-/**
- * Failures retrying cannot fix. Reported on the first occurrence rather than
- * after a run of them — waiting only delays telling someone something they
- * have to act on (or ask someone else to).
- */
-const PERMANENT_POLL_FAILURES: ReadonlySet<PlayerErrorReason> = new Set<PlayerErrorReason>([
-  'not_registered',
-  'auth_expired',
-  'insufficient_scope'
-])
-
-/** A blip should not toast; a pattern should. ~30s at the idle cadence. */
-const POLL_FAILURES_BEFORE_TOAST = 3
-
-const likedCache = new Map<string, boolean>()
-const LIKED_CACHE_MAX = 50
-
-function rememberLiked(trackId: string, liked: boolean): void {
-  if (likedCache.size >= LIKED_CACHE_MAX && !likedCache.has(trackId)) {
-    const oldest = likedCache.keys().next().value
-    if (oldest !== undefined) likedCache.delete(oldest)
-  }
-  likedCache.set(trackId, liked)
-}
+let playback: PlaybackController | null = null
 
 /** Set the window height only (preset sizing), keeping the current
  *  x/y so it grows from its current anchor. */
@@ -350,264 +299,11 @@ function toggleClickThrough(): void {
   sendToRenderer(IPC.CLICK_THROUGH_CHANGED, clickThrough)
 }
 
-function sendNowPlaying(data: PlayerState | null): void {
-  sendToRenderer(IPC.NOW_PLAYING, data)
-}
-
-function sendLyrics(result: LyricsResult): void {
-  sendToRenderer(IPC.LYRICS_UPDATE, result)
-}
-
-function sendPlayerError(reason: PlayerErrorReason, message: string): void {
-  sendToRenderer(IPC.PLAYER_ERROR, { reason, message })
-}
-
-// ------------------------------------------------------------------
-// Auth
-// ------------------------------------------------------------------
-async function loginToSpotify(): Promise<boolean> {
-  if (!SPOTIFY_CLIENT_ID) {
-    throw new Error(
-      'Missing MAIN_VITE_SPOTIFY_CLIENT_ID. Add it to Linea/.env and restart the app.'
-    )
-  }
-
-  const verifier = generateCodeVerifier()
-  const challenge = generateCodeChallenge(verifier)
-  const state = generateState()
-  const { server, code } = await startLoopbackServer(LOOPBACK_PORT, state)
-
-  const authUrl = buildAuthUrl({
-    clientId: SPOTIFY_CLIENT_ID,
-    redirectUri: SPOTIFY_REDIRECT_URI,
-    codeChallenge: challenge,
-    scope: SPOTIFY_SCOPE,
-    state
-  })
-  await shell.openExternal(authUrl)
-
-  try {
-    const authCode = await code
-    const tokens = await exchangeCodeForTokens({
-      clientId: SPOTIFY_CLIENT_ID,
-      redirectUri: SPOTIFY_REDIRECT_URI,
-      code: authCode,
-      codeVerifier: verifier
-    })
-    saveRefreshToken(tokens.refreshToken)
-    setAccessToken(tokens.accessToken, tokens.expiresIn)
-    // A fresh login carries the full scope set again, and whatever the last
-    // account could not do should not be reported against this one.
-    scopeLimited = false
-    scopeToastShown = false
-    pollFailures = 0
-    pollFailureToast = null
-    startPolling()
-    return true
-  } finally {
-    server.close()
-  }
-}
-
-function logoutFromSpotify(): void {
-  clearRefreshToken()
-  clearAccessToken()
-  stopPolling()
-  lastState = null
-  likedCache.clear()
-  sendNowPlaying(null)
-  sendLyrics({ lines: [], status: 'none' })
-}
-
-// ------------------------------------------------------------------
-// Polling (adaptive: fast while playing, slow while idle, off when
-// logged out)
-// ------------------------------------------------------------------
-function msToTrackEnd(): number | null {
-  if (!lastState?.isPlaying || lastState.durationMs <= 0) return null
-  return Math.max(0, lastState.durationMs - estimatePositionMs(lastState))
-}
-
-function schedulePoll(delayOverrideMs?: number): void {
-  if (pollTimer) {
-    clearTimeout(pollTimer)
-    pollTimer = null
-  }
-  const delay =
-    delayOverrideMs ??
-    nextPollDelay({
-      authed: hasAuth(),
-      isPlaying: lastState?.isPlaying ?? false,
-      msToTrackEnd: msToTrackEnd()
-    })
-  if (delay === null) return
-  pollTimer = setTimeout(() => void pollOnce(), delay)
-}
-
-async function updateLikedState(trackId: string): Promise<void> {
-  const result = await player.checkSaved(trackId)
-  if (!result.ok) return
-  rememberLiked(trackId, result.data)
-  if (lastState?.trackId === trackId && lastState.liked !== result.data) {
-    lastState = { ...lastState, liked: result.data }
-    sendNowPlaying(lastState)
-  }
-}
-
-async function refreshLyrics(state: PlayerState): Promise<void> {
-  if (!state.trackId) return
-  const result = await getLyricsForTrack({
-    trackId: state.trackId,
-    trackName: state.trackName,
-    artistName: state.artistName,
-    albumName: state.albumName,
-    durationSec: Math.round(state.durationMs / 1000)
-  })
-  // A lookup can span several providers, so a fast skip could land the
-  // previous track's lyrics over the current one. Drop late answers.
-  if (lastState?.trackId !== state.trackId) return
-  sendLyrics(result)
-}
-
-async function pollOnce(): Promise<void> {
-  pollTimer = null
-  try {
-    if (!hasAuth() || !mainWindow) return
-
-    let result = scopeLimited
-      ? await player.fetchCurrentlyPlayingLegacy()
-      : await player.fetchPlaybackState()
-
-    if (!result.ok && result.reason === 'insufficient_scope' && !scopeLimited) {
-      scopeLimited = true
-      if (!scopeToastShown) {
-        scopeToastShown = true
-        sendPlayerError('insufficient_scope', 'Reconnect Spotify to enable playback controls')
-      }
-      result = await player.fetchCurrentlyPlayingLegacy()
-    }
-
-    if (!result.ok) {
-      if (result.reason === 'rate_limited') {
-        // Self-resolving and Spotify tells us when — no point alarming anyone.
-        schedulePoll(result.retryAfterMs ?? 30_000)
-        return
-      }
-
-      // A failing poll used to retry here in silence, forever. Nothing was
-      // ever sent to the renderer, so the panel kept the "Nothing playing /
-      // Play a song on Spotify" it ships with — identical to an idle Spotify.
-      // A user whose account simply cannot reach the API saw a working app
-      // that never showed a song, and had nothing to report but that.
-      pollFailures += 1
-      const permanent = PERMANENT_POLL_FAILURES.has(result.reason)
-      if (
-        pollFailureToast !== result.reason &&
-        (permanent || pollFailures >= POLL_FAILURES_BEFORE_TOAST)
-      ) {
-        pollFailureToast = result.reason
-        sendPlayerError(result.reason, 'Could not read playback state')
-      }
-      // Permanent failures still get re-checked, in case access is granted
-      // or a session is repaired while the app is open — just not every 10s.
-      schedulePoll(permanent ? 60_000 : 10_000)
-      return
-    }
-
-    pollFailures = 0
-    pollFailureToast = null
-
-    const state = result.data
-    if (!state) {
-      if (lastState !== null) {
-        lastState = null
-        sendNowPlaying(null)
-        sendLyrics({ lines: [], status: 'none' })
-      }
-      schedulePoll()
-      return
-    }
-
-    state.liked = state.trackId ? (likedCache.get(state.trackId) ?? null) : null
-    const trackChanged = player.hasTrackChanged(lastState, state)
-    lastState = state
-    sendNowPlaying(state)
-
-    if (trackChanged && state.trackId) {
-      // Both fetches run in the background — lyrics arriving late must
-      // not delay scheduling the next playback poll.
-      if (!scopeLimited) void updateLikedState(state.trackId)
-      refreshLyrics(state).catch((error) => console.error('Lyrics refresh failed:', error))
-    }
-  } catch (error) {
-    console.error('Now-playing poll failed:', error)
-  }
-  schedulePoll()
-}
-
-function startPolling(): void {
-  if (pollTimer) return
-  void pollOnce()
-}
-
-function stopPolling(): void {
-  if (pollTimer) {
-    clearTimeout(pollTimer)
-    pollTimer = null
-  }
-}
-
-// ------------------------------------------------------------------
-// Player commands
-// ------------------------------------------------------------------
-async function runCommand(cmd: PlayerCommand): Promise<ApiResult<null>> {
-  switch (cmd.type) {
-    case 'play':
-      return player.play()
-    case 'pause':
-      return player.pause()
-    case 'next':
-      return player.next()
-    case 'previous':
-      return player.previous()
-    case 'seek':
-      return player.seek(cmd.positionMs)
-    case 'shuffle':
-      return player.setShuffle(cmd.state)
-    case 'repeat':
-      return player.setRepeat(cmd.mode)
-    default:
-      return { ok: false, reason: 'network' }
-  }
-}
-
-async function handlePlayerCommand(cmd: PlayerCommand): Promise<ApiResult<null>> {
-  const result = await runCommand(cmd)
-  if (result.ok) {
-    // Spotify's state is eventually consistent — poll quickly to
-    // reconcile the optimistic UI.
-    schedulePoll(400)
-  }
-  return result
-}
-
-async function handleToggleLike(): Promise<ApiResult<boolean>> {
-  const trackId = lastState?.trackId
-  if (!trackId) return { ok: false, reason: 'no_device' }
-  const current = likedCache.get(trackId) ?? lastState?.liked ?? false
-  const result = current ? await player.removeTrack(trackId) : await player.saveTrack(trackId)
-  if (!result.ok) return result
-  const liked = !current
-  rememberLiked(trackId, liked)
-  if (lastState?.trackId === trackId) lastState = { ...lastState, liked }
-  return { ok: true, data: liked }
-}
-
 // ------------------------------------------------------------------
 // IPC input validation — the renderer is the least-trusted process, so
 // every value crossing into main is checked before use (malformed
 // numbers would corrupt window bounds; unchecked command fields would
-// be interpolated into Spotify API URLs).
+// be sent to the native media helper).
 // ------------------------------------------------------------------
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
@@ -626,31 +322,11 @@ function isValidBounds(
   )
 }
 
-function isValidPlayerCommand(value: unknown): value is PlayerCommand {
-  if (typeof value !== 'object' || value === null) return false
-  const cmd = value as Record<string, unknown>
-  switch (cmd.type) {
-    case 'play':
-    case 'pause':
-    case 'next':
-    case 'previous':
-      return true
-    case 'seek':
-      return isFiniteNumber(cmd.positionMs)
-    case 'shuffle':
-      return typeof cmd.state === 'boolean'
-    case 'repeat':
-      return cmd.mode === 'off' || cmd.mode === 'context' || cmd.mode === 'track'
-    default:
-      return false
-  }
-}
-
 // ------------------------------------------------------------------
 // App lifecycle
 // ------------------------------------------------------------------
 // A long-lived background overlay must not die on a stray async error
-// (e.g. a Spotify fetch rejecting during sleep/resume). Log and survive.
+// (e.g. a media request rejecting during sleep/resume). Log and survive.
 process.on('uncaughtException', (error) => {
   console.error('Uncaught exception in main:', error)
 })
@@ -673,6 +349,9 @@ app.on('web-contents-created', (_event, contents) => {
 // stacked on the desktop. The lock also fixes the pre-existing case of a user
 // launching Linea again when the unpinned panel is buried: the second launch
 // now summons the first instead of spawning a duplicate.
+// Isolated developer/test profiles keep real user preferences and credentials untouched.
+if (!app.isPackaged && process.env.LINEA_TEST_USER_DATA)
+  app.setPath('userData', process.env.LINEA_TEST_USER_DATA)
 const hasInstanceLock = app.requestSingleInstanceLock()
 if (!hasInstanceLock) app.quit()
 
@@ -704,17 +383,36 @@ app.whenReady().then(() => {
     applyMouseIgnore()
   })
 
-  ipcMain.handle(IPC.SPOTIFY_LOGIN, () => loginToSpotify())
-  ipcMain.handle(IPC.SPOTIFY_LOGOUT, () => {
-    logoutFromSpotify()
-  })
-  ipcMain.handle(IPC.SPOTIFY_AUTH_STATE, () => hasAuth())
-
-  ipcMain.handle(IPC.PLAYER_COMMAND, (_event, cmd: unknown): Promise<ApiResult<null>> => {
-    if (!isValidPlayerCommand(cmd)) return Promise.resolve({ ok: false, reason: 'network' })
-    return handlePlayerCommand(cmd)
-  })
-  ipcMain.handle(IPC.TOGGLE_LIKE, () => handleToggleLike())
+  let credentialsRemoved = false
+  const testNoMedia = !app.isPackaged && process.env.LINEA_TEST_NO_MEDIA === '1'
+  const bridge =
+    process.platform === 'win32' && !testNoMedia
+      ? new SmtcBridge(
+          app.isPackaged
+            ? join(process.resourcesPath, 'smtc', 'linea-smtc.exe')
+            : join(__dirname, '../../resources/smtc/linea-smtc.exe')
+        )
+      : null
+  playback = new PlaybackController(
+    bridge,
+    getLyricsForTrack,
+    (snapshot, lyricsOnly) =>
+      sendToRenderer(lyricsOnly ? IPC.LYRICS_UPDATE : IPC.NOW_PLAYING, snapshot),
+    () => {
+      if (credentialsRemoved) return
+      credentialsRemoved = true
+      try {
+        unlinkSync(join(app.getPath('userData'), 'auth.dat'))
+      } catch {
+        /* Obsolete credentials do not block playback. */
+      }
+    }
+  )
+  ipcMain.handle(IPC.GET_PLAYBACK_SNAPSHOT, () => playback!.getSnapshot())
+  ipcMain.handle(
+    IPC.PLAYER_COMMAND,
+    (_event, request: unknown): Promise<ApiResult<null>> => playback!.command(request)
+  )
 
   ipcMain.handle(IPC.SET_PINNED, (_event, pinned: unknown) => {
     const value = pinned === true
@@ -757,7 +455,7 @@ app.whenReady().then(() => {
   })
 
   // Everything the renderer needs is registered above, before the window
-  // exists. The renderer's first paint waits on GET_PREFS/AUTH_STATE — if a
+  // exists. The renderer's first paint waits on GET_PREFS/GET_PLAYBACK_SNAPSHOT — if a
   // later step here throws, an unhandled rejection would skip the remaining
   // registrations and leave the panel blank forever, so those handlers must
   // never sit downstream of fallible setup.
@@ -769,7 +467,8 @@ app.whenReady().then(() => {
   } catch (error) {
     console.error('Tray creation failed — continuing without it:', error)
   }
-  startPolling()
+  playback.start()
+  powerMonitor.on('resume', () => playback?.resume())
   try {
     initAutoUpdater(sendToRenderer)
   } catch (error) {
@@ -805,7 +504,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
-  stopPolling()
+  playback?.stop()
   stopUpdateChecks()
 })
 

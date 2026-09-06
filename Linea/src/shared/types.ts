@@ -1,23 +1,6 @@
+import type { LyricsResult } from './lyrics'
+
 export type RepeatMode = 'off' | 'context' | 'track'
-
-export interface PlayerState {
-  isPlaying: boolean
-  trackId: string | null
-  trackName: string
-  artistName: string
-  albumName: string
-  durationMs: number
-  progressMs: number
-  fetchedAt: number
-  shuffle: boolean
-  repeat: RepeatMode
-  liked: boolean | null
-  deviceActive: boolean
-}
-
-/** Legacy alias — the pre-transport shape was a subset of PlayerState. */
-export type NowPlaying = PlayerState
-
 export type PlayerCommand =
   | { type: 'play' }
   | { type: 'pause' }
@@ -26,30 +9,52 @@ export type PlayerCommand =
   | { type: 'seek'; positionMs: number }
   | { type: 'shuffle'; state: boolean }
   | { type: 'repeat'; mode: RepeatMode }
+export type PlayerCapabilities = Record<PlayerCommand['type'], boolean>
 
+export interface PlayerState {
+  sessionId: string
+  mediaRevision: number
+  isPlaying: boolean
+  trackId: string | null
+  trackName: string
+  artistName: string
+  albumName: string
+  durationMs: number
+  progressMs: number
+  fetchedAt: number
+  playbackRate: number
+  timelineValid: boolean
+  seekMinMs: number
+  seekMaxMs: number
+  capabilities: PlayerCapabilities
+  shuffle: boolean | null
+  repeat: RepeatMode | null
+}
+export type NowPlaying = PlayerState
+export interface PlayerCommandRequest {
+  sessionId: string
+  trackId: string | null
+  mediaRevision: number
+  command: PlayerCommand
+}
 export type PlayerErrorReason =
-  | 'premium_required'
-  | 'no_device'
-  | 'rate_limited'
-  | 'auth_expired'
-  | 'insufficient_scope'
-  /**
-   * The account is not on the Spotify app's allowlist. Spotify apps start in
-   * Development Mode, which admits only accounts the developer has added in
-   * the dashboard; everyone else gets a 403 on every call. Distinct from
-   * `network` because it is permanent for that user — retrying never helps,
-   * and it is the one failure the person hitting it cannot fix themselves.
-   */
-  | 'not_registered'
-  | 'network'
-
-export type ApiResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; reason: PlayerErrorReason; retryAfterMs?: number }
-
+  | 'source_unavailable'
+  | 'session_unavailable'
+  | 'unsupported_command'
+  | 'command_rejected'
+  | 'timeout'
+  | 'invalid_request'
+export type ApiResult<T> = { ok: true; data: T } | { ok: false; reason: PlayerErrorReason }
 export interface PlayerErrorEvent {
   reason: PlayerErrorReason
   message: string
+}
+export type SourceStatus = 'ready' | 'idle' | 'unavailable' | 'unsupported'
+export interface PlaybackSnapshot {
+  revision: number
+  player: PlayerState | null
+  lyrics: LyricsResult
+  sourceStatus: SourceStatus
 }
 
 export type Theme = 'light' | 'dark'

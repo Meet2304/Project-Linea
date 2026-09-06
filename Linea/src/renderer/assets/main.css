@@ -46,7 +46,7 @@ body {
   border: 1px solid transparent;
   border-radius: var(--panel-radius);
   box-shadow: none;
-  /* Drag is handled in JS on the top bar / connect view (not a blanket
+  /* Drag is handled in JS on the top bar (not a blanket
      -webkit-app-region) so lyrics and controls stay clickable/scrollable. */
   transition: opacity var(--dur) var(--ease);
 }
@@ -166,83 +166,6 @@ input:focus-visible {
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-mono);
   text-transform: uppercase;
-}
-
-/* ------------------------------------------------------------
-   Connect (disconnected) view
-   ------------------------------------------------------------ */
-.connect {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  text-align: center;
-  /* Drag handle while disconnected (wired in JS — there's no top bar here). */
-  cursor: grab;
-}
-
-.connect:active {
-  cursor: grabbing;
-}
-
-.wordmark {
-  font-size: 24px;
-  font-weight: var(--w-medium);
-  letter-spacing: -0.03em;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.wordmark::after {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-left: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.connect-tag {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-mono);
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-
-.btn-primary {
-  margin-top: 6px;
-  padding: 8px 20px;
-  border-radius: var(--radius-round);
-  background: var(--accent);
-  color: var(--text-on-accent);
-  font-size: var(--text-sm);
-  font-weight: var(--w-medium);
-  transition:
-    transform var(--dur-fast) var(--ease),
-    filter var(--dur-fast) var(--ease);
-}
-
-.btn-primary:hover {
-  filter: brightness(1.08);
-}
-
-.btn-primary:active {
-  transform: translateY(1px);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.connect-status {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  min-height: 1.4em;
 }
 
 /* ------------------------------------------------------------
@@ -504,13 +427,14 @@ input:focus-visible {
   animation: icon-pin-wiggle 1s ease-in-out forwards;
 }
 
-#btn-close:hover .icon-anim-x-a,
-#btn-close:focus-visible .icon-anim-x-a {
+/* Preserve the close-button animation in the player and idle states. */
+.btn-close:hover .icon-anim-x-a,
+.btn-close:focus-visible .icon-anim-x-a {
   animation: icon-x-spin 0.4s ease-in-out forwards;
 }
 
-#btn-close:hover .icon-anim-x-b,
-#btn-close:focus-visible .icon-anim-x-b {
+.btn-close:hover .icon-anim-x-b,
+.btn-close:focus-visible .icon-anim-x-b {
   animation: icon-x-spin 0.4s ease-in-out 0.1s forwards;
 }
 
@@ -580,10 +504,10 @@ input:focus-visible {
   #btn-settings:focus-visible .icon-anim-settings,
   #btn-pin:hover .icon-anim-pin,
   #btn-pin:focus-visible .icon-anim-pin,
-  #btn-close:hover .icon-anim-x-a,
-  #btn-close:hover .icon-anim-x-b,
-  #btn-close:focus-visible .icon-anim-x-a,
-  #btn-close:focus-visible .icon-anim-x-b,
+  .btn-close:hover .icon-anim-x-a,
+  .btn-close:hover .icon-anim-x-b,
+  .btn-close:focus-visible .icon-anim-x-a,
+  .btn-close:focus-visible .icon-anim-x-b,
   #btn-update:hover .icon-anim-update,
   #btn-update:focus-visible .icon-anim-update {
     animation: none;

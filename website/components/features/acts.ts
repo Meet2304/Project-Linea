@@ -37,7 +37,7 @@ export const ACTS: Act[] = [
     title: 'Never lose your place',
     body: 'Lyrics move with the song. Your line stays centered.',
     points: ['Scroll ahead, tap once to return', 'Timestamps if you want them'],
-    note: 'Lyrics come from lrclib — not every track has them.',
+    note: 'Lyrics come from LRCLIB with a NetEase fallback — not every track has them.',
     palette: PALETTES.iris,
     pattern: PATTERNS.weave
   },
@@ -48,7 +48,7 @@ export const ACTS: Act[] = [
     title: 'Skip a track without leaving',
     body: 'Play, pause and scrub without switching windows.',
     points: ['Sits above every window', 'Click anywhere to pause'],
-    note: 'Control needs Spotify Premium — lyrics work on any plan.',
+    note: 'Windows beta: controls depend on what your player supports.',
     palette: PALETTES.tide,
     pattern: PATTERNS.ripple
   },

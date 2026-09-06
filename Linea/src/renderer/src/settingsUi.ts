@@ -6,7 +6,6 @@ export interface SettingsCallbacks {
   onClickThrough: () => void
   onLyricsSize: (size: LyricsSize) => void
   onShowTimestamps: (show: boolean) => void
-  onDisconnect: () => void
   /** Fires after the now/settings view swaps. */
   onViewChange: () => void
 }
@@ -19,7 +18,6 @@ const themeSwitch = byId<HTMLButtonElement>('set-theme')
 const clickThroughSwitch = byId<HTMLButtonElement>('set-clickthrough')
 const sizeSegs = Array.from(document.querySelectorAll<HTMLButtonElement>('.seg'))
 const timestampsSwitch = byId<HTMLButtonElement>('set-timestamps')
-const disconnectBtn = byId<HTMLButtonElement>('set-disconnect')
 const settingsScroll = byId('settings-scroll')
 const settingsScrollWrap = byId('settings-scroll-wrap')
 
@@ -70,10 +68,6 @@ export function initSettings(cb: SettingsCallbacks): void {
     const show = !isOn(timestampsSwitch)
     setOn(timestampsSwitch, show)
     cb.onShowTimestamps(show)
-  })
-  disconnectBtn.addEventListener('click', () => {
-    closeSettings()
-    cb.onDisconnect()
   })
 
   settingsScroll.addEventListener('scroll', updateSettingsScrollFades, { passive: true })

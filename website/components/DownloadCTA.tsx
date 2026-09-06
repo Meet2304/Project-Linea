@@ -72,7 +72,7 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
             color: 'var(--steel)'
           }}
         >
-          Free and open source. Windows and macOS.
+          Free and open source. Try the new Windows beta.
         </p>
 
         <div
@@ -97,7 +97,8 @@ export default function DownloadCTA({ release }: { release: ReleaseInfo }) {
             color: 'var(--slate)'
           }}
         >
-          Needs Spotify — Premium to control playback, lyrics on any plan.
+          The beta follows compatible Windows media players. Available controls depend on the
+          player.
         </p>
       </div>
 

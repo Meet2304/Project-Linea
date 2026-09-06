@@ -2,13 +2,12 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipcChannels'
 import type {
   ApiResult,
-  PlayerCommand,
+  PlayerCommandRequest,
   PlayerErrorEvent,
-  PlayerState,
+  PlaybackSnapshot,
   Prefs,
   UpdateState
 } from '../shared/types'
-import type { LyricsResult } from '../shared/lyrics'
 
 function subscribe<T>(channel: string): (callback: (data: T) => void) => () => void {
   return (callback) => {
@@ -23,12 +22,10 @@ contextBridge.exposeInMainWorld('linea', {
   getClickThroughState: (): Promise<boolean> => ipcRenderer.invoke(IPC.GET_CLICK_THROUGH_STATE),
   setPointerOverPanel: (over: boolean): Promise<void> =>
     ipcRenderer.invoke(IPC.SET_POINTER_OVER_PANEL, over),
-  login: (): Promise<boolean> => ipcRenderer.invoke(IPC.SPOTIFY_LOGIN),
-  logout: (): Promise<void> => ipcRenderer.invoke(IPC.SPOTIFY_LOGOUT),
-  getAuthState: (): Promise<boolean> => ipcRenderer.invoke(IPC.SPOTIFY_AUTH_STATE),
-  playerCommand: (command: PlayerCommand): Promise<ApiResult<null>> =>
+  getPlaybackSnapshot: (): Promise<PlaybackSnapshot> =>
+    ipcRenderer.invoke(IPC.GET_PLAYBACK_SNAPSHOT),
+  playerCommand: (command: PlayerCommandRequest): Promise<ApiResult<null>> =>
     ipcRenderer.invoke(IPC.PLAYER_COMMAND, command),
-  toggleLike: (): Promise<ApiResult<boolean>> => ipcRenderer.invoke(IPC.TOGGLE_LIKE),
   setPinned: (pinned: boolean): Promise<void> => ipcRenderer.invoke(IPC.SET_PINNED, pinned),
   resizeTo: (height: number): Promise<void> => ipcRenderer.invoke(IPC.RESIZE_WINDOW, height),
   getWindowBounds: (): Promise<{ x: number; y: number; width: number; height: number }> =>
@@ -40,8 +37,8 @@ contextBridge.exposeInMainWorld('linea', {
     height: number
   }): Promise<void> => ipcRenderer.invoke(IPC.SET_WINDOW_BOUNDS, bounds),
   closeWindow: (): Promise<void> => ipcRenderer.invoke(IPC.CLOSE_WINDOW),
-  onNowPlaying: subscribe<PlayerState | null>(IPC.NOW_PLAYING),
-  onLyricsUpdate: subscribe<LyricsResult>(IPC.LYRICS_UPDATE),
+  onNowPlaying: subscribe<PlaybackSnapshot>(IPC.NOW_PLAYING),
+  onLyricsUpdate: subscribe<PlaybackSnapshot>(IPC.LYRICS_UPDATE),
   onClickThroughChanged: subscribe<boolean>(IPC.CLICK_THROUGH_CHANGED),
   onWindowFocusChanged: subscribe<boolean>(IPC.WINDOW_FOCUS_CHANGED),
   onPlayerError: subscribe<PlayerErrorEvent>(IPC.PLAYER_ERROR),

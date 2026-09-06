@@ -1,6 +1,6 @@
 import { icons } from './icons'
 import { formatTime, formatRemaining } from '../../shared/format'
-import type { LyricsSize, PlayerState, Prefs } from '../../shared/types'
+import type { LyricsSize, PlayerState, Prefs, SourceStatus } from '../../shared/types'
 import type { LyricLine, LyricsStatus } from '../../shared/lyrics'
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -19,10 +19,7 @@ export const LYRICS_PRESETS: Record<LyricsSize, { px: number; lines: number }> =
 export const el = {
   app: byId('app'),
   thumb: byId<HTMLCanvasElement>('thumb'),
-  connectView: byId('connect-view'),
   playerView: byId('player-view'),
-  connectBtn: byId<HTMLButtonElement>('connect-btn'),
-  connectStatus: byId('connect-status'),
   trackTitle: byId('track-title'),
   trackArtist: byId('track-artist'),
   seek: byId<HTMLInputElement>('seek'),
@@ -69,15 +66,15 @@ export function reflectPin(pinned: boolean): void {
   el.btnPin.setAttribute('aria-label', pinned ? 'Unpin from top' : 'Pin on top')
 }
 
-export function showView(view: 'connect' | 'player'): void {
-  el.connectView.hidden = view !== 'connect'
-  el.playerView.hidden = view !== 'player'
-}
-
-export function renderHeader(player: PlayerState | null): void {
+export function renderHeader(player: PlayerState | null, status: SourceStatus): void {
   if (!player || !player.trackId) {
     el.trackTitle.textContent = 'Nothing playing'
-    el.trackArtist.textContent = 'Play a song on Spotify'
+    el.trackArtist.textContent =
+      status === 'unsupported'
+        ? 'Windows media sessions only in this version'
+        : status === 'unavailable'
+          ? 'Media access unavailable - reconnecting...'
+          : 'Play a song'
     return
   }
   el.trackTitle.textContent = player.trackName
@@ -87,14 +84,34 @@ export function renderHeader(player: PlayerState | null): void {
 export function renderTransport(player: PlayerState | null): void {
   const playing = player?.isPlaying ?? false
   el.btnPlay.innerHTML = playing ? icons.pause : icons.play
-
+  const action = playing ? 'pause' : 'play'
+  el.btnPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play')
+  for (const [button, command, title] of [
+    [el.btnPlay, action, playing ? 'Pause' : 'Play'],
+    [el.btnPrev, 'previous', 'Previous'],
+    [el.btnNext, 'next', 'Next'],
+    [el.seek, 'seek', 'Seek']
+  ] as const) {
+    const enabled = player?.capabilities[command] ?? false
+    button.disabled = !enabled
+    button.title = enabled
+      ? title
+      : player
+        ? title + ' is unavailable in this player'
+        : 'Start a song in a media player'
+  }
+  el.btnShuffle.hidden = !player?.capabilities.shuffle
+  el.btnRepeat.hidden = !player?.capabilities.repeat
   el.btnShuffle.dataset.active = String(player?.shuffle ?? false)
-
+  el.btnShuffle.setAttribute('aria-pressed', String(player?.shuffle ?? false))
   const repeat = player?.repeat ?? 'off'
   el.btnRepeat.innerHTML = repeat === 'track' ? icons.repeatOne : icons.repeat
   el.btnRepeat.dataset.active = String(repeat !== 'off')
+  el.btnRepeat.setAttribute(
+    'aria-label',
+    'Repeat: ' + (repeat === 'context' ? 'all' : repeat === 'track' ? 'one' : 'off')
+  )
 }
-
 export function renderScrubber(positionMs: number, durationMs: number): void {
   const ratio = durationMs > 0 ? Math.min(1, Math.max(0, positionMs / durationMs)) : 0
   el.seek.value = String(Math.round(ratio * 1000))
