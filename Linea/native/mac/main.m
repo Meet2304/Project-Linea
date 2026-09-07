@@ -12,6 +12,8 @@ static void emit(NSDictionary *value) {
 }
 static NSDictionary *failure(NSString *reason) { return @{@"ok":@NO, @"reason":reason}; }
 static NSArray *targets(void) {
+    // AppKit refreshes running-application properties on the main run loop.
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.001, false);
     NSMutableArray *result = [NSMutableArray array];
     pid_t front = NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier;
     for (NSString *bundle in @[@"com.spotify.client", @"com.apple.Music"]) {
