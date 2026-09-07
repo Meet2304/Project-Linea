@@ -10,7 +10,8 @@ const REASONS = new Set<PlayerErrorReason>([
   'unsupported_command',
   'command_rejected',
   'timeout',
-  'invalid_request'
+  'invalid_request',
+  'permission_required'
 ])
 export class SmtcBridge extends EventEmitter {
   private child: ChildProcessWithoutNullStreams | null = null
@@ -21,6 +22,7 @@ export class SmtcBridge extends EventEmitter {
   private failures = 0
   private restart: ReturnType<typeof setTimeout> | null = null
   private startup: ReturnType<typeof setTimeout> | null = null
+  private authorization: Promise<ApiResult<null>> | null = null
   private pending = new Map<
     number,
     { resolve: (r: ApiResult<unknown>) => void; timer: ReturnType<typeof setTimeout> }
@@ -144,16 +146,17 @@ export class SmtcBridge extends EventEmitter {
       m.ok ? { ok: true, data: m.data } : { ok: false, reason: m.reason as PlayerErrorReason }
     )
   }
-  private request(fields: Record<string, unknown>): Promise<ApiResult<unknown>> {
+  private request(fields: Record<string, unknown>, timeout = 5000): Promise<ApiResult<unknown>> {
     if (!this.child || !this.ready)
       return Promise.resolve({ ok: false, reason: 'source_unavailable' })
     const id = ++this.id
     return new Promise((resolve) => {
-      this.pending.set(id, { resolve, timer: setTimeout(() => this.fail('timeout'), 5000) })
+      this.pending.set(id, { resolve, timer: setTimeout(() => this.fail('timeout'), timeout) })
       this.child?.stdin.write(JSON.stringify({ v: 1, id, ...fields }) + '\n')
     })
   }
   async read(): Promise<ApiResult<MediaSession[]>> {
+    if (this.authorization) await this.authorization
     const epoch = this.epoch
     const result = await this.request({ method: 'snapshot' })
     if (!result.ok) {
@@ -172,7 +175,17 @@ export class SmtcBridge extends EventEmitter {
       return { ok: false, reason: 'source_unavailable' }
     }
   }
+  authorize(): Promise<ApiResult<null>> {
+    if (this.authorization) return this.authorization
+    this.authorization = this.request({ method: 'authorize' }, 60000)
+      .then((r): ApiResult<null> => (r.ok ? { ok: true, data: null } : r))
+      .finally(() => {
+        this.authorization = null
+      })
+    return this.authorization
+  }
   async command(request: PlayerCommandRequest): Promise<ApiResult<null>> {
+    if (this.authorization) await this.authorization
     const prefix = String(this.epoch) + ':'
     if (!request.sessionId.startsWith(prefix)) return { ok: false, reason: 'session_unavailable' }
     const { type, ...args } = request.command

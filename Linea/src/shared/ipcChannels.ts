@@ -1,4 +1,5 @@
 export const IPC = {
+  REQUEST_MEDIA_ACCESS: 'linea:request-media-access',
   TOGGLE_CLICK_THROUGH: 'linea:toggle-click-through',
   GET_CLICK_THROUGH_STATE: 'linea:get-click-through-state',
   /** Renderer reports whether the cursor is over the visible panel (not gutter). */

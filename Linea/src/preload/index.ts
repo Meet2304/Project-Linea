@@ -18,6 +18,8 @@ function subscribe<T>(channel: string): (callback: (data: T) => void) => () => v
 }
 
 contextBridge.exposeInMainWorld('linea', {
+  platform: process.platform,
+  requestMediaAccess: (): Promise<ApiResult<null>> => ipcRenderer.invoke(IPC.REQUEST_MEDIA_ACCESS),
   toggleClickThrough: (): Promise<boolean> => ipcRenderer.invoke(IPC.TOGGLE_CLICK_THROUGH),
   getClickThroughState: (): Promise<boolean> => ipcRenderer.invoke(IPC.GET_CLICK_THROUGH_STATE),
   setPointerOverPanel: (over: boolean): Promise<void> =>

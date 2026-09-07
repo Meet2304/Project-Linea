@@ -1,9 +1,8 @@
 import type { LyricsSize, Prefs, Theme } from '../../shared/types'
-import { el } from './playerUi'
+import { el, showToast } from './playerUi'
 
 export interface SettingsCallbacks {
   onTheme: (theme: Theme) => void
-  onClickThrough: () => void
   onLyricsSize: (size: LyricsSize) => void
   onShowTimestamps: (show: boolean) => void
   /** Fires after the now/settings view swaps. */
@@ -15,7 +14,6 @@ function byId<T extends HTMLElement>(id: string): T {
 }
 
 const themeSwitch = byId<HTMLButtonElement>('set-theme')
-const clickThroughSwitch = byId<HTMLButtonElement>('set-clickthrough')
 const sizeSegs = Array.from(document.querySelectorAll<HTMLButtonElement>('.seg'))
 const timestampsSwitch = byId<HTMLButtonElement>('set-timestamps')
 const settingsScroll = byId('settings-scroll')
@@ -46,16 +44,33 @@ function updateSettingsScrollFades(): void {
 
 export function initSettings(cb: SettingsCallbacks): void {
   onViewChange = cb.onViewChange
+  byId('set-media-access').hidden = window.linea.platform !== 'darwin'
+  const access = byId<HTMLButtonElement>('btn-media-access')
+  access.addEventListener('click', async () => {
+    access.disabled = true
+    try {
+      const result = await window.linea.requestMediaAccess()
+      access.title = result.ok
+        ? 'Access requested for the running player'
+        : 'Enable Linea in System Settings > Privacy & Security > Automation'
+      access.textContent = result.ok ? 'Allow' : 'Retry'
+      if (!result.ok)
+        showToast(
+          result.reason === 'session_unavailable'
+            ? 'Start Spotify or Music before allowing access'
+            : 'Enable Linea in System Settings > Privacy & Security > Automation'
+        )
+    } catch {
+      showToast('Music access could not be requested. Try again.')
+    } finally {
+      access.disabled = false
+    }
+  })
 
   themeSwitch.addEventListener('click', () => {
     const dark = !isOn(themeSwitch)
     setOn(themeSwitch, dark)
     cb.onTheme(dark ? 'dark' : 'light')
-  })
-  clickThroughSwitch.addEventListener('click', () => {
-    // State is owned by main (global shortcut can also toggle it);
-    // reflectClickThrough() applies the authoritative value.
-    cb.onClickThrough()
   })
   sizeSegs.forEach((seg) => {
     seg.addEventListener('click', () => {
@@ -82,10 +97,6 @@ export function reflectPrefs(prefs: Prefs): void {
   setOn(themeSwitch, prefs.theme === 'dark')
   setOn(timestampsSwitch, prefs.showTimestamps)
   reflectSize(prefs.lyricsSize)
-}
-
-export function reflectClickThrough(on: boolean): void {
-  setOn(clickThroughSwitch, on)
 }
 
 function setSettingsOpen(open: boolean): void {

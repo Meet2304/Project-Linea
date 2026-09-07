@@ -194,24 +194,18 @@
                     ></button>
                   </div>
                   <div class="set-row">
-                    <span class="set-label">Click-through</span>
-                    <span class="set-hint mono">Ctrl+Shift+.</span>
-                    <button
-                      id="set-clickthrough"
-                      class="switch"
-                      type="button"
-                      role="switch"
-                      aria-checked="false"
-                      aria-label="Click-through"
-                    ></button>
-                  </div>
-                  <div class="set-row">
                     <span class="set-label">Lyrics size</span>
                     <div class="segmented" role="group" aria-label="Lyrics size">
                       <button class="seg" type="button" data-size="small">S</button>
                       <button class="seg" type="button" data-size="medium">M</button>
                       <button class="seg" type="button" data-size="large">L</button>
                     </div>
+                  </div>
+                  <div id="set-media-access" class="set-row" hidden>
+                    <span class="set-label">Music access</span>
+                    <button id="btn-media-access" class="btn-update-action" type="button">
+                      Allow
+                    </button>
                   </div>
                   <div class="size-preview-box" aria-hidden="true">
                     <span class="size-preview-label">Preview</span>

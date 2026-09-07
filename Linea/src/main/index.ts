@@ -34,7 +34,7 @@ import {
 // window is freely resizable (custom grips in the renderer drive
 // SET_WINDOW_BOUNDS); these are the launch and floor sizes.
 const INITIAL_WIDTH = 600
-const INITIAL_HEIGHT = 250
+const INITIAL_HEIGHT = 206
 const MIN_WIDTH = 372
 const MIN_HEIGHT = 150
 /** Transparent shadow ring around the panel — must match main.css `body` padding. */
@@ -386,11 +386,18 @@ app.whenReady().then(() => {
   let credentialsRemoved = false
   const testNoMedia = !app.isPackaged && process.env.LINEA_TEST_NO_MEDIA === '1'
   const bridge =
-    process.platform === 'win32' && !testNoMedia
+    ['win32', 'darwin'].includes(process.platform) && !testNoMedia
       ? new SmtcBridge(
           app.isPackaged
-            ? join(process.resourcesPath, 'smtc', 'linea-smtc.exe')
-            : join(__dirname, '../../resources/smtc/linea-smtc.exe')
+            ? join(
+                process.resourcesPath,
+                process.platform === 'darwin' ? 'mac/linea-media' : 'smtc/linea-smtc.exe'
+              )
+            : join(
+                __dirname,
+                '../../resources',
+                process.platform === 'darwin' ? 'mac/linea-media' : 'smtc/linea-smtc.exe'
+              )
         )
       : null
   playback = new PlaybackController(
@@ -399,7 +406,7 @@ app.whenReady().then(() => {
     (snapshot, lyricsOnly) =>
       sendToRenderer(lyricsOnly ? IPC.LYRICS_UPDATE : IPC.NOW_PLAYING, snapshot),
     () => {
-      if (credentialsRemoved) return
+      if (process.platform !== 'win32' || credentialsRemoved) return
       credentialsRemoved = true
       try {
         unlinkSync(join(app.getPath('userData'), 'auth.dat'))
@@ -408,6 +415,13 @@ app.whenReady().then(() => {
       }
     }
   )
+  ipcMain.handle(IPC.REQUEST_MEDIA_ACCESS, async (): Promise<ApiResult<null>> => {
+    if (process.platform !== 'darwin' || !bridge)
+      return { ok: false, reason: 'unsupported_command' }
+    const result = await bridge.authorize()
+    void playback?.poll()
+    return result
+  })
   ipcMain.handle(IPC.GET_PLAYBACK_SNAPSHOT, () => playback!.getSnapshot())
   ipcMain.handle(
     IPC.PLAYER_COMMAND,

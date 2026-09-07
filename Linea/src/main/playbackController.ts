@@ -156,7 +156,12 @@ export class PlaybackController {
       if (!result.ok) {
         this.clearTrack()
         this.mapper.reset()
-        this.set({ player: null, lyrics: EMPTY, sourceStatus: 'unavailable' })
+        this.set({
+          player: null,
+          lyrics: EMPTY,
+          sourceStatus:
+            result.reason === 'permission_required' ? 'permission_required' : 'unavailable'
+        })
         return
       }
       const selected = selectSession(result.data, this.snapshot.player?.sessionId)
@@ -214,6 +219,8 @@ export class PlaybackController {
     )
       return { ok: false, reason: 'session_unavailable' }
     const c = request.command
+    if (c.type === 'repeat' && p.repeatModes && !p.repeatModes.includes(c.mode))
+      return { ok: false, reason: 'unsupported_command' }
     if (!p.capabilities[c.type]) return { ok: false, reason: 'unsupported_command' }
     if (c.type === 'seek' && (c.positionMs < p.seekMinMs || c.positionMs > p.seekMaxMs))
       return { ok: false, reason: 'invalid_request' }

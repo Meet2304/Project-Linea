@@ -29,6 +29,7 @@ export interface PlayerState {
   capabilities: PlayerCapabilities
   shuffle: boolean | null
   repeat: RepeatMode | null
+  repeatModes?: RepeatMode[]
 }
 export type NowPlaying = PlayerState
 export interface PlayerCommandRequest {
@@ -44,12 +45,13 @@ export type PlayerErrorReason =
   | 'command_rejected'
   | 'timeout'
   | 'invalid_request'
+  | 'permission_required'
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; reason: PlayerErrorReason }
 export interface PlayerErrorEvent {
   reason: PlayerErrorReason
   message: string
 }
-export type SourceStatus = 'ready' | 'idle' | 'unavailable' | 'unsupported'
+export type SourceStatus = 'ready' | 'idle' | 'unavailable' | 'unsupported' | 'permission_required'
 export interface PlaybackSnapshot {
   revision: number
   player: PlayerState | null

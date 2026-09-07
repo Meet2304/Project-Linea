@@ -18,7 +18,12 @@ describe('release channels', () => {
       allowDowngrade: false
     })
   })
-  it('does not update the unsupported macOS beta stub', () => {
-    expect(updatePolicy('0.2.0-beta.1', 'darwin').enabled).toBe(false)
+  it('offers Mac beta updates through the beta feed', () => {
+    expect(updatePolicy('0.2.0-beta.1', 'darwin')).toEqual({
+      enabled: true,
+      channel: 'beta',
+      allowPrerelease: true,
+      allowDowngrade: false
+    })
   })
 })

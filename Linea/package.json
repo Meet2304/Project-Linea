@@ -1,7 +1,7 @@
 {
   "name": "linea",
-  "version": "0.2.0-beta.1",
-  "description": "Always-on-top lyrics overlay for Windows media sessions",
+  "version": "0.2.0-beta.2",
+  "description": "Always-on-top lyrics overlay for Windows and macOS",
   "main": "./out/main/index.js",
   "author": "Meet2304",
   "license": "MIT",
@@ -31,7 +31,7 @@
     "release": "bun run build && node scripts/package.mjs --publish always",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "build:smtc": "node scripts/build-smtc.mjs"
+    "build:smtc": "node scripts/build-smtc.mjs && node scripts/build-mac.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

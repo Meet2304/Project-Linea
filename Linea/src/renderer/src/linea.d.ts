@@ -8,6 +8,8 @@ import type {
 } from '../../shared/types'
 
 interface LineaAPI {
+  platform: string
+  requestMediaAccess: () => Promise<ApiResult<null>>
   toggleClickThrough: () => Promise<boolean>
   getClickThroughState: () => Promise<boolean>
   setPointerOverPanel: (over: boolean) => Promise<void>

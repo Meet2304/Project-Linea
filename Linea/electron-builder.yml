@@ -29,14 +29,26 @@ files:
   # throws on launch and takes the rest of app-ready down with it.
   - resources/**
   - '!resources/smtc/**'
+  - '!resources/mac/**'
   - package.json
 
 mac:
   target:
     - target: dmg
-      arch: [x64, arm64]
+      arch: [universal]
   category: public.app-category.music
   notarize: false
+  minimumSystemVersion: '12.0'
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  binaries:
+    - Contents/Resources/mac/linea-media
+  extendInfo:
+    NSAppleEventsUsageDescription: Linea reads the current song and controls playback in Spotify and Music to synchronize lyrics.
+  extraResources:
+    - from: resources/mac/
+      to: mac/
+      filter: ['linea-media', 'media.js']
 
 win:
   extraResources:

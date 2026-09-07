@@ -63,3 +63,24 @@ jobs:
 
       - name: Run e2e tests
         run: bun run test:e2e
+
+      - name: Verify Mac helper protocol
+        if: runner.os == 'macOS'
+        run: node scripts/check-mac.mjs
+
+      - name: Package Mac beta for acceptance testing
+        if: runner.os == 'macOS'
+        run: node scripts/package.mjs --mac --publish never
+
+      - name: Launch packaged Mac app
+        if: runner.os == 'macOS'
+        run: node scripts/check-mac-app.mjs
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'macOS'
+        with:
+          name: linea-mac-beta
+          path: |
+            Linea/dist/*.dmg
+            Linea/dist/beta-mac.yml
+          if-no-files-found: error

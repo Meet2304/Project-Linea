@@ -9,9 +9,9 @@ export function updatePolicy(
 } {
   const beta = /-beta\.\d+$/.test(version)
   return {
-    enabled: !beta || platform === 'win32',
+    enabled: !beta || platform === 'win32' || platform === 'darwin',
     channel: beta ? 'beta' : 'latest',
-    allowPrerelease: beta && platform === 'win32',
+    allowPrerelease: beta && (platform === 'win32' || platform === 'darwin'),
     allowDowngrade: false
   }
 }

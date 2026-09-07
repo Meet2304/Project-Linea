@@ -15,6 +15,7 @@ export interface MediaSession {
   rate: number | null
   shuffle: boolean | null
   repeat: RepeatMode | null
+  repeatModes?: RepeatMode[]
   controls: Record<
     'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'seek' | 'shuffle' | 'repeat',
     boolean
@@ -47,6 +48,10 @@ export function parseSessions(value: unknown): MediaSession[] {
       !(s.rate === null || finite(s.rate)) ||
       !(s.shuffle === null || typeof s.shuffle === 'boolean') ||
       !(s.repeat === null || ['off', 'context', 'track'].includes(String(s.repeat))) ||
+      (s.repeatModes !== undefined &&
+        (!Array.isArray(s.repeatModes) ||
+          s.repeatModes.length === 0 ||
+          !s.repeatModes.every((m) => ['off', 'context', 'track'].includes(m)))) ||
       !record(s.controls) ||
       !['play', 'pause', 'toggle', 'next', 'previous', 'seek', 'shuffle', 'repeat'].every(
         (k) => typeof (s.controls as Record<string, unknown>)[k] === 'boolean'
@@ -156,6 +161,7 @@ export class SessionMapper {
       seekMaxMs,
       shuffle: s.shuffle,
       repeat: s.repeat,
+      ...(s.repeatModes ? { repeatModes: s.repeatModes } : {}),
       capabilities: {
         play: c.play || c.toggle,
         pause: c.pause || c.toggle,

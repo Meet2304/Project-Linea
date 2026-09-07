@@ -5,6 +5,7 @@
 - Node.js and Bun.
 - On Windows: Visual Studio 2022 or Build Tools 2022 with Desktop development
   with C++, MSVC v143 x64 tools, and a Windows 10/11 SDK (10.0.17763 or newer).
+- On macOS: Xcode Command Line Tools (xcode-select --install).
 - End users need only the installer. No .NET or separate Visual C++ runtime is
   required by the statically linked helper.
 
@@ -19,12 +20,13 @@ bun run build:win
 ```
 
 Windows development and build commands compile the helper automatically.
-The installer is written to dist/Linea-0.2.0-beta.1-setup.exe.
+The installer is written to dist/Linea-0.2.0-beta.2-setup.exe.
 To inspect an unpacked build, run bun run build:unpack.
 
-On macOS, bun run build and bun run build:mac skip the native build. The overlay
-opens with a Windows-only message; macOS playback is not implemented. Linux is
-not a release target for this beta.
+On macOS, bun run build and bun run build:mac compile the universal Automation
+helper. The DMG supports Intel and Apple Silicon Macs running macOS 12+.
+See [Mac setup and acceptance](../documentation/linea-macos-beta.md). Linux is not
+a release target for this beta.
 
 ## Checks
 
@@ -71,8 +73,8 @@ native output is ignored by Git.
 
 ## Release policy
 
-Version/tag: 0.2.0-beta.1 / v0.2.0-beta.1. Beta tags produce a Windows-only GitHub
-prerelease with beta.yml; they are never marked latest. The package wrapper
+Version/tag: 0.2.0-beta.2 / v0.2.0-beta.2. Beta tags produce a Windows and macOS GitHub
+prerelease with beta.yml and beta-mac.yml; they are never marked latest. The package wrapper
 explicitly selects the update channel, and afterPack rejects a mismatch. Stable tags retain the
 separate stable workflow. Do not promote this beta to stable until outstanding
 platform and installer acceptance checks are resolved.
