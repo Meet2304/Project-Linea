@@ -36,6 +36,13 @@ export interface FieldOptions {
   /** Chladni/radial modal numbers. Derived from `density` when omitted. */
   n?: number
   m?: number
+  /**
+   * An offset into the plate's own clock, in the same units as `speed * t`.
+   * Raising it sweeps the field forward; it eases rather than jumping, and
+   * it is the only retune that reaches ripple, flow and lattice, none of
+   * which read the modal numbers. See setPattern.
+   */
+  drift?: number
   /** Pointer influence strength; 0 disables it. */
   ptAmt?: number
   /**
@@ -77,15 +84,22 @@ export interface FieldInstance {
   canvas: HTMLCanvasElement
   setColors: (c1: string, c2?: string | null) => void
   /**
-   * Retune the plate without rebuilding it.
+   * Retune the plate without rebuilding it, and without resetting it.
    *
-   * Remounting to change a pattern tears the canvas out and puts a new one
-   * back, which blinks — fine when a whole section changes, useless for the
-   * changelog's corner plate, where the pattern answers the pointer and a
-   * blink per hover would read as a glitch. The phases are reseeded with the
-   * numbers so the plate genuinely re-forms rather than sliding.
+   * Everything here is a *target*: the modal numbers ease toward `n`/`m` and
+   * the plate's clock eases toward `drift`, so a retune is a sweep the field
+   * travels through rather than a new field appearing.
+   *
+   * This used to reseed the phases, which is what made a plate visibly start
+   * over on every hover. Phases are fixed at mount now and never touched
+   * again — reseeding them is a discontinuity by definition, there is no
+   * amount of easing that hides it.
+   *
+   * `drift` exists because `n`/`m` only reach chladni and radial. ripple,
+   * flow and lattice read neither, so shifting the clock is the only way to
+   * move them at all, and it moves every style for free.
    */
-  setPattern: (p: { style?: FieldStyle; n?: number; m?: number; seed?: number }) => void
+  setPattern: (p: { style?: FieldStyle; n?: number; m?: number; drift?: number }) => void
   pause: () => void
   resume: () => void
   destroy: () => void
@@ -168,9 +182,19 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
     }
   }
 
-  let P = phasesFor(seed)
+  // Fixed at mount. Nothing reseeds these — see setPattern.
+  const P = phasesFor(seed)
+
+  // Current values, and where they are heading. render() walks one toward
+  // the other every frame, so a retune is a sweep and never a jump.
   let n0 = opts.n ?? 2 + (density % 5)
   let m0 = opts.m ?? 3 + ((density + 2) % 6)
+  let nTarget = n0
+  let mTarget = m0
+  // Seeded from the option so a remount at a non-zero drift comes back where
+  // it was rather than sweeping home from zero.
+  let drift = opts.drift ?? 0
+  let driftTarget = drift
   const band = 0.06 + dither * 0.9
 
   if (getComputedStyle(el).position === 'static') el.style.position = 'relative'
@@ -281,7 +305,10 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
     // Two clocks. `t` drives the plate — turn it up and the field feels
     // like something is playing. `tp` drives the ring under the cursor and
     // stays slow, so the interaction reads as a swell rather than a strobe.
-    const t = elapsed * speed
+    // `drift` is the retune: a smoothly eased offset into the plate's own
+    // clock, so a hover sweeps the field forward instead of restarting it.
+    drift += (driftTarget - drift) * 0.045
+    const t = elapsed * speed + drift
     const tp = elapsed * ringSpeed
 
     // Ease pointer position and influence toward their targets. The
@@ -291,6 +318,12 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
     pY += (ptTargetY - pY) * 0.06
     pAmt += (ptActive - pAmt) * 0.022
     const amt = pAmt * ptAmt
+
+    // Slower than the pointer easing above: a plate re-forming into a new
+    // mode should read as the figure reorganising itself, not as a slider
+    // being dragged.
+    n0 += (nTarget - n0) * 0.035
+    m0 += (mTarget - m0) * 0.035
 
     const scaleY = rH > rW ? rH / rW : 1
     const PX = (pX * 2 - 1) * scale * aspect
@@ -485,14 +518,13 @@ export function mountField(el: HTMLElement, opts: FieldOptions = {}): FieldInsta
       // Repaint immediately so a palette change lands even while parked.
       if (!running) drawOnce()
     },
-    setPattern(p: { style?: FieldStyle; n?: number; m?: number; seed?: number }) {
+    setPattern(p: { style?: FieldStyle; n?: number; m?: number; drift?: number }) {
+      // Style is the one thing that cannot be eased — the styles are separate
+      // formulas, not points on a scale. Nothing changes it after mount.
       if (p.style) style = p.style
-      if (p.n !== undefined) n0 = p.n
-      if (p.m !== undefined) m0 = p.m
-      // A new seed means a new set of phases, which is what makes ripple and
-      // flow — the two styles with no modal numbers to change — actually look
-      // like a different plate rather than the same one still running.
-      if (p.seed !== undefined) P = phasesFor(p.seed)
+      if (p.n !== undefined) nTarget = p.n
+      if (p.m !== undefined) mTarget = p.m
+      if (p.drift !== undefined) driftTarget = p.drift
       if (!running) drawOnce()
     },
     pause() {

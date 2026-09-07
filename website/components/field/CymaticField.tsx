@@ -67,16 +67,20 @@ export default function CymaticField({
 
   // Pattern is applied imperatively for the same reason color is: the
   // changelog's corner plate retunes on hover, and rebuilding the canvas for
-  // that blinks. `scale` is not here — it changes the render geometry, and
-  // nothing animates it, so it stays a remount above.
+  // that blinks. Everything passed here eases toward its new value inside the
+  // engine, so a retune never restarts the field.
+  //
+  // `scale` and `seed` are absent on purpose. Scale changes the render
+  // geometry, and seed fixes the phases at mount — easing either is
+  // meaningless, so both stay remount-only above.
   useEffect(() => {
     instRef.current?.setPattern({
       style: opts.style,
       n: opts.n,
       m: opts.m,
-      seed: opts.seed
+      drift: opts.drift
     })
-  }, [opts.style, opts.n, opts.m, opts.seed])
+  }, [opts.style, opts.n, opts.m, opts.drift])
 
   useEffect(() => {
     const inst = instRef.current
