@@ -16,7 +16,7 @@ jobs:
         run: |
           if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]]; then
             echo 'beta=true' >> "$GITHUB_OUTPUT"
-            echo 'matrix={"include":[{"os":"windows-latest","name":"Windows"}]}' >> "$GITHUB_OUTPUT"
+            echo 'matrix={"include":[{"os":"windows-latest","name":"Windows"},{"os":"macos-latest","name":"macOS"}]}' >> "$GITHUB_OUTPUT"
           elif [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo 'beta=false' >> "$GITHUB_OUTPUT"
             echo 'matrix={"include":[{"os":"windows-latest","name":"Windows"},{"os":"macos-latest","name":"macOS"}]}' >> "$GITHUB_OUTPUT"
@@ -68,8 +68,9 @@ jobs:
         if: needs.prepare.outputs.beta == 'true'
         shell: pwsh
         run: |
-          if (-not (Test-Path -LiteralPath 'dist/beta.yml')) { throw 'Missing beta update manifest' }
-          if (Test-Path -LiteralPath 'dist/latest.yml') { throw 'Beta must not generate stable update metadata' }
+          $manifest = if ($IsMacOS) { 'dist/beta-mac.yml' } else { 'dist/beta.yml' }
+          if (-not (Test-Path -LiteralPath $manifest)) { throw 'Missing beta update manifest' }
+          if ((Test-Path -LiteralPath 'dist/latest.yml') -or (Test-Path -LiteralPath 'dist/latest-mac.yml')) { throw 'Beta must not generate stable update metadata' }
   publish:
     name: Publish completed release
     needs: [prepare, build]

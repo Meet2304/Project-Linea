@@ -11,8 +11,8 @@ function byId<T extends HTMLElement>(id: string): T {
 
 /** Each size preset pairs a font size with a default visible-line count. */
 export const LYRICS_PRESETS: Record<LyricsSize, { px: number; lines: number }> = {
-  small: { px: 13, lines: 6 },
-  medium: { px: 15, lines: 5 },
+  small: { px: 13, lines: 3 },
+  medium: { px: 15, lines: 3 },
   large: { px: 18, lines: 3 }
 }
 
@@ -71,10 +71,14 @@ export function renderHeader(player: PlayerState | null, status: SourceStatus): 
     el.trackTitle.textContent = 'Nothing playing'
     el.trackArtist.textContent =
       status === 'unsupported'
-        ? 'Windows media sessions only in this version'
-        : status === 'unavailable'
-          ? 'Media access unavailable - reconnecting...'
-          : 'Play a song'
+        ? 'Playback is supported on Windows and macOS'
+        : status === 'permission_required'
+          ? 'Open Settings > Music access to allow your player'
+          : status === 'unavailable'
+            ? 'Media access unavailable - reconnecting...'
+            : window.linea.platform === 'darwin'
+              ? 'Play a song in Spotify or Music'
+              : 'Play a song'
     return
   }
   el.trackTitle.textContent = player.trackName

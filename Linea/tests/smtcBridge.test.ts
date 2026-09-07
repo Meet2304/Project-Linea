@@ -119,3 +119,31 @@ describe('SMTC process protocol', () => {
     expect(await read).toEqual({ ok: false, reason: 'source_unavailable' })
   })
 })
+
+it('keeps permission denial distinct from a crashed helper', async () => {
+  send({ v: 1, type: 'ready' })
+  let id = 0
+  children[0].stdin.on('data', (c) => {
+    id = JSON.parse(c.toString()).id
+  })
+  const read = bridge.read()
+  send({ v: 1, type: 'response', id, ok: false, reason: 'permission_required' })
+  expect(await read).toEqual({ ok: false, reason: 'permission_required' })
+  expect(children[0].kill).not.toHaveBeenCalled()
+})
+it('holds reconciliation during an explicit Mac permission prompt', async () => {
+  send({ v: 1, type: 'ready' })
+  const requests: { id: number; method: string }[] = []
+  children[0].stdin.on('data', (c) => requests.push(JSON.parse(c.toString())))
+  const authorize = bridge.authorize()
+  const read = bridge.read()
+  await vi.advanceTimersByTimeAsync(10000)
+  expect(children[0].kill).not.toHaveBeenCalled()
+  expect(requests.map((r) => r.method)).toEqual(['authorize'])
+  send({ v: 1, type: 'response', id: requests[0].id, ok: true, data: null })
+  await authorize
+  await vi.advanceTimersByTimeAsync(0)
+  expect(requests[1].method).toBe('snapshot')
+  send({ v: 1, type: 'response', id: requests[1].id, ok: true, data: { sessions: [] } })
+  expect(await read).toEqual({ ok: true, data: [] })
+})

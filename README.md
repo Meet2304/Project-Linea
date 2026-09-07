@@ -1,29 +1,29 @@
 # Linea
 
-A small, always-on-top lyrics overlay. The **0.2.0 Windows beta** follows local
-Windows media sessions instead of Spotify's Web API.
+A small, always-on-top lyrics overlay. The **0.2.0 beta** follows local playback instead of Spotify's Web API. Windows uses
+media sessions; macOS supports Spotify desktop and Apple Music through Automation.
 
 Play a song in Spotify desktop or another compatible Windows player. Linea shows
 its title and artist, finds synced lyrics through LRCLIB with a NetEase fallback,
 and follows the player's timeline. No Spotify login, developer registration,
 Premium check, or additional runtime installation is required by Linea.
 
-## Windows beta
+## Windows and macOS beta
 
-Windows 10 version 1809 or newer / Windows 11, x64.
+Windows 10 version 1809 or newer / Windows 11, x64. macOS 12 or newer,
+Intel and Apple Silicon. [Mac setup and limitations](./documentation/linea-macos-beta.md).
 Install the beta executable from the
-[0.2.0-beta.1 release](https://github.com/Meet2304/Project-Linea/releases/tag/v0.2.0-beta.1)
+[0.2.0-beta.2 release](https://github.com/Meet2304/Project-Linea/releases/tag/v0.2.0-beta.2)
 once published. During development, build it using the instructions in
 [Linea/README.md](./Linea/README.md).
 
 The existing stable downloads still use the legacy Spotify integration and its
 account restrictions. The beta is a separate prerelease; stable installations
-will not automatically receive it. macOS playback is not included in this beta;
-a locally built Mac version opens with an explicit unsupported message.
+will not automatically receive it. Mac users authorize their running player through Settings > Music access.
 
 ## Features
 
-- Synced, scrollable lyrics, optional timestamps, and a jump-to-current-line button.
+- Synced, scrollable lyrics with three lines by default, optional timestamps, and a jump-to-current-line button.
 - Play/pause, next/previous and seek where the selected media session supports them.
 - Shuffle and repeat when the player exposes both the controls and their state.
 - Music sessions take priority over videos; no manual session picker in this beta.

@@ -39,13 +39,7 @@ import {
   showToast
 } from './playerUi'
 import { LyricScheduler } from './scheduler'
-import {
-  initSettings,
-  reflectPrefs,
-  reflectClickThrough,
-  toggleSettings,
-  openSettings
-} from './settingsUi'
+import { initSettings, reflectPrefs, toggleSettings, openSettings } from './settingsUi'
 import { initUpdateUi, reflectUpdateState } from './updateUi'
 
 // ------------------------------------------------------------------
@@ -573,7 +567,8 @@ function toastForReason(reason: PlayerErrorReason): void {
     unsupported_command: 'This player does not support that control',
     command_rejected: 'The player could not perform that action',
     timeout: 'The player took too long to respond',
-    invalid_request: 'That playback action is not available'
+    invalid_request: 'That playback action is not available',
+    permission_required: 'Allow Linea in System Settings > Privacy & Security > Automation'
   }
   showToast(messages[reason])
 }
@@ -652,7 +647,8 @@ function wireTransport(): void {
   })
   el.btnRepeat.addEventListener('click', () => {
     if (!player || player.repeat === null) return
-    const mode = player.repeat === 'off' ? 'context' : player.repeat === 'context' ? 'track' : 'off'
+    const modes = player.repeatModes ?? (['off', 'context', 'track'] as const)
+    const mode = modes[(modes.indexOf(player.repeat) + 1) % modes.length]
     void sendCommand({ type: 'repeat', mode })
   })
 
@@ -814,7 +810,6 @@ async function init(): Promise<void> {
 
   initSettings({
     onTheme: applyTheme,
-    onClickThrough: () => void window.linea.toggleClickThrough(),
     onLyricsSize: applyLyricsSize,
     onShowTimestamps: (show) => {
       queuePrefs({ showTimestamps: show })
@@ -827,7 +822,6 @@ async function init(): Promise<void> {
   window.linea.onLyricsUpdate(applySnapshot)
 
   window.linea.onClickThroughChanged((on) => {
-    reflectClickThrough(on)
     el.app.dataset.clickthrough = String(on)
   })
 
@@ -870,13 +864,13 @@ async function init(): Promise<void> {
   reflectPrefs(prefs)
   reflectPin(prefs.pinned)
   setLyricsVisible()
-  reflectClickThrough(clickThrough)
   el.app.dataset.clickthrough = String(clickThrough)
   setWindowFocused(document.hasFocus())
   const hovering = el.app.matches(':hover')
   setPointerInside(hovering)
   void window.linea.setPointerOverPanel(hovering)
   el.playerView.hidden = false
+  if (!prefs.windowBounds) await window.linea.resizeTo(presetWindowHeight(prefs.lyricsSize))
   try {
     applySnapshot(await window.linea.getPlaybackSnapshot())
   } catch {

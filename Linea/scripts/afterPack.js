@@ -25,6 +25,17 @@ module.exports = async function afterPack(context) {
   if (context.packager.config.publish?.channel !== expectedChannel) {
     throw new Error('Use the package scripts so update metadata matches the release channel')
   }
+  if (context.electronPlatformName === 'darwin') {
+    const resources = join(
+      context.appOutDir,
+      context.packager.appInfo.productFilename + '.app',
+      'Contents',
+      'Resources',
+      'mac'
+    )
+    await stat(join(resources, 'linea-media'))
+    await stat(join(resources, 'media.js'))
+  }
   if (context.electronPlatformName !== 'win32') return
 
   await stat(join(context.appOutDir, 'resources', 'smtc', 'linea-smtc.exe'))

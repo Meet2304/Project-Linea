@@ -13,3 +13,5 @@ native/smtc/build/
 resources/smtc/
 
 output/playwright/
+
+resources/mac/

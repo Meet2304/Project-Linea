@@ -112,7 +112,12 @@ export function checkForUpdate(): void {
 /** Windows installs and relaunches; macOS opens the release page. */
 export function installUpdate(): void {
   if (state.status === 'manual') {
-    void shell.openExternal(RELEASES_URL)
+    void shell.openExternal(
+      policy.allowPrerelease
+        ? 'https://github.com/Meet2304/Project-Linea/releases/tag/v' +
+            encodeURIComponent(state.next)
+        : RELEASES_URL
+    )
     return
   }
   if (state.status !== 'ready') return
