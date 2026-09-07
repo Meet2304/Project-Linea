@@ -66,13 +66,10 @@ const REPO = 'https://github.com/Meet2304/Project-Linea/releases/tag/'
 
 export const RELEASES: Release[] = [
   {
-    // Displayed as 0.2.0 — `version` is the poster-sized ghost numeral behind
-    // the letter, and the full pre-release tag does not fit it. The tag is
-    // what gets signed at the bottom, and it stays exact.
     version: '0.2.0',
-    tag: 'v0.2.0-beta.1',
-    date: '2026-09-06',
-    dateLong: '6 September 2026',
+    tag: 'v0.2.0',
+    date: '2026-09-07',
+    dateLong: '7 September 2026',
     title: 'Windows media sessions',
     kind: 'feature',
     accent: 'var(--citrine)',
@@ -97,13 +94,10 @@ export const RELEASES: Release[] = [
       },
       {
         h: 'Windows first',
-        d: 'A Windows beta. macOS opens and says the source is not there yet rather than pretending.'
+        d: 'Windows release. Mac development continues separately; the legacy Mac download remains available.'
       }
     ],
-    // Points at the releases index, not the tag: v0.2.0-beta.1 is built but
-    // not published, and a tag URL would 404. Swap it for REPO + tag the day
-    // it ships.
-    url: 'https://github.com/Meet2304/Project-Linea/releases'
+    url: REPO + 'v0.2.0'
   },
 
   {

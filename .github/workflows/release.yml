@@ -10,6 +10,7 @@ jobs:
       beta: ${{ steps.targets.outputs.beta }}
       matrix: ${{ steps.targets.outputs.matrix }}
     steps:
+      - uses: actions/checkout@v4
       - id: targets
         env:
           TAG: ${{ github.ref_name }}
@@ -19,7 +20,7 @@ jobs:
             echo 'matrix={"include":[{"os":"windows-latest","name":"Windows"}]}' >> "$GITHUB_OUTPUT"
           elif [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo 'beta=false' >> "$GITHUB_OUTPUT"
-            echo 'matrix={"include":[{"os":"windows-latest","name":"Windows"},{"os":"macos-latest","name":"macOS"}]}' >> "$GITHUB_OUTPUT"
+            echo 'matrix={"include":[{"os":"windows-latest","name":"Windows"}]}' >> "$GITHUB_OUTPUT"
           else
             echo "::error::Unsupported release tag: $TAG"
             exit 1
@@ -30,11 +31,13 @@ jobs:
           TAG: ${{ github.ref_name }}
           BETA: ${{ steps.targets.outputs.beta }}
         run: |
+          notes=(--generate-notes)
+          if [ -f "documentation/releases/$TAG.md" ]; then notes=(--notes-file "documentation/releases/$TAG.md"); fi
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             if [ "$BETA" = true ]; then
-              gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --prerelease --latest=false --title "$TAG" --notes ""
+              gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --prerelease --latest=false --title "$TAG" "${notes[@]}"
             else
-              gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "$TAG" --notes ""
+              gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "$TAG" "${notes[@]}"
             fi
           fi
   build:
@@ -64,6 +67,8 @@ jobs:
         run: bun run release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Verify overlay interactions
+        run: bun run test:e2e
       - name: Verify beta update manifest
         if: needs.prepare.outputs.beta == 'true'
         shell: pwsh
@@ -75,6 +80,13 @@ jobs:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Keep existing Mac users on the legacy release
+        if: needs.prepare.outputs.beta == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" .github/legacy-mac/latest-mac.yml --repo "$GITHUB_REPOSITORY" --clobber
       - name: Preserve stable feed for beta releases
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

@@ -71,7 +71,7 @@ export default function DownloadCTA() {
             color: 'var(--steel)'
           }}
         >
-          Free and open source. Try the new Windows beta.
+          Free and open source. Available for Windows.
         </p>
 
         <div
@@ -96,8 +96,7 @@ export default function DownloadCTA() {
             color: 'var(--slate)'
           }}
         >
-          The beta follows compatible Windows media players. Available controls depend on the
-          player.
+          Linea follows compatible Windows media players. Mac downloads retain the legacy Spotify integration.
         </p>
       </div>
 

@@ -34,7 +34,7 @@ import {
 // window is freely resizable (custom grips in the renderer drive
 // SET_WINDOW_BOUNDS); these are the launch and floor sizes.
 const INITIAL_WIDTH = 600
-const INITIAL_HEIGHT = 250
+const INITIAL_HEIGHT = 206
 const MIN_WIDTH = 372
 const MIN_HEIGHT = 150
 /** Transparent shadow ring around the panel — must match main.css `body` padding. */

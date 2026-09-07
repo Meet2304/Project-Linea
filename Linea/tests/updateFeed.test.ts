@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, it, expect, vi } from 'vitest'
 import type { RequestOptions } from 'node:http'
 import { NsisUpdater } from 'electron-updater/out/NsisUpdater'
@@ -84,4 +85,48 @@ describe('installed updater against a simulated GitHub release feed', () => {
     expect(await instance.isUpdateAvailable({ version: '0.2.0-beta.1', files: [] })).toBe(false)
     expect(await instance.isUpdateAvailable({ version: '0.1.7', files: [] })).toBe(false)
   })
+
+  for (const platform of ['win32', 'darwin'] as const) {
+    it(
+      'promotes Windows beta to stable while preserving the legacy Mac version: ' + platform,
+      async () => {
+        const instance = updater(
+          platform === 'win32' ? '0.2.0-beta.1' : '0.1.6',
+          platform === 'win32'
+        )
+        const request = vi.fn(async (options: RequestOptions): Promise<string> => {
+          const path = String(options.path)
+          if (path.endsWith('.atom'))
+            return '<feed><entry><title>0.2.0</title><link href="https://github.com/owner/repo/releases/tag/v0.2.0"/><content>Windows release</content></entry></feed>'
+          if (path.endsWith('/latest')) return '{"tag_name":"v0.2.0"}'
+          if (path.endsWith('/latest-mac.yml'))
+            return readFileSync('../.github/legacy-mac/latest-mac.yml', 'utf8')
+          if (path.endsWith('/beta.yml')) throw new Error('Stable release has no beta manifest')
+          if (path.endsWith('/latest.yml'))
+            return JSON.stringify({
+              version: '0.2.0',
+              files: [{ url: 'setup.exe', sha512: 'fixture', size: 1 }]
+            })
+          throw new Error('Unexpected request: ' + path)
+        })
+        const provider = new GitHubProvider(
+          { provider: 'github', owner: 'owner', repo: 'repo' },
+          instance,
+          {
+            platform,
+            isUseMultipleRangeRequest: false,
+            executor: { request } as unknown as ProviderRuntimeOptions['executor']
+          }
+        )
+        const info = await provider.getLatestVersion()
+        expect(info.version).toBe(platform === 'win32' ? '0.2.0' : '0.1.6')
+        const check = instance as unknown as {
+          isUpdateAvailable(info: typeof info): Promise<boolean>
+        }
+        expect(await check.isUpdateAvailable(info)).toBe(platform === 'win32')
+        if (platform === 'win32')
+          expect(request.mock.calls.some(([r]) => String(r.path).endsWith('/beta.yml'))).toBe(true)
+      }
+    )
+  }
 })

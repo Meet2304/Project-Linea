@@ -1,6 +1,6 @@
 # Linea
 
-A small, always-on-top lyrics overlay. The **0.2.0 Windows beta** follows local
+A small, always-on-top lyrics overlay. The **0.2.0 Windows release** follows local
 Windows media sessions instead of Spotify's Web API.
 
 Play a song in Spotify desktop or another compatible Windows player. Linea shows
@@ -8,29 +8,30 @@ its title and artist, finds synced lyrics through LRCLIB with a NetEase fallback
 and follows the player's timeline. No Spotify login, developer registration,
 Premium check, or additional runtime installation is required by Linea.
 
-## Windows beta
+## Windows
 
 Windows 10 version 1809 or newer / Windows 11, x64.
-Install the beta executable from the
-[0.2.0-beta.1 release](https://github.com/Meet2304/Project-Linea/releases/tag/v0.2.0-beta.1)
-once published. During development, build it using the instructions in
+Install the Windows executable from the
+[0.2.0 release](https://github.com/Meet2304/Project-Linea/releases/tag/v0.2.0).
+For development, build it using the instructions in
 [Linea/README.md](./Linea/README.md).
 
-The existing stable downloads still use the legacy Spotify integration and its
-account restrictions. The beta is a separate prerelease; stable installations
-will not automatically receive it. macOS playback is not included in this beta;
-a locally built Mac version opens with an explicit unsupported message.
+Windows stable and beta installations can update to 0.2.0. There is no new Mac
+build in this release. The legacy [Mac 0.1.6 download](https://github.com/Meet2304/Project-Linea/releases/download/v0.1.6/Linea-0.1.6.dmg)
+retains the old Spotify integration and its account restrictions. Mac playback
+development continues separately.
 
 ## Features
 
 - Synced, scrollable lyrics, optional timestamps, and a jump-to-current-line button.
 - Play/pause, next/previous and seek where the selected media session supports them.
 - Shuffle and repeat when the player exposes both the controls and their state.
-- Music sessions take priority over videos; no manual session picker in this beta.
+- Music sessions take priority over videos; no manual session picker in this release.
+- Three lyric lines by default at every text size; saved window sizes are preserved.
 - Resizable overlay, themes, lyric sizes, opacity preferences, pinning and click-through.
 - Per-track cymatic artwork, tray access, and saved window placement.
 - Toggle click-through with Ctrl+Shift+. and summon Linea with Ctrl+Shift+L.
-- Local lyric cache, provider fallback, and Windows beta updates.
+- Local lyric cache, provider fallback, and Windows automatic updates.
 
 Missing controls are disabled or hidden. A player without a usable timeline can
 still show metadata and matched lyrics, but Linea does not invent progress or
