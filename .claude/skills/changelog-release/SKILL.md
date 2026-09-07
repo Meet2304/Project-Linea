@@ -94,9 +94,23 @@ pausing.
 ### 5. Check the colour and the pattern
 
 `assignSongVisuals()` in `song.ts` guarantees no two sections share a jewel or
-a plate figure. It works by walking a song's seed forward until it finds a
-free pair, oldest release first. You do not choose a colour — but you do have
-to confirm it found one.
+a plate. It walks a song's seed forward until it finds a free pair, oldest
+release first. You do not choose a colour — but you do have to confirm it
+found one.
+
+The walk has **two tiers**, and the reason matters:
+
+1. Prefer a jewel *and a style* nobody is wearing. While styles remain, this
+   is the only tier that runs and every plate is a different shape.
+2. Only once the styles are gone, allow a repeated style — but only a
+   **modal** one (`chladni`, `radial`), with modal numbers nobody has used.
+
+Tier 2 is restricted because **only `chladni` and `radial` actually read `n`
+and `m`** in `cymatics-live.ts`. `ripple`, `flow` and `lattice` ignore them
+entirely. So `lattice:2:6` and `lattice:5:6` are different signatures that
+render as *the same plate*. Uniqueness was briefly checked on `style:n:m`
+alone, and it put two matching lattices and two matching flows on the page.
+Never treat the signature as sufficient on its own.
 
 Two ceilings to know about:
 
@@ -118,6 +132,9 @@ curl -s http://localhost:3999/changelog | grep -o '\-\-accent-c:var(--[a-z]*)' |
 
 Every count must be `1`. A count of `2` means two screens are wearing the same
 colour — fix it before shipping.
+
+The style is drawn to a canvas and never reaches the HTML, so it cannot be
+grepped. Check it by eye, or by logging `assignSongVisuals(RELEASES)`.
 
 ### 6. Confirm the opener updated itself
 
@@ -172,5 +189,12 @@ Then load `/changelog` and confirm, for the new screen:
   changelog-only concerns out of `cymatic-thumb.ts`.
 - **Changing a `track.key` after the fact.** It rehashes, and every release
   after it may shuffle colour as the walk re-routes.
+- **Assuming `n`/`m` differentiate any style.** They reach `chladni` and
+  `radial` only. Two plates sharing a non-modal style are twins no matter what
+  numbers they carry.
+- **Making the corner tuner reseed the field's phases.** It reads as the plate
+  restarting on every hover. Phases are fixed at mount; a retune eases `n`,
+  `m` and `drift` inside the engine instead, and `drift` is what makes the
+  three non-modal styles respond at all.
 - **Adding a 4th point.** The screen cannot grow. Three is the ceiling.
 - **A tag URL for an unpublished release.** It 404s. Point at the index.

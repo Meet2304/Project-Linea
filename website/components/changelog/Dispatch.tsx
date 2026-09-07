@@ -31,32 +31,36 @@ interface Props {
 /**
  * The corner plate, retuned.
  *
- * A real plate does not change colour or change what it is when you drive it
- * harder — it re-forms into a different mode. So hovering keeps the style and
- * the jewel (those are the section's identity, and assignSongVisuals
- * guarantees no two releases share them) and moves only the figure: new modal
- * numbers, new phases.
+ * A real plate does not restart when you drive it differently — it travels,
+ * and settles into another mode. So a hover keeps the style, the jewel and
+ * the phases (the first two are the section's identity; the third is what
+ * made the plate visibly start over every time the cursor arrived) and moves
+ * only two things, both of which the engine eases rather than snapping:
  *
- * Both halves matter. chladni and radial are drawn from n and m; ripple,
- * lattice and flow have no modal numbers at all and are told apart purely by
- * their phases, which is what the seed reseeds. Changing one without the
- * other would leave three of the five styles sitting perfectly still.
+ *   n / m   the modal numbers, which reach chladni and radial;
+ *   drift   an offset into the plate's clock, which reaches everything.
+ *
+ * drift is not a flourish. ripple, flow and lattice read no modal numbers at
+ * all, so without it a hover would do nothing whatsoever on three of the five
+ * styles.
  *
  * Step 0 must reproduce the assigned figure exactly, or a section would come
  * up wearing something other than its own plate before anyone touched it.
  */
+const DRIFT_PER_STEP = 6.5
+
 function figureFor(
   song: SongVisuals | undefined,
   step: number
-): { n: number; m: number; seed: number } {
-  // A songless release keeps the radial fallback documented below.
-  const base = song ? song.seed : 5
-  if (step === 0) return { n: song?.n ?? 4, m: song?.m ?? 6, seed: song ? song.seed % 100_000 : 5 }
+): { n: number; m: number; drift: number } {
+  const n = song?.n ?? 4
+  const m = song?.m ?? 6
+  if (step === 0) return { n, m, drift: 0 }
 
-  // Golden-ratio stride: consecutive steps land far apart in the modal
+  // Golden-ratio stride, so consecutive steps land far apart in the modal
   // numbers rather than walking 2, 3, 4 up the scale.
-  const seed = (base + step * 0x9e3779b1) >>> 0
-  return { n: 2 + (seed % 5), m: 3 + ((seed + 2) % 6), seed: seed % 100_000 }
+  const seed = ((song ? song.seed : 5) + step * 0x9e3779b1) >>> 0
+  return { n: 2 + (seed % 5), m: 3 + ((seed + 2) % 6), drift: step * DRIFT_PER_STEP }
 }
 
 export default function Dispatch({ release: r, song, accentHex }: Props) {
@@ -108,12 +112,17 @@ export default function Dispatch({ release: r, song, accentHex }: Props) {
         // It is also the one style no song hashes to, so a songless dispatch
         // can never turn up wearing a tracked release's plate.
         style={song?.style ?? 'radial'}
-        // The figure answers the pointer; the style and the jewel do not.
-        // These now reach the running field through setPattern rather than
-        // remounting it, so a retune re-forms the plate instead of blinking.
+        // The figure answers the pointer; the style, the jewel and the phases
+        // do not. n/m/drift reach the running field through setPattern and
+        // ease into place there, so a retune sweeps the plate rather than
+        // rebuilding or restarting it.
         n={figure.n}
         m={figure.m}
-        seed={figure.seed}
+        drift={figure.drift}
+        // Mount-only: this fixes the plate's phases, and every release gets
+        // its own, which is what stops two sections sharing a style from
+        // running in lockstep.
+        seed={song ? song.seed % 100_000 : 5}
         scale={1.5}
         speed={0.9}
         dither={0.5}
