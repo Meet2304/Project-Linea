@@ -1,12 +1,19 @@
 import { _electron as electron, expect } from '@playwright/test'
 import { resolve } from 'node:path'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
+const fsExistsStable = () => existsSync('dist/latest-mac.yml')
 const metadata = JSON.parse(readFileSync('package.json', 'utf8'))
 const app = await electron.launch({
   executablePath: resolve('dist/mac-universal/Linea.app/Contents/MacOS/Linea')
 })
 try {
   const page = await app.firstWindow()
+  // Allow the helper's startup/read deadlines to expose a broken packaged path.
+  await new Promise((resolve) => setTimeout(resolve, 6500))
+  const manifest = readFileSync('dist/beta-mac.yml', 'utf8')
+  if (!manifest.includes('version: ' + metadata.version))
+    throw new Error('Missing beta Mac update metadata')
+  if (fsExistsStable()) throw new Error('Mac beta produced a stable manifest')
   await expect
     .poll(
       () => page.evaluate(() => window.linea.getPlaybackSnapshot().then((s) => s.sourceStatus)),
