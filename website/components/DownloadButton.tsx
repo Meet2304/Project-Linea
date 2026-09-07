@@ -35,7 +35,7 @@ interface Props {
  * other platform's link and the beta's caveats all used to sit here, and a
  * stack of small print under the one thing we want clicked reads as an
  * apology for it. What the button hands over is decided by /download, which
- * resolves the newest release — the beta included — at click time.
+ * resolves the newest stable release for each platform at click time.
  */
 export default function DownloadButton({ size = 'lg', accent = 'var(--ink)', className }: Props) {
   const [platform, setPlatform] = useState<Platform | null>(null)
@@ -46,7 +46,9 @@ export default function DownloadButton({ size = 'lg', accent = 'var(--ink)', cla
   const href = platform === 'win' || platform === 'mac' ? downloadHref(platform) : RELEASES_URL
   const label =
     platform === 'win' || platform === 'mac'
-      ? `Download for ${PLATFORM_LABEL[platform]}`
+      ? platform === 'mac'
+        ? 'Legacy Mac download'
+        : `Download for ${PLATFORM_LABEL[platform]}`
       : 'Download Linea'
 
   const pad = size === 'lg' ? '15px 28px' : '11px 21px'

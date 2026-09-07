@@ -11,8 +11,8 @@ function byId<T extends HTMLElement>(id: string): T {
 
 /** Each size preset pairs a font size with a default visible-line count. */
 export const LYRICS_PRESETS: Record<LyricsSize, { px: number; lines: number }> = {
-  small: { px: 13, lines: 6 },
-  medium: { px: 15, lines: 5 },
+  small: { px: 13, lines: 3 },
+  medium: { px: 15, lines: 3 },
   large: { px: 18, lines: 3 }
 }
 

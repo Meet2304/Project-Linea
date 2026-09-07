@@ -19,12 +19,12 @@ bun run build:win
 ```
 
 Windows development and build commands compile the helper automatically.
-The installer is written to dist/Linea-0.2.0-beta.1-setup.exe.
+The installer is written to dist/Linea-0.2.0-setup.exe.
 To inspect an unpacked build, run bun run build:unpack.
 
 On macOS, bun run build and bun run build:mac skip the native build. The overlay
 opens with a Windows-only message; macOS playback is not implemented. Linux is
-not a release target for this beta.
+not a release target for this release.
 
 ## Checks
 
@@ -71,12 +71,15 @@ native output is ignored by Git.
 
 ## Release policy
 
-Version/tag: 0.2.0-beta.1 / v0.2.0-beta.1. Beta tags produce a Windows-only GitHub
-prerelease with beta.yml; they are never marked latest. The package wrapper
-explicitly selects the update channel, and afterPack rejects a mismatch. Stable tags retain the
-separate stable workflow. Do not promote this beta to stable until outstanding
-platform and installer acceptance checks are resolved.
+Version/tag: 0.2.0 / v0.2.0. Stable tags publish Windows-only releases with
+latest.yml. Beta tags publish Windows-only prereleases with beta.yml and are
+never marked latest. The package wrapper explicitly selects the update channel,
+and afterPack rejects a mismatch. Both Windows channels can upgrade to 0.2.0;
+automatic downgrades are disabled.
 
-The website's explicitly labelled beta link goes to the beta release page.
-Stable download routing remains unchanged. Publishing the website or a release
-is separate from building the local installer.
+Mac development is separate. Stable releases carry forward the legacy 0.1.6
+latest-mac.yml from .github/legacy-mac/ so existing Mac installations stay on
+that version. No new Mac binary is built or published by this workflow.
+
+Release notes live in documentation/releases/vVERSION.md at the repository root.
+The website routes downloads to the newest stable asset for each platform.

@@ -39,13 +39,7 @@ import {
   showToast
 } from './playerUi'
 import { LyricScheduler } from './scheduler'
-import {
-  initSettings,
-  reflectPrefs,
-  reflectClickThrough,
-  toggleSettings,
-  openSettings
-} from './settingsUi'
+import { initSettings, reflectPrefs, toggleSettings, openSettings } from './settingsUi'
 import { initUpdateUi, reflectUpdateState } from './updateUi'
 
 // ------------------------------------------------------------------
@@ -814,7 +808,6 @@ async function init(): Promise<void> {
 
   initSettings({
     onTheme: applyTheme,
-    onClickThrough: () => void window.linea.toggleClickThrough(),
     onLyricsSize: applyLyricsSize,
     onShowTimestamps: (show) => {
       queuePrefs({ showTimestamps: show })
@@ -827,7 +820,6 @@ async function init(): Promise<void> {
   window.linea.onLyricsUpdate(applySnapshot)
 
   window.linea.onClickThroughChanged((on) => {
-    reflectClickThrough(on)
     el.app.dataset.clickthrough = String(on)
   })
 
@@ -870,13 +862,13 @@ async function init(): Promise<void> {
   reflectPrefs(prefs)
   reflectPin(prefs.pinned)
   setLyricsVisible()
-  reflectClickThrough(clickThrough)
   el.app.dataset.clickthrough = String(clickThrough)
   setWindowFocused(document.hasFocus())
   const hovering = el.app.matches(':hover')
   setPointerInside(hovering)
   void window.linea.setPointerOverPanel(hovering)
   el.playerView.hidden = false
+  if (!prefs.windowBounds) await window.linea.resizeTo(presetWindowHeight(prefs.lyricsSize))
   try {
     applySnapshot(await window.linea.getPlaybackSnapshot())
   } catch {

@@ -3,7 +3,6 @@ import { el } from './playerUi'
 
 export interface SettingsCallbacks {
   onTheme: (theme: Theme) => void
-  onClickThrough: () => void
   onLyricsSize: (size: LyricsSize) => void
   onShowTimestamps: (show: boolean) => void
   /** Fires after the now/settings view swaps. */
@@ -15,7 +14,6 @@ function byId<T extends HTMLElement>(id: string): T {
 }
 
 const themeSwitch = byId<HTMLButtonElement>('set-theme')
-const clickThroughSwitch = byId<HTMLButtonElement>('set-clickthrough')
 const sizeSegs = Array.from(document.querySelectorAll<HTMLButtonElement>('.seg'))
 const timestampsSwitch = byId<HTMLButtonElement>('set-timestamps')
 const settingsScroll = byId('settings-scroll')
@@ -52,11 +50,6 @@ export function initSettings(cb: SettingsCallbacks): void {
     setOn(themeSwitch, dark)
     cb.onTheme(dark ? 'dark' : 'light')
   })
-  clickThroughSwitch.addEventListener('click', () => {
-    // State is owned by main (global shortcut can also toggle it);
-    // reflectClickThrough() applies the authoritative value.
-    cb.onClickThrough()
-  })
   sizeSegs.forEach((seg) => {
     seg.addEventListener('click', () => {
       const size = seg.dataset.size as LyricsSize
@@ -82,10 +75,6 @@ export function reflectPrefs(prefs: Prefs): void {
   setOn(themeSwitch, prefs.theme === 'dark')
   setOn(timestampsSwitch, prefs.showTimestamps)
   reflectSize(prefs.lyricsSize)
-}
-
-export function reflectClickThrough(on: boolean): void {
-  setOn(clickThroughSwitch, on)
 }
 
 function setSettingsOpen(open: boolean): void {

@@ -35,6 +35,7 @@ interface GhRelease {
   published_at?: string
   created_at?: string
   draft?: boolean
+  prerelease?: boolean
   assets?: GhAsset[]
 }
 
@@ -52,21 +53,18 @@ function stamp(rel: GhRelease): number {
 }
 
 /**
- * The newest published release, pre-releases included.
- *
- * `/releases/latest` deliberately skips pre-releases, which is the wrong
- * answer while a beta is the build we want people on: it would keep handing
- * out the last stable installer after the beta shipped. So we list releases
- * and take the newest non-draft one instead.
- *
- * The trade-off is that demoting a bad build to pre-release no longer pulls
- * it from the site — delete it, or turn it back into a draft, to do that.
+ * The newest published stable release, optionally restricted to a platform.
+ * Mac downloads continue resolving to the legacy Mac release while Windows
+ * moves forward; unfinished prereleases are not offered as stable downloads.
  *
  * `cache: 'no-store'` is for the download redirect, which must resolve the
  * current release at click time — a cached answer there is exactly the bug
  * that shipped v0.1.0's installer to visitors after v0.1.1 was out.
  */
-export async function fetchNewestRelease(opts?: { fresh?: boolean }): Promise<GhRelease | null> {
+export async function fetchNewestRelease(opts?: {
+  fresh?: boolean
+  platform?: 'win' | 'mac'
+}): Promise<GhRelease | null> {
   const cache: RequestInit & { next?: { revalidate: number } } = opts?.fresh
     ? { cache: 'no-store' }
     : { next: { revalidate: RELEASE_REVALIDATE_SECONDS } }
@@ -78,7 +76,16 @@ export async function fetchNewestRelease(opts?: { fresh?: boolean }): Promise<Gh
     if (!res.ok) return null
     const all = (await res.json()) as GhRelease[]
     // Drafts are visible only with a token, and have no public assets.
-    return all.filter((rel) => !rel.draft).sort((a, b) => stamp(b) - stamp(a))[0] ?? null
+    return (
+      all
+        .filter(
+          (rel) =>
+            !rel.draft &&
+            !rel.prerelease &&
+            (!opts?.platform || pick(rel.assets ?? [], EXTENSION[opts.platform]))
+        )
+        .sort((a, b) => stamp(b) - stamp(a))[0] ?? null
+    )
   } catch {
     return null
   }
@@ -86,7 +93,7 @@ export async function fetchNewestRelease(opts?: { fresh?: boolean }): Promise<Gh
 
 /** Download URL for the newest build on `platform`, or null if there isn't one. */
 export async function latestAssetUrl(platform: 'win' | 'mac'): Promise<string | null> {
-  const rel = await fetchNewestRelease({ fresh: true })
+  const rel = await fetchNewestRelease({ fresh: true, platform })
   return pick(rel?.assets ?? [], EXTENSION[platform])?.url ?? null
 }
 
