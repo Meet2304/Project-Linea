@@ -82,3 +82,37 @@ platform and installer acceptance checks are resolved.
 The website's explicitly labelled beta link goes to the beta release page.
 Stable download routing remains unchanged. Publishing the website or a release
 is separate from building the local installer.
+
+## Mac permission-hang test build
+
+The isolated `codex/mac-permission-hang-fix` branch builds 0.2.0-beta.3 for
+acceptance testing; it does not publish a release or change Windows stable.
+
+The native helper processes requests and Automation checks on one serial worker.
+Its main run loop stays active and performs AppKit discovery. Requests have native
+deadlines (4.5 seconds normally, 55 seconds for explicit authorization); a stalled
+call logs the request and exits with code 75. Electron reconnects using its existing
+backoff. No new runtime dependencies are required.
+
+`node scripts/check-mac-permissions.mjs` compiles a separate fixture with injected
+permission behavior. It verifies main-loop callbacks during a permission check,
+denied access, explicit prompting, EOF shutdown, and termination of a stalled call.
+The injection is excluded from the shipped binary. This is regression coverage,
+not proof that a real user's macOS consent service responds.
+
+After quitting Linea fully, capture detailed logs on the test Mac:
+
+```bash
+LINEA_MEDIA_DEBUG=1 "/Applications/Linea.app/Contents/MacOS/Linea" 2>&1 | tee "$HOME/Desktop/linea-app.log"
+```
+
+Native diagnostics use stderr and include request stages, target application IDs
+and numeric permission/script errors, without song metadata. The app also logs
+helper launch errors, exit codes/signals, and request deadlines. Normal snapshot
+stage logging is opt-in; timeout/error logging is always enabled.
+
+Acceptance: run with Spotify desktop playing, grant Automation access through
+Linea if requested, and verify title, lyrics and transport controls. Repeat after
+denying access, reopening Spotify and sleeping/resuming. A remaining failure should
+now identify its stage instead of producing only a ready line. Signing and
+notarization remain separate Mac distribution work.

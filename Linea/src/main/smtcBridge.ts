@@ -84,12 +84,21 @@ export class SmtcBridge extends EventEmitter {
     const decoder = new StringDecoder('utf8')
     let buffer = ''
     let logged = 0
-    this.startup = setTimeout(() => this.fail('timeout'), 5000)
-    child.on('error', () => {
-      if (this.child === child) this.fail('source_unavailable')
+    this.startup = setTimeout(() => {
+      console.error('Media helper: startup timed out', this.path)
+      this.fail('timeout')
+    }, 5000)
+    child.on('error', (error) => {
+      if (this.child === child) {
+        console.error('Media helper: launch failed', this.path, error.message)
+        this.fail('source_unavailable')
+      }
     })
-    child.on('exit', () => {
-      if (this.child === child) this.fail('source_unavailable')
+    child.on('exit', (code, signal) => {
+      if (this.child === child) {
+        console.error('Media helper: exited', { code, signal })
+        this.fail('source_unavailable')
+      }
     })
     child.stdin.on('error', () => {
       if (this.child === child) this.fail('source_unavailable')
@@ -151,7 +160,13 @@ export class SmtcBridge extends EventEmitter {
       return Promise.resolve({ ok: false, reason: 'source_unavailable' })
     const id = ++this.id
     return new Promise((resolve) => {
-      this.pending.set(id, { resolve, timer: setTimeout(() => this.fail('timeout'), timeout) })
+      this.pending.set(id, {
+        resolve,
+        timer: setTimeout(() => {
+          console.error('Media helper: request timed out', { id, method: fields.method })
+          this.fail('timeout')
+        }, timeout)
+      })
       this.child?.stdin.write(JSON.stringify({ v: 1, id, ...fields }) + '\n')
     })
   }

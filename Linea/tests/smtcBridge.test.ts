@@ -147,3 +147,18 @@ it('holds reconciliation during an explicit Mac permission prompt', async () => 
   send({ v: 1, type: 'response', id: requests[1].id, ok: true, data: { sessions: [] } })
   expect(await read).toEqual({ ok: true, data: [] })
 })
+
+describe('helper failure diagnostics', () => {
+  it('logs an unexpected native exit code and fails pending work', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      send({ v: 1, type: 'ready' })
+      const read = bridge.read()
+      children[0].emit('exit', 75, null)
+      expect(await read).toEqual({ ok: false, reason: 'source_unavailable' })
+      expect(log).toHaveBeenCalledWith('Media helper: exited', { code: 75, signal: null })
+    } finally {
+      log.mockRestore()
+    }
+  })
+})

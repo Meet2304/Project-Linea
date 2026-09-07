@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, codex/mac-permission-hang-fix]
   pull_request:
     branches: [main]
 
@@ -58,11 +58,12 @@ jobs:
       - name: Build app
         run: bun run build
 
-      - name: Install Playwright
-        run: bunx playwright install --with-deps chromium
-
       - name: Run e2e tests
         run: bun run test:e2e
+
+      - name: Verify Mac permission worker and timeout
+        if: runner.os == 'macOS'
+        run: node scripts/check-mac-permissions.mjs
 
       - name: Verify Mac helper protocol
         if: runner.os == 'macOS'

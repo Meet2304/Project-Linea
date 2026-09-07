@@ -3,6 +3,18 @@
 #import <ApplicationServices/ApplicationServices.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+
+static BOOL debugLogging;
+#ifdef LINEA_TESTING
+static BOOL testHang;
+#endif
+static void diagnostic(NSString *message) {
+    fprintf(stderr, "linea-media: %s\n", message.UTF8String);
+    fflush(stderr);
+}
+static void trace(NSString *message) { if (debugLogging) diagnostic(message); }
 
 static void emit(NSDictionary *value) {
     NSData *data = [NSJSONSerialization dataWithJSONObject:value options:0 error:nil];
@@ -12,24 +24,45 @@ static void emit(NSDictionary *value) {
 }
 static NSDictionary *failure(NSString *reason) { return @{@"ok":@NO, @"reason":reason}; }
 static NSArray *targets(void) {
-    // AppKit refreshes running-application properties on the main run loop.
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.001, false);
-    NSMutableArray *result = [NSMutableArray array];
-    pid_t front = NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier;
-    for (NSString *bundle in @[@"com.spotify.client", @"com.apple.Music"]) {
-        for (NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:bundle]) {
-            [result addObject:@{@"bundle":bundle, @"id":[NSString stringWithFormat:@"%@:%d",bundle,app.processIdentifier],
-                @"current":@(front == app.processIdentifier)}];
+    // Only discovery touches AppKit. The worker never blocks the main event loop.
+#ifdef LINEA_TESTING
+    return @[@{@"bundle":@"com.spotify.client", @"id":@"test", @"current":@YES}];
+#endif
+    __block NSArray *discovered;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        NSMutableArray *result = [NSMutableArray array];
+        pid_t front = NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier;
+        for (NSString *bundle in @[@"com.spotify.client", @"com.apple.Music"]) {
+            for (NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:bundle]) {
+                [result addObject:@{@"bundle":bundle, @"id":[NSString stringWithFormat:@"%@:%d",bundle,app.processIdentifier],
+                    @"current":@(front == app.processIdentifier)}];
+            }
         }
-    }
-    return result;
+        discovered = [result copy];
+    });
+    return discovered;
 }
 static OSStatus permission(NSString *bundle, BOOL prompt) {
+    NSCAssert(!NSThread.isMainThread, @"Automation permission must run off the main thread");
+    trace([NSString stringWithFormat:@"permission begin target=%@ prompt=%d", bundle, prompt]);
+#ifdef LINEA_TESTING
+    // A callback to main must complete while the permission worker is waiting.
+    dispatch_sync(dispatch_get_main_queue(), ^{ trace(@"permission main-loop callback"); });
+    if (testHang) dispatch_semaphore_wait(dispatch_semaphore_create(0), DISPATCH_TIME_FOREVER);
+    OSStatus status = errAEEventNotPermitted;
+#else
     NSAppleEventDescriptor *target = [NSAppleEventDescriptor descriptorWithBundleIdentifier:bundle];
-    return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, prompt);
+    OSStatus status = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, prompt);
+#endif
+    trace([NSString stringWithFormat:@"permission end target=%@ status=%d", bundle, (int)status]);
+    return status;
 }
 int main(int argc, char **argv) {
     @autoreleasepool {
+        debugLogging = getenv("LINEA_MEDIA_DEBUG") != NULL;
+#ifdef LINEA_TESTING
+        testHang = argc > 1 && strcmp(argv[1], "--test-hang") == 0;
+#endif
         // The parent owns the pipes; also exit if a wedged script outlives its parent.
         pid_t parent = getppid();
         dispatch_source_t watcher = dispatch_source_create(DISPATCH_SOURCE_TYPE_PROC, parent, DISPATCH_PROC_EXIT,
@@ -39,91 +72,121 @@ int main(int argc, char **argv) {
         NSString *path = [[[NSString stringWithUTF8String:argv[0]] stringByDeletingLastPathComponent]
             stringByAppendingPathComponent:@"media.js"];
         NSString *source = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
-        if (!source) return 2;
-        NSMutableDictionary *known = [NSMutableDictionary dictionary];
-        unsigned long long revision = 0;
-        NSUInteger nextPermissionTarget = 0;
-        emit(@{@"v":@1, @"type":@"ready"});
-        char *line = NULL; size_t capacity = 0; ssize_t length;
-        while ((length = getline(&line, &capacity, stdin)) > 0) {
+        if (!source) { diagnostic(@"missing or unreadable bundled media.js"); return 2; }
+        dispatch_async(dispatch_queue_create("linea.media.requests", DISPATCH_QUEUE_SERIAL), ^{
             @autoreleasepool {
-                if (length > 65536) break;
-                NSDictionary *request = [NSJSONSerialization JSONObjectWithData:[NSData dataWithBytes:line length:length]
-                    options:0 error:nil];
-                if (![request isKindOfClass:NSDictionary.class] || ![request[@"id"] isKindOfClass:NSNumber.class]) break;
-                NSDictionary *answer = nil;
-                NSArray *running = targets();
-                NSString *method = request[@"method"];
-                if (![request[@"v"] isEqual:@1]) answer = failure(@"invalid_request");
-                else if (![@[@"snapshot", @"command", @"authorize"] containsObject:method ?: @""]) answer = failure(@"invalid_request");
-                else if ([method isEqual:@"authorize"]) {
-                    // One prompt per click. Reading never prompts or launches another app.
-                    if (!running.count) answer = failure(@"session_unavailable");
-                    for (NSUInteger i = 0; i < running.count; i++) {
-                        NSUInteger index = (nextPermissionTarget + i) % running.count;
-                        NSDictionary *target = running[index];
-                        if (permission(target[@"bundle"], NO) != noErr) {
-                            nextPermissionTarget = (index + 1) % running.count;
-                            OSStatus status = permission(target[@"bundle"], YES);
-                            answer = status == noErr ? @{@"ok":@YES,@"data":NSNull.null} : failure(@"permission_required");
-                            break;
-                        }
-                    }
-                    if (!answer) answer = @{@"ok":@YES,@"data":NSNull.null};
-                } else {
-                    NSMutableArray *allowed = [NSMutableArray array];
-                    BOOL denied = NO;
-                    for (NSDictionary *target in running) {
-                        if (permission(target[@"bundle"], NO) == noErr) [allowed addObject:target];
-                        else denied = YES;
-                    }
-                    if ([method isEqual:@"command"]) {
-                        NSDictionary *previous = known[request[@"sessionId"] ?: @""];
-                        if (!previous || ![previous[@"mediaRevision"] isEqual:request[@"mediaRevision"]])
-                            answer = failure(@"session_unavailable");
-                        else {
-                            NSPredicate *matches = [NSPredicate predicateWithFormat:@"id == %@",request[@"sessionId"]];
-                            allowed = [[allowed filteredArrayUsingPredicate:matches] mutableCopy];
-                            if (!allowed.count) answer = failure(denied ? @"permission_required" : @"session_unavailable");
-                        }
-                    }
-                    if (!answer && !allowed.count && denied) answer = failure(@"permission_required");
-                    if (!answer) {
-                        NSMutableDictionary *input = [request mutableCopy];
-                        input[@"targets"] = allowed;
-                        if ([method isEqual:@"command"]) input[@"nativeKey"] = known[request[@"sessionId"]][@"nativeKey"];
-                        NSData *json = [NSJSONSerialization dataWithJSONObject:input options:0 error:nil];
-                        NSString *argument = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
-                        NSString *program = [source stringByAppendingFormat:
-                            @"\ntry { JSON.stringify(handle(%@)) } catch(e) { JSON.stringify({ok:false,reason:Number(e.errorNumber)===-1743?'permission_required':'command_rejected'}) }",argument];
-                        OSAScript *script = [[OSAScript alloc] initWithSource:program
-                            language:[OSALanguage languageForName:@"JavaScript"]];
-                        NSDictionary *error = nil;
-                        NSAppleEventDescriptor *result = [script executeAndReturnError:&error];
-                        NSData *resultData = [result.stringValue dataUsingEncoding:NSUTF8StringEncoding];
-                        answer = resultData ? [NSJSONSerialization JSONObjectWithData:resultData
-                            options:NSJSONReadingMutableContainers error:nil] : nil;
-                        if (![answer isKindOfClass:NSDictionary.class]) answer = failure(@"source_unavailable");
-                        if ([method isEqual:@"snapshot"] && [answer[@"ok"] boolValue]) {
-                            NSMutableDictionary *next = [NSMutableDictionary dictionary];
-                            for (NSMutableDictionary *row in answer[@"data"][@"sessions"]) {
-                                NSDictionary *old = known[row[@"id"]];
-                                row[@"mediaRevision"] = [old[@"nativeKey"] isEqual:row[@"nativeKey"]]
-                                    ? old[@"mediaRevision"] : @(++revision);
-                                next[row[@"id"]] = [row copy];
-                                [row removeObjectForKey:@"nativeKey"];
+                NSMutableDictionary *known = [NSMutableDictionary dictionary];
+                unsigned long long revision = 0;
+                NSUInteger nextPermissionTarget = 0;
+                emit(@{@"v":@1, @"type":@"ready"});
+                char *line = NULL; size_t capacity = 0; ssize_t length;
+                while ((length = getline(&line, &capacity, stdin)) > 0) {
+                    @autoreleasepool {
+                        if (length > 65536) break;
+                        NSDictionary *request = [NSJSONSerialization JSONObjectWithData:[NSData dataWithBytes:line length:length]
+                            options:0 error:nil];
+                        if (![request isKindOfClass:NSDictionary.class] || ![request[@"id"] isKindOfClass:NSNumber.class]) break;
+                        NSString *method = request[@"method"];
+                        trace([NSString stringWithFormat:@"request %@ method=%@ discovery begin", request[@"id"], method]);
+                        // Also bound direct diagnostic runs, where Electron cannot kill a hung helper.
+                        dispatch_source_t deadline = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+                        double seconds = [method isEqual:@"authorize"] ? 55.0 : 4.5;
+#ifdef LINEA_TESTING
+                        seconds = 0.5;
+#endif
+                        dispatch_source_set_timer(deadline, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(seconds * NSEC_PER_SEC)), DISPATCH_TIME_FOREVER, 0);
+                        dispatch_source_set_event_handler(deadline, ^{
+                            diagnostic([NSString stringWithFormat:@"request %@ method=%@ timed out; terminating helper", request[@"id"], method]);
+                            _exit(75);
+                        });
+                        dispatch_resume(deadline);
+                        NSDictionary *answer = nil;
+                        NSArray *running = targets();
+                        trace([NSString stringWithFormat:@"discovery end count=%lu", (unsigned long)running.count]);
+                        if (![request[@"v"] isEqual:@1]) answer = failure(@"invalid_request");
+                        else if (![@[@"snapshot", @"command", @"authorize"] containsObject:method ?: @""]) answer = failure(@"invalid_request");
+                        else if ([method isEqual:@"authorize"]) {
+                            // One prompt per click. Reading never prompts or launches another app.
+                            if (!running.count) answer = failure(@"session_unavailable");
+                            for (NSUInteger i = 0; i < running.count; i++) {
+                                NSUInteger index = (nextPermissionTarget + i) % running.count;
+                                NSDictionary *target = running[index];
+                                if (permission(target[@"bundle"], NO) != noErr) {
+                                    nextPermissionTarget = (index + 1) % running.count;
+                                    OSStatus status = permission(target[@"bundle"], YES);
+                                    answer = status == noErr ? @{@"ok":@YES,@"data":NSNull.null} : failure(@"permission_required");
+                                    break;
+                                }
                             }
-                            known = next;
+                            if (!answer) answer = @{@"ok":@YES,@"data":NSNull.null};
+                        } else {
+                            NSMutableArray *allowed = [NSMutableArray array];
+                            BOOL denied = NO;
+                            for (NSDictionary *target in running) {
+                                if (permission(target[@"bundle"], NO) == noErr) [allowed addObject:target];
+                                else denied = YES;
+                            }
+                            if ([method isEqual:@"command"]) {
+                                NSDictionary *previous = known[request[@"sessionId"] ?: @""];
+                                if (!previous || ![previous[@"mediaRevision"] isEqual:request[@"mediaRevision"]])
+                                    answer = failure(@"session_unavailable");
+                                else {
+                                    NSPredicate *matches = [NSPredicate predicateWithFormat:@"id == %@",request[@"sessionId"]];
+                                    allowed = [[allowed filteredArrayUsingPredicate:matches] mutableCopy];
+                                    if (!allowed.count) answer = failure(denied ? @"permission_required" : @"session_unavailable");
+                                }
+                            }
+                            if (!answer && !allowed.count && denied) answer = failure(@"permission_required");
+                            if (!answer) {
+                                NSMutableDictionary *input = [request mutableCopy];
+                                input[@"targets"] = allowed;
+                                if ([method isEqual:@"command"]) input[@"nativeKey"] = known[request[@"sessionId"]][@"nativeKey"];
+                                NSData *json = [NSJSONSerialization dataWithJSONObject:input options:0 error:nil];
+                                NSString *argument = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+                                NSString *program = [source stringByAppendingFormat:
+                                    @"\ntry { JSON.stringify(handle(%@)) } catch(e) { JSON.stringify({ok:false,reason:Number(e.errorNumber)===-1743?'permission_required':'command_rejected'}) }",argument];
+                                trace(@"playback script begin");
+                                OSAScript *script = [[OSAScript alloc] initWithSource:program
+                                    language:[OSALanguage languageForName:@"JavaScript"]];
+                                NSDictionary *error = nil;
+                                NSAppleEventDescriptor *result = [script executeAndReturnError:&error];
+                                trace(@"playback script end");
+                                // Log only the numeric OSA error, not script contents or track metadata.
+                                if (error) diagnostic([NSString stringWithFormat:@"playback script error=%@", error[OSAScriptErrorNumber]]);
+                                NSData *resultData = [result.stringValue dataUsingEncoding:NSUTF8StringEncoding];
+                                answer = resultData ? [NSJSONSerialization JSONObjectWithData:resultData
+                                    options:NSJSONReadingMutableContainers error:nil] : nil;
+                                if (![answer isKindOfClass:NSDictionary.class]) answer = failure(@"source_unavailable");
+                                if ([method isEqual:@"snapshot"] && [answer[@"ok"] boolValue]) {
+                                    NSMutableDictionary *next = [NSMutableDictionary dictionary];
+                                    for (NSMutableDictionary *row in answer[@"data"][@"sessions"]) {
+                                        NSDictionary *old = known[row[@"id"]];
+                                        row[@"mediaRevision"] = [old[@"nativeKey"] isEqual:row[@"nativeKey"]]
+                                            ? old[@"mediaRevision"] : @(++revision);
+                                        next[row[@"id"]] = [row copy];
+                                        [row removeObjectForKey:@"nativeKey"];
+                                    }
+                                    known = next;
+                                }
+                            }
                         }
+                        NSMutableDictionary *response = [answer mutableCopy];
+                        response[@"v"]=@1; response[@"type"]=@"response"; response[@"id"]=request[@"id"];
+                        dispatch_sync(dispatch_get_main_queue(), ^{ dispatch_source_cancel(deadline); });
+                        trace([NSString stringWithFormat:@"response %@ ok=%@ reason=%@", request[@"id"], answer[@"ok"], answer[@"reason"] ?: @"none"]);
+                        emit(response);
                     }
                 }
-                NSMutableDictionary *response = [answer mutableCopy];
-                response[@"v"]=@1; response[@"type"]=@"response"; response[@"id"]=request[@"id"];
-                emit(response);
+                free(line);
+                dispatch_source_cancel(watcher);
+                trace(@"stdin closed; exiting");
+                exit(0);
             }
-        }
-        free(line);
-        dispatch_source_cancel(watcher);
+        });
+        // Keep a source installed so the run loop also services AppKit and main-queue callbacks.
+        NSMachPort *keepAlive = [NSMachPort port];
+        [NSRunLoop.currentRunLoop addPort:keepAlive forMode:NSDefaultRunLoopMode];
+        [NSRunLoop.currentRunLoop run];
     }
     return 0;
 }
