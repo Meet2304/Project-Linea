@@ -85,7 +85,7 @@ is separate from building the local installer.
 
 ## Mac permission-hang test build
 
-The isolated `codex/mac-permission-hang-fix` branch builds 0.2.0-beta.3 for
+The isolated `codex/mac-permission-hang-fix` branch builds 0.2.0-beta.4 for
 acceptance testing; it does not publish a release or change Windows stable.
 
 The native helper processes requests and Automation checks on one serial worker.
@@ -116,3 +116,12 @@ Linea if requested, and verify title, lyrics and transport controls. Repeat afte
 denying access, reopening Spotify and sleeping/resuming. A remaining failure should
 now identify its stage instead of producing only a ready line. Signing and
 notarization remain separate Mac distribution work.
+
+Beta.4 removes AEDeterminePermissionToAutomateTarget after beta.3 logs confirmed
+that moving it off-main did not resolve the stall. Permission probes now send a
+read-only get-name Apple Event to the discovered process ID, with a one-second
+reply timeout and kAEDoNotPromptForUserConsent during polling. Explicit access
+requests allow consent and wait up to 50 seconds. Only consent errors map to
+permission_required; timeout and missing-player errors retain their own reasons.
+The native fixture also verifies actual Apple Event delivery to an in-process
+receiver and error replies. It cannot validate a different Mac's TCC consent.

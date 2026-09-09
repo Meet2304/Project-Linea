@@ -60,7 +60,7 @@ try {
     const result = await probe([], method)
     assert.equal(result.code, 0, result.stderr)
     assert.match(result.stderr, /permission main-loop callback/)
-    assert.match(result.stderr, /permission end/)
+    assert.match(result.stderr, /permission probe end/)
     assert.match(result.stderr, /stdin closed/)
     assert.deepEqual(result.messages[1], {
       v: 1,
@@ -72,6 +72,22 @@ try {
     if (method === 'snapshot') assert.doesNotMatch(result.stderr, /prompt=1/)
     else assert.match(result.stderr, /prompt=1/)
   }
+  for (const [arg, reason] of [['--test-consent', 'permission_required'], ['--test-timeout', 'timeout'], ['--test-gone', 'session_unavailable']]) {
+    for (const method of ['snapshot', 'authorize']) {
+      const result = await probe([arg], method)
+      assert.equal(result.code, 0, result.stderr)
+      assert.equal(result.messages[1].reason, reason)
+      if (reason !== 'permission_required') assert.doesNotMatch(result.stderr, /prompt=1/)
+    }
+  }
+  const real = await probe(['--test-real-send'], 'authorize')
+  assert.equal(real.code, 0, real.stderr)
+  assert.equal(real.messages[1].ok, true, real.stderr)
+  assert.match(real.stderr, /real Apple event received on main loop/)
+  const replyError = await probe(['--test-reply-error'], 'authorize')
+  assert.equal(replyError.code, 0, replyError.stderr)
+  assert.equal(replyError.messages[1].reason, 'permission_required')
+  assert.match(replyError.stderr, /real Apple event received on main loop/)
   const hung = await probe(['--test-hang'], 'snapshot')
   assert.equal(hung.code, 75, hung.stderr)
   assert.match(hung.stderr, /permission main-loop callback/)

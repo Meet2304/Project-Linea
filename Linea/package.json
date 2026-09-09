@@ -1,6 +1,6 @@
 {
   "name": "linea",
-  "version": "0.2.0-beta.3",
+  "version": "0.2.0-beta.4",
   "description": "Always-on-top lyrics overlay for Windows and macOS",
   "main": "./out/main/index.js",
   "author": "Meet2304",

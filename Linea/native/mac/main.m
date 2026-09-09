@@ -9,12 +9,32 @@
 static BOOL debugLogging;
 #ifdef LINEA_TESTING
 static BOOL testHang;
+static BOOL testRealSend;
+static BOOL testReplyError;
+static OSStatus testStatus = errAEEventNotPermitted;
 #endif
 static void diagnostic(NSString *message) {
     fprintf(stderr, "linea-media: %s\n", message.UTF8String);
     fflush(stderr);
 }
 static void trace(NSString *message) { if (debugLogging) diagnostic(message); }
+
+
+#ifdef LINEA_TESTING
+@interface ProbeReceiver : NSObject
+- (void)receive:(NSAppleEventDescriptor *)event reply:(NSAppleEventDescriptor *)reply;
+@end
+@implementation ProbeReceiver
+- (void)receive:(NSAppleEventDescriptor *)event reply:(NSAppleEventDescriptor *)reply {
+    NSCAssert(NSThread.isMainThread, @"Apple event handler must use the main loop");
+    NSAppleEventDescriptor *object = [event paramDescriptorForKeyword:keyDirectObject];
+    NSCAssert([object descriptorForKeyword:keyAEKeyData].typeCodeValue == pName, @"Expected get name");
+    trace(@"real Apple event received on main loop");
+    if (testReplyError) [reply setParamDescriptor:[NSAppleEventDescriptor descriptorWithInt32:errAEEventNotPermitted] forKeyword:keyErrorNumber];
+    else [reply setParamDescriptor:[NSAppleEventDescriptor descriptorWithString:@"Fixture"] forKeyword:keyDirectObject];
+}
+@end
+#endif
 
 static void emit(NSDictionary *value) {
     NSData *data = [NSJSONSerialization dataWithJSONObject:value options:0 error:nil];
@@ -26,7 +46,7 @@ static NSDictionary *failure(NSString *reason) { return @{@"ok":@NO, @"reason":r
 static NSArray *targets(void) {
     // Only discovery touches AppKit. The worker never blocks the main event loop.
 #ifdef LINEA_TESTING
-    return @[@{@"bundle":@"com.spotify.client", @"id":@"test", @"current":@YES}];
+    return @[@{@"bundle":@"com.spotify.client", @"id":@"test", @"pid":@(getpid()), @"current":@YES}];
 #endif
     __block NSArray *discovered;
     dispatch_sync(dispatch_get_main_queue(), ^{
@@ -35,26 +55,64 @@ static NSArray *targets(void) {
         for (NSString *bundle in @[@"com.spotify.client", @"com.apple.Music"]) {
             for (NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:bundle]) {
                 [result addObject:@{@"bundle":bundle, @"id":[NSString stringWithFormat:@"%@:%d",bundle,app.processIdentifier],
-                    @"current":@(front == app.processIdentifier)}];
+                    @"pid":@(app.processIdentifier), @"current":@(front == app.processIdentifier)}];
             }
         }
         discovered = [result copy];
     });
     return discovered;
 }
-static OSStatus permission(NSString *bundle, BOOL prompt) {
+static BOOL needsPermission(OSStatus status) {
+    return status == errAEEventNotPermitted || status == errAEEventWouldRequireUserConsent;
+}
+static NSString *permissionFailure(OSStatus status) {
+    if (needsPermission(status)) return @"permission_required";
+    if (status == errAETimeout) return @"timeout";
+    if (status == procNotFound || status == connectionInvalid) return @"session_unavailable";
+    return @"source_unavailable";
+}
+static OSStatus permission(NSDictionary *player, BOOL prompt) {
     NSCAssert(!NSThread.isMainThread, @"Automation permission must run off the main thread");
-    trace([NSString stringWithFormat:@"permission begin target=%@ prompt=%d", bundle, prompt]);
+    NSString *bundle = player[@"bundle"];
+    trace([NSString stringWithFormat:@"permission probe begin target=%@ prompt=%d", bundle, prompt]);
+    // A harmless get-name event exercises the actual permission path without the
+    // unbounded AEDeterminePermissionToAutomateTarget preflight. Address the running
+    // instance by PID so a probe cannot launch or switch to a replacement player.
+    NSAppleEventDescriptor *target = [NSAppleEventDescriptor descriptorWithProcessIdentifier:[player[@"pid"] intValue]];
+    NSAppleEventDescriptor *property = [NSAppleEventDescriptor recordDescriptor];
+    [property setDescriptor:[NSAppleEventDescriptor descriptorWithTypeCode:typeProperty] forKeyword:keyAEDesiredClass];
+    [property setDescriptor:[NSAppleEventDescriptor descriptorWithEnumCode:formPropertyID] forKeyword:keyAEKeyForm];
+    [property setDescriptor:[NSAppleEventDescriptor descriptorWithTypeCode:pName] forKeyword:keyAEKeyData];
+    [property setDescriptor:[NSAppleEventDescriptor nullDescriptor] forKeyword:keyAEContainer];
+    NSAppleEventDescriptor *event = [NSAppleEventDescriptor appleEventWithEventClass:kAECoreSuite
+        eventID:kAEGetData targetDescriptor:target returnID:kAutoGenerateReturnID transactionID:kAnyTransactionID];
+    [event setParamDescriptor:[property coerceToDescriptorType:typeObjectSpecifier] forKeyword:keyDirectObject];
+    AESendMode mode = kAEWaitReply | kAENeverInteract;
+    if (!prompt) mode |= kAEDoNotPromptForUserConsent;
+    // Apple Event timeouts use 60 ticks per second. Consent only happens on a click.
+    SInt32 ticks = prompt ? 50 * 60 : 60;
+    AppleEvent reply = {typeNull, NULL};
+    OSStatus status;
 #ifdef LINEA_TESTING
-    // A callback to main must complete while the permission worker is waiting.
+    NSAppleEventDescriptor *object = [event paramDescriptorForKeyword:keyDirectObject];
+    NSCAssert(object.descriptorType == typeObjectSpecifier, @"Expected a property specifier");
+    NSCAssert([object descriptorForKeyword:keyAEKeyData].typeCodeValue == pName, @"Only read the app name");
+    NSCAssert(((mode & kAEDoNotPromptForUserConsent) != 0) == !prompt, @"Polling must not prompt");
+    NSCAssert(ticks > 0 && ticks <= 3000, @"Every send must have a deadline");
     dispatch_sync(dispatch_get_main_queue(), ^{ trace(@"permission main-loop callback"); });
     if (testHang) dispatch_semaphore_wait(dispatch_semaphore_create(0), DISPATCH_TIME_FOREVER);
-    OSStatus status = errAEEventNotPermitted;
-#else
-    NSAppleEventDescriptor *target = [NSAppleEventDescriptor descriptorWithBundleIdentifier:bundle];
-    OSStatus status = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, prompt);
+    if (!testRealSend) status = testStatus;
+    else
 #endif
-    trace([NSString stringWithFormat:@"permission end target=%@ status=%d", bundle, (int)status]);
+    status = AESendMessage(event.aeDesc, &reply, mode, ticks);
+    if (status == noErr) {
+        // Transport success does not mean the player accepted the event.
+        SInt32 replyError = noErr;
+        if (AEGetParamPtr(&reply, keyErrorNumber, typeSInt32, NULL, &replyError, sizeof(replyError), NULL) == noErr)
+            status = replyError;
+    }
+    AEDisposeDesc(&reply);
+    trace([NSString stringWithFormat:@"permission probe end target=%@ status=%d", bundle, (int)status]);
     return status;
 }
 int main(int argc, char **argv) {
@@ -62,6 +120,14 @@ int main(int argc, char **argv) {
         debugLogging = getenv("LINEA_MEDIA_DEBUG") != NULL;
 #ifdef LINEA_TESTING
         testHang = argc > 1 && strcmp(argv[1], "--test-hang") == 0;
+        if (argc > 1 && strcmp(argv[1], "--test-timeout") == 0) testStatus = errAETimeout;
+        if (argc > 1 && strcmp(argv[1], "--test-consent") == 0) testStatus = errAEEventWouldRequireUserConsent;
+        if (argc > 1 && strcmp(argv[1], "--test-gone") == 0) testStatus = procNotFound;
+        testReplyError = argc > 1 && strcmp(argv[1], "--test-reply-error") == 0;
+        testRealSend = testReplyError || (argc > 1 && strcmp(argv[1], "--test-real-send") == 0);
+        ProbeReceiver *receiver = [ProbeReceiver new];
+        [NSAppleEventManager.sharedAppleEventManager setEventHandler:receiver andSelector:@selector(receive:reply:)
+            forEventClass:kAECoreSuite andEventID:kAEGetData];
 #endif
         // The parent owns the pipes; also exit if a wedged script outlives its parent.
         pid_t parent = getppid();
@@ -111,20 +177,25 @@ int main(int argc, char **argv) {
                             for (NSUInteger i = 0; i < running.count; i++) {
                                 NSUInteger index = (nextPermissionTarget + i) % running.count;
                                 NSDictionary *target = running[index];
-                                if (permission(target[@"bundle"], NO) != noErr) {
+                                OSStatus existing = permission(target, NO);
+                                if (needsPermission(existing)) {
                                     nextPermissionTarget = (index + 1) % running.count;
-                                    OSStatus status = permission(target[@"bundle"], YES);
-                                    answer = status == noErr ? @{@"ok":@YES,@"data":NSNull.null} : failure(@"permission_required");
+                                    OSStatus status = permission(target, YES);
+                                    answer = status == noErr ? @{@"ok":@YES,@"data":NSNull.null} : failure(permissionFailure(status));
                                     break;
                                 }
+                                if (existing != noErr) answer = failure(permissionFailure(existing));
                             }
                             if (!answer) answer = @{@"ok":@YES,@"data":NSNull.null};
                         } else {
                             NSMutableArray *allowed = [NSMutableArray array];
                             BOOL denied = NO;
+                            NSString *probeError = nil;
                             for (NSDictionary *target in running) {
-                                if (permission(target[@"bundle"], NO) == noErr) [allowed addObject:target];
-                                else denied = YES;
+                                OSStatus status = permission(target, NO);
+                                if (status == noErr) [allowed addObject:target];
+                                else if (needsPermission(status)) denied = YES;
+                                else probeError = permissionFailure(status);
                             }
                             if ([method isEqual:@"command"]) {
                                 NSDictionary *previous = known[request[@"sessionId"] ?: @""];
@@ -133,10 +204,10 @@ int main(int argc, char **argv) {
                                 else {
                                     NSPredicate *matches = [NSPredicate predicateWithFormat:@"id == %@",request[@"sessionId"]];
                                     allowed = [[allowed filteredArrayUsingPredicate:matches] mutableCopy];
-                                    if (!allowed.count) answer = failure(denied ? @"permission_required" : @"session_unavailable");
+                                    if (!allowed.count) answer = failure(probeError ?: (denied ? @"permission_required" : @"session_unavailable"));
                                 }
                             }
-                            if (!answer && !allowed.count && denied) answer = failure(@"permission_required");
+                            if (!answer && !allowed.count && (probeError || denied)) answer = failure(probeError ?: @"permission_required");
                             if (!answer) {
                                 NSMutableDictionary *input = [request mutableCopy];
                                 input[@"targets"] = allowed;
