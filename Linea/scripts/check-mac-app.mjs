@@ -9,7 +9,6 @@ import {
   accessSync,
   constants,
   mkdtempSync,
-  cpSync,
   rmSync
 } from 'node:fs'
 const fsExistsStable = () => existsSync('dist/latest-mac.yml')
@@ -44,9 +43,13 @@ const copiedDirectory = mkdtempSync(join(tmpdir(), 'Linea installed é '))
 let app
 try {
   const installed = join(copiedDirectory, 'Linea.app')
-  cpSync(original, installed, { recursive: true })
+  // Preserve macOS bundle symlinks, permissions and extended attributes.
+  execFileSync('/usr/bin/ditto', [original, installed])
   app = await electron.launch({ executablePath: join(installed, 'Contents/MacOS/Linea') })
+  app.process().stderr.on('data', chunk => process.stderr.write(chunk))
+  app.process().on('exit', (code, signal) => console.log('Packaged app exited:', { code, signal }))
   const page = await app.firstWindow()
+  page.on('crash', () => console.error('Packaged renderer crashed'))
   // Allow the helper's startup/read deadlines to expose a broken packaged path.
   await new Promise((resolve) => setTimeout(resolve, 6500))
   const manifest = readFileSync('dist/beta-mac.yml', 'utf8')
