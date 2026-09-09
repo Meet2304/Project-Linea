@@ -162,3 +162,118 @@ describe('helper failure diagnostics', () => {
     }
   })
 })
+
+describe('reported Mac launch and reconnect regressions', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  for (const code of ['EPERM', 'EACCES', 'ENOENT']) {
+    it(
+      'reports a blocked or missing helper (' + code + ') without an unhandled error',
+      async () => {
+        const unavailable = vi.fn()
+        bridge.on('unavailable', unavailable)
+        children[0].emit(
+          'error',
+          Object.assign(new Error(code + ': helper launch blocked'), { code })
+        )
+        expect(console.error).toHaveBeenCalledWith(
+          'Media helper: launch failed',
+          'helper.exe',
+          code + ': helper launch blocked'
+        )
+        expect(unavailable).toHaveBeenCalledOnce()
+        expect(await bridge.read()).toEqual({ ok: false, reason: 'source_unavailable' })
+        await vi.advanceTimersByTimeAsync(1000)
+        expect(children).toHaveLength(2)
+      }
+    )
+  }
+
+  it('logs a helper that never becomes ready and cancels its startup deadline on shutdown', async () => {
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(console.error).toHaveBeenCalledWith('Media helper: startup timed out', 'helper.exe')
+    expect(children[0].kill).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(1000)
+    bridge.stop()
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(children).toHaveLength(2)
+    expect(
+      vi
+        .mocked(console.error)
+        .mock.calls.filter(([message]) => message === 'Media helper: startup timed out')
+    ).toHaveLength(1)
+  })
+
+  it('bounds ready-only snapshot hangs, backs off, then recovers with a fresh session', async () => {
+    for (const delay of [1000, 5000, 30000, 30000]) {
+      send({ v: 1, type: 'ready' })
+      const active = children.at(-1)!
+      const pending = bridge.read()
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(await pending).toEqual({ ok: false, reason: 'timeout' })
+      expect(active.kill).toHaveBeenCalledOnce()
+      const count = children.length
+      await vi.advanceTimersByTimeAsync(delay - 1)
+      expect(children).toHaveLength(count)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(children).toHaveLength(count + 1)
+    }
+    expect(console.error).toHaveBeenCalledWith(
+      'Media helper: request timed out',
+      expect.objectContaining({ method: 'snapshot' })
+    )
+    send({ v: 1, type: 'ready' })
+    let id = 0
+    children.at(-1)!.stdin.on('data', (chunk) => {
+      id = JSON.parse(chunk.toString()).id
+    })
+    const recovered = bridge.read()
+    send({ v: 1, type: 'response', id, ok: true, data: { sessions: [media()] } })
+    expect(await recovered).toMatchObject({
+      ok: true,
+      data: [expect.objectContaining({ id: expect.stringMatching(/^5:/) })]
+    })
+    children.at(-1)!.emit('exit', 75, null)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(children).toHaveLength(6) // successful playback resets the retry backoff
+  })
+
+  it('ends a stuck explicit authorization and releases the waiting snapshot', async () => {
+    send({ v: 1, type: 'ready' })
+    const authorize = bridge.authorize()
+    const read = bridge.read()
+    await vi.advanceTimersByTimeAsync(59999)
+    expect(children[0].kill).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(await authorize).toEqual({ ok: false, reason: 'timeout' })
+    expect(await read).toEqual({ ok: false, reason: 'source_unavailable' })
+    expect(console.error).toHaveBeenCalledWith(
+      'Media helper: request timed out',
+      expect.objectContaining({ method: 'authorize' })
+    )
+  })
+
+  it('preserves the native permission-stage diagnostic before a watchdog exit', async () => {
+    send({ v: 1, type: 'ready' })
+    const read = bridge.read()
+    children[0].stderr.write(
+      'linea-media: permission probe begin target=com.spotify.client prompt=0\n'
+    )
+    children[0].stderr.write(
+      'linea-media: request 1 method=snapshot timed out; terminating helper\n'
+    )
+    children[0].emit('exit', 75, null)
+    expect(await read).toEqual({ ok: false, reason: 'source_unavailable' })
+    expect(console.error).toHaveBeenCalledWith(
+      'SMTC:',
+      expect.stringContaining('permission probe begin')
+    )
+    expect(console.error).toHaveBeenCalledWith('SMTC:', expect.stringContaining('timed out'))
+    expect(console.error).toHaveBeenCalledWith('Media helper: exited', { code: 75, signal: null })
+  })
+})

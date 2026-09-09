@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process'
-import { mkdtempSync, copyFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, copyFileSync, rmSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import assert from 'node:assert/strict'
@@ -72,7 +72,11 @@ try {
     if (method === 'snapshot') assert.doesNotMatch(result.stderr, /prompt=1/)
     else assert.match(result.stderr, /prompt=1/)
   }
-  for (const [arg, reason] of [['--test-consent', 'permission_required'], ['--test-timeout', 'timeout'], ['--test-gone', 'session_unavailable']]) {
+  for (const [arg, reason] of [
+    ['--test-consent', 'permission_required'],
+    ['--test-timeout', 'timeout'],
+    ['--test-gone', 'session_unavailable']
+  ]) {
     for (const method of ['snapshot', 'authorize']) {
       const result = await probe([arg], method)
       assert.equal(result.code, 0, result.stderr)
@@ -88,11 +92,18 @@ try {
   assert.equal(replyError.code, 0, replyError.stderr)
   assert.equal(replyError.messages[1].reason, 'permission_required')
   assert.match(replyError.stderr, /real Apple event received/)
-  const hung = await probe(['--test-hang'], 'snapshot')
-  assert.equal(hung.code, 75, hung.stderr)
-  assert.match(hung.stderr, /permission main-loop callback/)
-  assert.match(hung.stderr, /timed out; terminating helper/)
-  assert.equal(hung.messages.length, 1)
+  for (const method of ['snapshot', 'authorize']) {
+    const hung = await probe(['--test-hang'], method)
+    assert.equal(hung.code, 75, hung.stderr)
+    assert.match(hung.stderr, /permission main-loop callback/)
+    assert.match(hung.stderr, /timed out; terminating helper/)
+    assert.equal(hung.messages.length, 1)
+  }
+  unlinkSync(join(dir, 'media.js'))
+  const missingScript = await probe([], 'snapshot')
+  assert.equal(missingScript.code, 2)
+  assert.deepEqual(missingScript.messages, [])
+  assert.match(missingScript.stderr, /missing or unreadable bundled media.js/)
   console.log(
     'Mac permission checks leave the main loop responsive; denied access, explicit authorization, pipe closure and stalled requests passed.'
   )

@@ -1,12 +1,51 @@
 import { _electron as electron, expect } from '@playwright/test'
-import { resolve } from 'node:path'
-import { readFileSync, existsSync } from 'node:fs'
+import { resolve, join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { execFileSync } from 'node:child_process'
+import assert from 'node:assert/strict'
+import {
+  readFileSync,
+  existsSync,
+  accessSync,
+  constants,
+  mkdtempSync,
+  cpSync,
+  rmSync
+} from 'node:fs'
 const fsExistsStable = () => existsSync('dist/latest-mac.yml')
 const metadata = JSON.parse(readFileSync('package.json', 'utf8'))
-const app = await electron.launch({
-  executablePath: resolve('dist/mac-universal/Linea.app/Contents/MacOS/Linea')
-})
+const original = resolve('dist/mac-universal/Linea.app')
+for (const relative of ['Contents/MacOS/Linea', 'Contents/Resources/mac/linea-media']) {
+  const binary = join(original, relative)
+  accessSync(binary, constants.R_OK | constants.X_OK)
+  const architectures = execFileSync('/usr/bin/lipo', ['-archs', binary], { encoding: 'utf8' })
+    .trim()
+    .split(/\s+/)
+  assert.ok(
+    architectures.includes('arm64') && architectures.includes('x86_64'),
+    relative + ' must be universal'
+  )
+}
+accessSync(join(original, 'Contents/Resources/mac/media.js'), constants.R_OK)
+const usage = execFileSync(
+  '/usr/bin/plutil',
+  [
+    '-extract',
+    'NSAppleEventsUsageDescription',
+    'raw',
+    '-o',
+    '-',
+    join(original, 'Contents/Info.plist')
+  ],
+  { encoding: 'utf8' }
+)
+assert.ok(usage.trim(), 'Missing Automation usage description')
+const copiedDirectory = mkdtempSync(join(tmpdir(), 'Linea installed é '))
+let app
 try {
+  const installed = join(copiedDirectory, 'Linea.app')
+  cpSync(original, installed, { recursive: true })
+  app = await electron.launch({ executablePath: join(installed, 'Contents/MacOS/Linea') })
   const page = await app.firstWindow()
   // Allow the helper's startup/read deadlines to expose a broken packaged path.
   await new Promise((resolve) => setTimeout(resolve, 6500))
@@ -27,5 +66,9 @@ try {
     throw new Error('Wrong platform')
   console.log('Packaged universal Mac app launches and initializes the bundled media helper.')
 } finally {
-  await app.close()
+  try {
+    await app?.close()
+  } finally {
+    rmSync(copiedDirectory, { recursive: true, force: true })
+  }
 }
