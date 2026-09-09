@@ -26,10 +26,10 @@ static void trace(NSString *message) { if (debugLogging) diagnostic(message); }
 @end
 @implementation ProbeReceiver
 - (void)receive:(NSAppleEventDescriptor *)event reply:(NSAppleEventDescriptor *)reply {
-    NSCAssert(NSThread.isMainThread, @"Apple event handler must use the main loop");
+    // Apple Events sent to this same process may be delivered directly on the sender thread.
     NSAppleEventDescriptor *object = [event paramDescriptorForKeyword:keyDirectObject];
     NSCAssert([object descriptorForKeyword:keyAEKeyData].typeCodeValue == pName, @"Expected get name");
-    trace(@"real Apple event received on main loop");
+    trace(@"real Apple event received");
     if (testReplyError) [reply setParamDescriptor:[NSAppleEventDescriptor descriptorWithInt32:errAEEventNotPermitted] forKeyword:keyErrorNumber];
     else [reply setParamDescriptor:[NSAppleEventDescriptor descriptorWithString:@"Fixture"] forKeyword:keyDirectObject];
 }
@@ -255,7 +255,7 @@ int main(int argc, char **argv) {
             }
         });
         // Keep a source installed so the run loop also services AppKit and main-queue callbacks.
-        NSMachPort *keepAlive = [NSMachPort port];
+        NSPort *keepAlive = [NSMachPort port];
         [NSRunLoop.currentRunLoop addPort:keepAlive forMode:NSDefaultRunLoopMode];
         [NSRunLoop.currentRunLoop run];
     }
