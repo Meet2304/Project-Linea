@@ -1,7 +1,8 @@
 # Linea — website
 
-The marketing site for [Linea](../README.md). One page, built with Next.js
-(App Router) and Tailwind v4.
+The marketing site for [Linea](../README.md). Built with Next.js (App Router)
+and Tailwind v4. Public origin: `https://project-linea.vercel.app` (override
+with `NEXT_PUBLIC_SITE_URL` when a custom domain is attached).
 
 ```bash
 bun install
@@ -14,6 +15,11 @@ bun run build
 | Path                       |                                                                           |
 | -------------------------- | ------------------------------------------------------------------------- |
 | `app/page.tsx`             | Composes the page and reads the latest GitHub release at render time      |
+| `app/faq/page.tsx`         | Indexed FAQ — source of truth is `lib/seo/faq.ts`                         |
+| `app/robots.ts`            | Allows Google and LLM crawlers; points at the sitemap                     |
+| `app/sitemap.ts`           | `/`, `/faq`, `/changelog`                                                 |
+| `app/llms.txt/route.ts`    | [llms.txt](https://llmstxt.org) index for agents                          |
+| `lib/site.ts`              | Canonical name, URL, titles                                               |
 | `app/globals.css`          | The design tokens, ported from the app's `src/renderer/assets/tokens.css` |
 | `app/api/release/route.ts` | Cached proxy for the GitHub Releases API                                  |
 | `components/field/`        | The live cymatics engine and its React wrapper                            |
@@ -54,3 +60,8 @@ Set `GITHUB_TOKEN` to raise the API rate limit. It is optional.
 ## Deploy
 
 Vercel, with **Root Directory** set to `website`.
+
+Set `GOOGLE_SITE_VERIFICATION` to the Search Console content value if you want
+the verification meta tag emitted automatically. Set `NEXT_PUBLIC_SITE_URL` to
+the custom domain (no trailing slash) so canonical tags, the sitemap and
+`llms.txt` all agree.

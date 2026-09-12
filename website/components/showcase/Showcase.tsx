@@ -233,9 +233,14 @@ export default function Showcase() {
               // see the shape of sound
             </Mono>
 
-            <h1 className={s.heroTitle}>Know every word.</h1>
+            <h1 className={s.heroTitle}>
+              <span className="sr-only">Linea. </span>
+              Know every word.
+            </h1>
 
-            <p className={s.heroSub}>Live song lyrics, floating over everything you do.</p>
+            <p className={s.heroSub}>
+              Linea is a live lyrics overlay. The words float over everything you do.
+            </p>
 
             <div className={s.heroCta}>
               {/* No accent override: the default is --ink, which is also what

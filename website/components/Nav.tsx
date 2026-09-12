@@ -12,6 +12,7 @@ const LINKS = [
   { href: '/#features', label: 'Features' },
   { href: '/#cymatics', label: 'Cymatics' },
   { href: '/changelog', label: 'Changelog' },
+  { href: '/faq', label: 'FAQ' },
   { href: '/#source', label: 'Source' }
 ]
 
@@ -119,7 +120,7 @@ export default function Nav() {
         /* On a phone the bar is the wordmark and two controls, so it can
            sit tighter — and the fade below it is shorter, because a tall
            gradient over a small screen dims a third of the page. */
-        @media (max-width: 720px) {
+        @media (max-width: 880px) {
           .nav-links { display: none !important; }
           .nav-shade { padding-bottom: 26px !important; }
           .nav-bar { padding: 14px 18px !important; gap: 12px !important; }

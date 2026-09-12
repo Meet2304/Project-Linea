@@ -1,5 +1,8 @@
 # Linea
 
+**[project-linea.vercel.app](https://project-linea.vercel.app)** — a free, open-source
+**desktop lyrics overlay** for Windows.
+
 A small, always-on-top lyrics overlay. The **0.2.0 Windows release** follows local
 Windows media sessions instead of Spotify's Web API.
 

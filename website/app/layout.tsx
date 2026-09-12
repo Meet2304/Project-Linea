@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { Outfit, Space_Mono } from 'next/font/google'
 import LoadingVeil from '@/components/loader/LoadingVeil'
+import JsonLd from '@/components/seo/JsonLd'
+import { siteGraphJsonLd } from '@/lib/seo/jsonld'
+import { rootMetadata } from '@/lib/seo/metadata'
 import './globals.css'
 
 const outfit = Outfit({
@@ -17,56 +20,27 @@ const spaceMono = Space_Mono({
   display: 'swap'
 })
 
-const TITLE = 'Linea — know every word'
-const DESCRIPTION =
-  'Live song lyrics, floating over everything you do. A lightweight, open-source desktop overlay with a Windows media-session beta.'
-
-export const metadata: Metadata = {
-  metadataBase: new URL('https://project-linea.vercel.app'),
-  title: TITLE,
-  description: DESCRIPTION,
-  applicationName: 'Linea',
-  authors: [{ name: 'Meet Bhatt', url: 'https://github.com/Meet2304' }],
-  keywords: [
-    'Linea',
-    'Windows lyrics overlay',
-    'lyrics overlay',
-    'desktop overlay',
-    'synced lyrics',
-    'Electron',
-    'open source'
-  ],
-  openGraph: {
-    type: 'website',
-    title: TITLE,
-    description: DESCRIPTION,
-    siteName: 'Linea',
-    images: [
-      {
-        url: '/social/linea-whatsapp-og.png',
-        width: 1200,
-        height: 630,
-        alt: 'Linea — know every word'
-      }
-    ]
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: TITLE,
-    description: DESCRIPTION,
-    images: ['/social/linea-x-social.png']
-  }
-}
+export const metadata: Metadata = rootMetadata
 
 export const viewport: Viewport = {
-  themeColor: '#ffffff',
-  colorScheme: 'light'
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0c0d10' }
+  ],
+  colorScheme: 'light dark'
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${outfit.variable} ${spaceMono.variable}`}>
       <body>
+        <JsonLd data={siteGraphJsonLd()} />
+        <a className="skip-to-content" href="#top">
+          Skip to content
+        </a>
+        <noscript>
+          <style>{`.loading-veil{display:none!important}`}</style>
+        </noscript>
         {/* In the first HTML payload on purpose: it covers the page before
             hydration, while everything beneath it finishes assembling. */}
         <LoadingVeil />
