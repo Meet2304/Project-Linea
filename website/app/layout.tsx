@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Outfit, Space_Mono } from 'next/font/google'
 import LoadingVeil from '@/components/loader/LoadingVeil'
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics'
 import './globals.css'
 
 const outfit = Outfit({
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             hydration, while everything beneath it finishes assembling. */}
         <LoadingVeil />
         {children}
+        <GoogleAnalytics />
       </body>
     </html>
   )

@@ -67,6 +67,9 @@ export default function DownloadButton({ size = 'lg', accent = 'var(--ink)', cla
         <a
           className="dl-primary"
           href={href}
+          data-analytics-event="download_click"
+          data-analytics-label={label}
+          data-analytics-platform={platform ?? 'unknown'}
           {...(platform === 'win' || platform === 'mac'
             ? {}
             : { target: '_blank', rel: 'noreferrer noopener' })}

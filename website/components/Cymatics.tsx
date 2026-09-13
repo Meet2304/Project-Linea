@@ -44,6 +44,7 @@ export default function Cymatics() {
   return (
     <section
       id="cymatics"
+      data-analytics-section="cymatics"
       style={{
         position: 'relative',
         minHeight: '100svh',
