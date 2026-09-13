@@ -39,14 +39,18 @@ export default function Interlude({ run }: { run: Release[] }) {
   }, [])
 
   return (
-    <section ref={ref} className={`${s.screen} ${s.interlude}`}>
+    <section
+      ref={ref}
+      className={`${s.screen} ${s.interlude}`}
+      data-analytics-section="changelog_corrections"
+    >
       <div className={`${s.interludeInner} ${shown ? s.in : ''}`}>
         <div className={s.interludeLead}>
           <p className="mono">In between · {run.length} corrections</p>
           <h2>Three releases in one evening, and not one of them was a feature.</h2>
           <p>
-            The build did not open. Then it opened but could not log in. Then it logged in and
-            lied about why the lyrics were missing. No letters for these — just the record.
+            The build did not open. Then it opened but could not log in. Then it logged in and lied
+            about why the lyrics were missing. No letters for these — just the record.
           </p>
         </div>
 

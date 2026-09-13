@@ -24,7 +24,10 @@ export default function Footer() {
   const pat = PATTERNS.weave
 
   return (
-    <footer style={{ borderTop: '1px solid var(--line)', background: 'var(--surface-alt)' }}>
+    <footer
+      data-analytics-section="footer"
+      style={{ borderTop: '1px solid var(--line)', background: 'var(--surface-alt)' }}
+    >
       <h2 className="sr-only">Linea</h2>
 
       <div

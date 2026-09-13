@@ -136,7 +136,7 @@ export default function Changelog() {
         })}
       </div>
 
-      <section className={`${s.screen} ${s.opener}`}>
+      <section className={`${s.screen} ${s.opener}`} data-analytics-section="changelog_intro">
         <div className={s.openerInner}>
           <p className="mono">Linea — dispatches</p>
           <h1>
@@ -166,7 +166,7 @@ export default function Changelog() {
         )
       )}
 
-      <section className={`${s.screen} ${s.closer}`}>
+      <section className={`${s.screen} ${s.closer}`} data-analytics-section="changelog_end">
         <div className={s.closerInner}>
           <h2>That is everything so far.</h2>
           <p>The next letter is already being written.</p>
