@@ -1,5 +1,8 @@
 # Linea
 
+**[linea.meetbhatt.com](https://linea.meetbhatt.com)** — a free, open-source
+**desktop lyrics overlay** for Windows.
+
 A small, always-on-top lyrics overlay. The **0.2.0 Windows release** follows local
 Windows media sessions instead of Spotify's Web API.
 

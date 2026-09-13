@@ -1,7 +1,7 @@
 # Linea — website
 
-The marketing site for [Linea](../README.md). One page, built with Next.js
-(App Router) and Tailwind v4.
+The marketing site for [Linea](../README.md). Built with Next.js (App Router)
+and Tailwind v4. Public origin: `https://linea.meetbhatt.com`.
 
 ```bash
 bun install
@@ -14,6 +14,11 @@ bun run build
 | Path                       |                                                                           |
 | -------------------------- | ------------------------------------------------------------------------- |
 | `app/page.tsx`             | Composes the page and reads the latest GitHub release at render time      |
+| `app/faq/page.tsx`         | Indexed FAQ — source of truth is `lib/seo/faq.ts`                         |
+| `app/robots.ts`            | Allows Google and LLM crawlers; points at the sitemap                     |
+| `app/sitemap.ts`           | `/`, `/faq`, `/changelog`                                                 |
+| `app/llms.txt/route.ts`    | [llms.txt](https://llmstxt.org) index for agents                          |
+| `lib/site.ts`              | Canonical name, URL, titles                                               |
 | `app/globals.css`          | The design tokens, ported from the app's `src/renderer/assets/tokens.css` |
 | `app/api/release/route.ts` | Cached proxy for the GitHub Releases API                                  |
 | `components/field/`        | The live cymatics engine and its React wrapper                            |
@@ -54,3 +59,15 @@ Set `GITHUB_TOKEN` to raise the API rate limit. It is optional.
 ## Deploy
 
 Vercel, with **Root Directory** set to `website`.
+
+In Vercel → Project → Settings → Environment Variables (Production, then
+redeploy — `NEXT_PUBLIC_*` is inlined at build time):
+
+| Name | Value |
+| ---- | ----- |
+| `NEXT_PUBLIC_SITE_URL` | `https://linea.meetbhatt.com` |
+| `GOOGLE_SITE_VERIFICATION` | the `content` value from Search Console’s HTML-tag method |
+
+Do not include a trailing slash on the site URL. After deploy, submit
+`https://linea.meetbhatt.com/sitemap.xml` in Google Search Console. The sitemap
+is generated; you do not upload HTML files for the pages themselves.

@@ -1,6 +1,7 @@
 import Nav from '@/components/Nav'
 import Showcase from '@/components/showcase/Showcase'
 import UnderTheHood from '@/components/UnderTheHood'
+import PlainWords from '@/components/PlainWords'
 import Cymatics from '@/components/Cymatics'
 import OpenSource from '@/components/OpenSource'
 import DownloadCTA from '@/components/DownloadCTA'
@@ -29,6 +30,7 @@ export default async function Page() {
           {/* Hero and the feature walkthrough are one pinned sequence. */}
           <Showcase />
           <UnderTheHood />
+          <PlainWords />
           <Cymatics />
           <OpenSource release={release} />
           <DownloadCTA />

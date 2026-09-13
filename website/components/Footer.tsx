@@ -3,13 +3,15 @@ import Mono from './ui/Mono'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
 import { ISSUES_URL, LICENSE_URL, NOTICE_URL, RELEASES_URL, REPO_URL } from '@/lib/release'
 
-const LINKS: { label: string; href: string }[] = [
-  { label: 'GitHub', href: REPO_URL },
-  { label: 'Releases', href: RELEASES_URL },
-  { label: 'Issues', href: ISSUES_URL },
-  { label: 'License', href: LICENSE_URL },
-  { label: 'Notices', href: NOTICE_URL },
-  { label: 'lrclib', href: 'https://lrclib.net' }
+const LINKS: { label: string; href: string; external?: boolean }[] = [
+  { label: 'FAQ', href: '/faq' },
+  { label: 'Changelog', href: '/changelog' },
+  { label: 'GitHub', href: REPO_URL, external: true },
+  { label: 'Releases', href: RELEASES_URL, external: true },
+  { label: 'Issues', href: ISSUES_URL, external: true },
+  { label: 'License', href: LICENSE_URL, external: true },
+  { label: 'Notices', href: NOTICE_URL, external: true },
+  { label: 'lrclib', href: 'https://lrclib.net', external: true }
 ]
 
 /**
@@ -51,8 +53,7 @@ export default function Footer() {
             <a
               key={l.label}
               href={l.href}
-              target="_blank"
-              rel="noreferrer noopener"
+              {...(l.external ? { target: '_blank', rel: 'noreferrer noopener' } : undefined)}
               style={{ textDecoration: 'none' }}
             >
               <Mono color="var(--steel)">{l.label}</Mono>
@@ -177,7 +178,7 @@ export default function Footer() {
         .foot-links a span { transition: opacity 180ms var(--ease); }
         .foot-links a:hover span { opacity: .6; }
 
-        /* Below this width the eyebrow, the six links and the three legal
+        /* Below this width the eyebrow, the links and the three legal
            lines can no longer share their rows: they wrap into ragged
            two-and-a-half-line blocks. Each one gets a shape of its own
            instead. Same breakpoint Under the Hood drops to one column. */

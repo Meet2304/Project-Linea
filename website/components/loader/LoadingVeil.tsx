@@ -66,6 +66,7 @@ export default function LoadingVeil() {
 
   return (
     <div
+      className="loading-veil"
       aria-hidden="true"
       onTransitionEnd={() => setPhase('gone')}
       style={{
