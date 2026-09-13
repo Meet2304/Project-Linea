@@ -4,10 +4,10 @@
  * cannot drift between Google, social cards and LLM crawlers.
  *
  * Override the public origin with NEXT_PUBLIC_SITE_URL (no trailing slash)
- * when a custom domain is attached. Preview deployments keep the stable
- * production host so they never mint a second canonical.
+ * if the domain changes. Preview deployments keep this production host so
+ * they never mint a second canonical.
  */
-export const SITE_HOST = 'project-linea.vercel.app'
+export const SITE_HOST = 'linea.meetbhatt.com'
 
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || `https://${SITE_HOST}`

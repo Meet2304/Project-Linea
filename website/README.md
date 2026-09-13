@@ -1,8 +1,7 @@
 # Linea — website
 
 The marketing site for [Linea](../README.md). Built with Next.js (App Router)
-and Tailwind v4. Public origin: `https://project-linea.vercel.app` (override
-with `NEXT_PUBLIC_SITE_URL` when a custom domain is attached).
+and Tailwind v4. Public origin: `https://linea.meetbhatt.com`.
 
 ```bash
 bun install
@@ -61,7 +60,14 @@ Set `GITHUB_TOKEN` to raise the API rate limit. It is optional.
 
 Vercel, with **Root Directory** set to `website`.
 
-Set `GOOGLE_SITE_VERIFICATION` to the Search Console content value if you want
-the verification meta tag emitted automatically. Set `NEXT_PUBLIC_SITE_URL` to
-the custom domain (no trailing slash) so canonical tags, the sitemap and
-`llms.txt` all agree.
+In Vercel → Project → Settings → Environment Variables (Production, then
+redeploy — `NEXT_PUBLIC_*` is inlined at build time):
+
+| Name | Value |
+| ---- | ----- |
+| `NEXT_PUBLIC_SITE_URL` | `https://linea.meetbhatt.com` |
+| `GOOGLE_SITE_VERIFICATION` | the `content` value from Search Console’s HTML-tag method |
+
+Do not include a trailing slash on the site URL. After deploy, submit
+`https://linea.meetbhatt.com/sitemap.xml` in Google Search Console. The sitemap
+is generated; you do not upload HTML files for the pages themselves.
