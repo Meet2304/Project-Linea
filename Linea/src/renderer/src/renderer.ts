@@ -13,7 +13,7 @@ import {
   type PlaybackFeedback
 } from '../../shared/playbackFeedback'
 import { estimatePositionMs } from '../../shared/lyrics'
-import type { LyricLine } from '../../shared/lyrics'
+import type { LyricLine, LyricsStatus } from '../../shared/lyrics'
 import type {
   LyricsSize,
   PlayerCommand,
@@ -41,11 +41,18 @@ import {
 import { LyricScheduler } from './scheduler'
 import { initSettings, reflectPrefs, toggleSettings, openSettings } from './settingsUi'
 import { initUpdateUi, reflectUpdateState } from './updateUi'
+import {
+  FEEDBACK_PAGE,
+  feedbackPageUrlFromSession,
+  type Diagnostics
+} from '../../shared/feedbackUrl'
 
 // ------------------------------------------------------------------
 // State
 // ------------------------------------------------------------------
 let sourceStatus: SourceStatus = 'idle'
+let lyricsStatus: LyricsStatus = 'none'
+let diagnostics: Diagnostics = { version: '', platform: '', osVersion: '', arch: '' }
 let lastRevision = -1
 let lyricContent = ''
 let authoritativePlayer: PlayerState | null = null
@@ -767,10 +774,22 @@ function applyLyricsSize(size: LyricsSize): void {
   })
 }
 
+function refreshReportLink(): void {
+  el.reportProblem.href = diagnostics.version
+    ? feedbackPageUrlFromSession({
+        diagnostics,
+        player,
+        lyricsStatus,
+        sourceStatus
+      })
+    : FEEDBACK_PAGE
+}
+
 function applySnapshot(snapshot: PlaybackSnapshot): void {
   if (snapshot.revision <= lastRevision) return
   lastRevision = snapshot.revision
   sourceStatus = snapshot.sourceStatus
+  lyricsStatus = snapshot.lyrics.status
   authoritativePlayer = snapshot.player
   if (feedback && !keepFeedback(feedback, authoritativePlayer)) clearFeedback()
   player =
@@ -791,6 +810,7 @@ function applySnapshot(snapshot: PlaybackSnapshot): void {
     })
   }
   refreshPlayerUi()
+  refreshReportLink()
 }
 
 // ------------------------------------------------------------------
@@ -813,7 +833,9 @@ async function init(): Promise<void> {
       queuePrefs({ showTimestamps: show })
       applyPrefsToDom(prefs)
     },
-    onViewChange: () => {}
+    onViewChange: () => {
+      refreshReportLink()
+    }
   })
 
   window.linea.onNowPlaying(applySnapshot)
@@ -874,7 +896,13 @@ async function init(): Promise<void> {
   } catch {
     sourceStatus = 'unavailable'
   }
+  try {
+    diagnostics = await window.linea.getDiagnostics()
+  } catch (error) {
+    console.error('Diagnostics unavailable:', error)
+  }
   refreshPlayerUi()
+  refreshReportLink()
 
   // Deliberately outside the Promise.all above: the updater is a convenience,
   // and a failure here must not cost the panel its prefs or auth state. The

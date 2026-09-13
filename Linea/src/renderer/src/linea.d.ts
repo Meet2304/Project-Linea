@@ -6,6 +6,7 @@ import type {
   Prefs,
   UpdateState
 } from '../../shared/types'
+import type { Diagnostics } from '../../shared/feedbackUrl'
 
 interface LineaAPI {
   toggleClickThrough: () => Promise<boolean>
@@ -33,6 +34,7 @@ interface LineaAPI {
   getUpdateState: () => Promise<UpdateState>
   checkForUpdate: () => Promise<void>
   installUpdate: () => Promise<void>
+  getDiagnostics: () => Promise<Diagnostics>
   onUpdateState: (callback: (state: UpdateState) => void) => () => void
 }
 

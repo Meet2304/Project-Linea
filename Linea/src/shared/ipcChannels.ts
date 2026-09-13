@@ -23,5 +23,7 @@ export const IPC = {
   GET_UPDATE_STATE: 'linea:get-update-state',
   CHECK_FOR_UPDATE: 'linea:check-for-update',
   /** Installs on Windows; opens the release page on macOS. */
-  INSTALL_UPDATE: 'linea:install-update'
+  INSTALL_UPDATE: 'linea:install-update',
+  /** App version + OS, for a problem report. */
+  GET_DIAGNOSTICS: 'linea:get-diagnostics'
 } as const

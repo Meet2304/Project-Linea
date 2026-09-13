@@ -69,6 +69,7 @@ describe('timeline mapping', () => {
     const a = mapper.map(raw, NOW + 2000),
       b = mapper.map(raw, NOW + 3000)
     expect(a.progressMs).toBe(12000)
+    expect(a.sourceAppId).toBe('player')
     expect(b.fetchedAt).toBe(a.fetchedAt)
     expect(estimatePositionMs(b, NOW + 4000)).toBe(14000)
   })

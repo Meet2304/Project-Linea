@@ -48,8 +48,11 @@ session takes priority.
 
 A persistent media-access message means the helper is reconnecting. Missing
 lyrics and unreachable lyric providers have separate messages; cached lyrics
-remain usable offline. If reporting a problem, include Windows version, player,
-song, available controls and reproduction steps, rather than account credentials.
+remain usable offline. If something is wrong, use the
+[feedback page](https://project-linea.vercel.app/feedback) — or **Report a
+problem** in settings, which opens that form with this session already filled
+in. Include Windows version, player, song, available controls and reproduction
+steps, rather than account credentials.
 
 ## Development and validation
 

@@ -12,6 +12,7 @@ const LINKS = [
   { href: '/#features', label: 'Features' },
   { href: '/#cymatics', label: 'Cymatics' },
   { href: '/changelog', label: 'Changelog' },
+  { href: '/feedback', label: 'Feedback' },
   { href: '/#source', label: 'Source' }
 ]
 

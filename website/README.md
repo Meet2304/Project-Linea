@@ -1,6 +1,6 @@
 # Linea — website
 
-The marketing site for [Linea](../README.md). One page, built with Next.js
+The marketing site for [Linea](../README.md). Built with Next.js
 (App Router) and Tailwind v4.
 
 ```bash
@@ -14,12 +14,15 @@ bun run build
 | Path                       |                                                                           |
 | -------------------------- | ------------------------------------------------------------------------- |
 | `app/page.tsx`             | Composes the page and reads the latest GitHub release at render time      |
+| `app/feedback/page.tsx`    | Structured problem reports, filed as GitHub issues                        |
+| `app/changelog/page.tsx`   | Release letters                                                           |
 | `app/globals.css`          | The design tokens, ported from the app's `src/renderer/assets/tokens.css` |
 | `app/api/release/route.ts` | Cached proxy for the GitHub Releases API                                  |
 | `components/field/`        | The live cymatics engine and its React wrapper                            |
 | `components/demo/`         | The interactive overlay replica                                           |
 | `components/features/`     | The sticky scroller and its four acts                                     |
 | `lib/palettes.ts`          | Named plates (patterns) and duotone palettes                              |
+| `lib/feedback.ts`          | Problem-report draft, GitHub issue URL                                    |
 
 ## The two things worth knowing
 

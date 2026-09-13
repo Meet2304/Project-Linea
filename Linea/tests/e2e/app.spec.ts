@@ -352,6 +352,17 @@ test('rejected commands restore actual playback without changing a replacement t
   await expect(page.locator('#btn-play')).toHaveAttribute('aria-label', 'Play')
 })
 
+test('settings offers a problem report with this session filled in', async () => {
+  await page.locator('#app').hover()
+  await page.locator('#btn-settings').click()
+  const link = page.locator('#report-problem')
+  await expect(link).toBeVisible()
+  await expect(link).toHaveAttribute('href', /project-linea\.vercel\.app\/feedback/)
+  const href = (await link.getAttribute('href')) ?? ''
+  expect(href).toContain('version=')
+  expect(href).toContain('windows=')
+})
+
 test('renderer reports no unhandled script errors', () => {
   expect(rendererErrors).toEqual([])
 })

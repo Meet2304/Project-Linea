@@ -12,6 +12,7 @@ import {
   powerMonitor
 } from 'electron'
 import { join } from 'path'
+import { release as osRelease, arch as osArch } from 'node:os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { IPC } from '../shared/ipcChannels'
@@ -453,6 +454,12 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.INSTALL_UPDATE, () => {
     installUpdate()
   })
+  ipcMain.handle(IPC.GET_DIAGNOSTICS, () => ({
+    version: app.getVersion(),
+    platform: process.platform,
+    osVersion: osRelease(),
+    arch: osArch()
+  }))
 
   // Everything the renderer needs is registered above, before the window
   // exists. The renderer's first paint waits on GET_PREFS/GET_PLAYBACK_SNAPSHOT — if a

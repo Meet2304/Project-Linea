@@ -44,7 +44,8 @@ export const el = {
   updateHint: byId('update-hint'),
   updateAction: byId<HTMLButtonElement>('update-action'),
   updateProgress: byId('update-progress'),
-  toast: byId('toast')
+  toast: byId('toast'),
+  reportProblem: byId<HTMLAnchorElement>('report-problem')
 }
 
 export function injectStaticIcons(): void {
