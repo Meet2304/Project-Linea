@@ -6,8 +6,7 @@ import ReducedMotion from '@/components/motion/ReducedMotion'
 import FeedbackScreen from '@/components/feedback/FeedbackScreen'
 
 const TITLE = 'Feedback — Linea'
-const DESCRIPTION =
-  'Report a problem with Linea. A short form that asks for Windows version, player, song and steps.'
+const DESCRIPTION = 'Report a problem or an idea. A sentence is enough — it becomes a GitHub issue.'
 
 export const metadata: Metadata = {
   title: TITLE,

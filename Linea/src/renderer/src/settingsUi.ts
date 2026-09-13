@@ -1,4 +1,5 @@
 import type { LyricsSize, Prefs, Theme } from '../../shared/types'
+import { parseUserReport, type UserReportKind } from '../../shared/report'
 import { el } from './playerUi'
 
 export interface SettingsCallbacks {
@@ -6,7 +7,7 @@ export interface SettingsCallbacks {
   onLyricsSize: (size: LyricsSize) => void
   onShowTimestamps: (show: boolean) => void
   /** Fires after the now/settings view swaps. */
-  onViewChange: () => void
+  onViewChange?: () => void
 }
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -18,8 +19,17 @@ const sizeSegs = Array.from(document.querySelectorAll<HTMLButtonElement>('.seg')
 const timestampsSwitch = byId<HTMLButtonElement>('set-timestamps')
 const settingsScroll = byId('settings-scroll')
 const settingsScrollWrap = byId('settings-scroll-wrap')
+const reportOpen = byId<HTMLButtonElement>('report-problem')
+const reportComposer = byId<HTMLFormElement>('report-composer')
+const reportMessage = byId<HTMLTextAreaElement>('report-message')
+const reportSend = byId<HTMLButtonElement>('report-send')
+const reportCancel = byId<HTMLButtonElement>('report-cancel')
+const reportStatus = byId('report-status')
+const reportKinds = Array.from(document.querySelectorAll<HTMLButtonElement>('.report-kind'))
 
 let onViewChange: () => void = () => {}
+let reportKind: UserReportKind = 'problem'
+let composerOpen = false
 
 function reflectSize(size: LyricsSize): void {
   sizeSegs.forEach((seg) => {
@@ -42,8 +52,80 @@ function updateSettingsScrollFades(): void {
   settingsScrollWrap.dataset.down = String(s.scrollTop + s.clientHeight < s.scrollHeight - 2)
 }
 
+function setReportStatus(kind: 'ok' | 'error' | 'pending', text: string): void {
+  reportStatus.hidden = false
+  reportStatus.dataset.kind = kind
+  reportStatus.textContent = text
+}
+
+function setComposerOpen(open: boolean): void {
+  composerOpen = open
+  reportComposer.hidden = !open
+  reportOpen.setAttribute('aria-expanded', String(open))
+  if (open) {
+    reportStatus.hidden = true
+    reportStatus.textContent = ''
+    requestAnimationFrame(() => {
+      reportMessage.focus()
+      updateSettingsScrollFades()
+    })
+  } else {
+    updateSettingsScrollFades()
+  }
+}
+
+function closeComposer(): boolean {
+  if (!composerOpen) return false
+  setComposerOpen(false)
+  return true
+}
+
+function wireReportComposer(): void {
+  reportOpen.addEventListener('click', () => {
+    setComposerOpen(reportComposer.hidden)
+  })
+  reportCancel.addEventListener('click', () => setComposerOpen(false))
+  reportKinds.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const kind = btn.dataset.kind
+      if (kind !== 'problem' && kind !== 'idea') return
+      reportKind = kind
+      reportKinds.forEach((chip) => {
+        chip.dataset.selected = String(chip === btn)
+      })
+    })
+  })
+  reportComposer.addEventListener('submit', (event) => {
+    event.preventDefault()
+    void sendReport()
+  })
+}
+
+async function sendReport(): Promise<void> {
+  const parsed = parseUserReport({ kind: reportKind, message: reportMessage.value })
+  if (!parsed) {
+    setReportStatus('error', 'A short sentence is enough.')
+    return
+  }
+  reportSend.disabled = true
+  setReportStatus('pending', 'Sending…')
+  try {
+    const result = await window.linea.submitReport(parsed)
+    if (result.ok) {
+      reportMessage.value = ''
+      setReportStatus('ok', 'Sent.')
+    } else {
+      setReportStatus('error', result.error ?? 'Could not send.')
+    }
+  } catch {
+    setReportStatus('error', 'Could not send.')
+  } finally {
+    reportSend.disabled = false
+  }
+}
+
 export function initSettings(cb: SettingsCallbacks): void {
-  onViewChange = cb.onViewChange
+  if (cb.onViewChange) onViewChange = cb.onViewChange
 
   themeSwitch.addEventListener('click', () => {
     const dark = !isOn(themeSwitch)
@@ -63,11 +145,18 @@ export function initSettings(cb: SettingsCallbacks): void {
     cb.onShowTimestamps(show)
   })
 
+  wireReportComposer()
+
   settingsScroll.addEventListener('scroll', updateSettingsScrollFades, { passive: true })
   new ResizeObserver(updateSettingsScrollFades).observe(settingsScroll)
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeSettings()
+    if (event.key !== 'Escape') return
+    if (closeComposer()) {
+      event.preventDefault()
+      return
+    }
+    closeSettings()
   })
 }
 
@@ -78,6 +167,7 @@ export function reflectPrefs(prefs: Prefs): void {
 }
 
 function setSettingsOpen(open: boolean): void {
+  if (!open) setComposerOpen(false)
   el.settingsView.hidden = !open
   el.nowView.hidden = open
   el.btnSettings.dataset.active = String(open)

@@ -1,16 +1,11 @@
 'use client'
 
-import { Suspense } from 'react'
 import CymaticField from '@/components/field/CymaticField'
 import Mono from '@/components/ui/Mono'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
 import FeedbackForm from './FeedbackForm'
 import s from './feedback.module.css'
 
-/**
- * A letter, not a ticket form. The live plate sits behind the type the same
- * way it does on the rest of the site; the form is the quiet thing on top.
- */
 export default function FeedbackScreen() {
   const pal = PALETTES.iris
   const pat = PATTERNS.weave
@@ -37,14 +32,12 @@ export default function FeedbackScreen() {
           <Mono tracking="0.2em">// trouble</Mono>
           <h1 className={s.title}>Something&apos;s off.</h1>
           <p className={s.lede}>
-            Tell me what broke. The form asks for the few things that actually help — Windows
-            version, player, song — so I don&apos;t have to guess.
+            A sentence is enough. Send files it as a GitHub issue so it lands next to the rest of
+            Linea&apos;s work.
           </p>
         </header>
 
-        <Suspense fallback={<p className={s.lede}>Loading the form…</p>}>
-          <FeedbackForm />
-        </Suspense>
+        <FeedbackForm />
       </div>
     </section>
   )

@@ -11,18 +11,19 @@ bun run build
 
 ## What's here
 
-| Path                       |                                                                           |
-| -------------------------- | ------------------------------------------------------------------------- |
-| `app/page.tsx`             | Composes the page and reads the latest GitHub release at render time      |
-| `app/feedback/page.tsx`    | Structured problem reports, filed as GitHub issues                        |
-| `app/changelog/page.tsx`   | Release letters                                                           |
-| `app/globals.css`          | The design tokens, ported from the app's `src/renderer/assets/tokens.css` |
-| `app/api/release/route.ts` | Cached proxy for the GitHub Releases API                                  |
-| `components/field/`        | The live cymatics engine and its React wrapper                            |
-| `components/demo/`         | The interactive overlay replica                                           |
-| `components/features/`     | The sticky scroller and its four acts                                     |
-| `lib/palettes.ts`          | Named plates (patterns) and duotone palettes                              |
-| `lib/feedback.ts`          | Problem-report draft, GitHub issue URL                                    |
+| Path                        |                                                                           |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `app/page.tsx`              | Composes the page and reads the latest GitHub release at render time      |
+| `app/feedback/page.tsx`     | One-box problem / idea form; Send files a GitHub issue                    |
+| `app/api/feedback/route.ts` | Creates or comments on GitHub issues (crash reports group by signature)   |
+| `app/changelog/page.tsx`    | Release letters                                                           |
+| `app/globals.css`           | The design tokens, ported from the app's `src/renderer/assets/tokens.css` |
+| `app/api/release/route.ts`  | Cached proxy for the GitHub Releases API                                  |
+| `components/field/`         | The live cymatics engine and its React wrapper                            |
+| `components/demo/`          | The interactive overlay replica                                           |
+| `components/features/`      | The sticky scroller and its four acts                                     |
+| `lib/palettes.ts`           | Named plates (patterns) and duotone palettes                              |
+| `lib/report.ts`             | Parse a report, issue title/body, crash grouping marker                   |
 
 ## The two things worth knowing
 
@@ -52,7 +53,13 @@ GitHub Releases. Every failure path returns `{ tag: null }`, which renders
 no release has been published yet. Linux visitors always get that fallback:
 `electron-builder.yml` has no Linux target.
 
-Set `GITHUB_TOKEN` to raise the API rate limit. It is optional.
+Set `GITHUB_TOKEN` to raise the API rate limit on release lookups. It is
+optional for the marketing pages.
+
+Reports need a write token. Set `GITHUB_FEEDBACK_TOKEN` (Issues: write on
+`Meet2304/Project-Linea`) so `/api/feedback` can open or comment on issues.
+It falls back to `GITHUB_TOKEN`. Without a write token the form returns 503
+and nothing is stored on this site.
 
 ## Deploy
 

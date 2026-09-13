@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Report a problem on the site
     url: https://project-linea.vercel.app/feedback
-    about: A short form that asks for Windows version, player, song and steps. Preferred if something is broken.
+    about: One box, then Send — it files a GitHub issue. Preferred if something is broken.

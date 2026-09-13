@@ -207,19 +207,45 @@
                       Is this the real life? Is this just fantasy?
                     </span>
                   </div>
-                  <a
+                  <button
                     id="report-problem"
                     class="set-row set-row-link"
-                    href="https://project-linea.vercel.app/feedback"
-                    target="_blank"
-                    rel="noreferrer noopener"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="report-composer"
                   >
                     <span class="update-text">
                       <span class="set-label">Report a problem</span>
-                      <span class="set-hint">Opens a short form</span>
+                      <span class="set-hint">Write a sentence</span>
                     </span>
-                    <span class="set-link-affordance" aria-hidden="true">Open</span>
-                  </a>
+                    <span class="set-link-affordance" aria-hidden="true">Write</span>
+                  </button>
+                  <form id="report-composer" class="report-composer" hidden>
+                    <div class="report-kinds" role="group" aria-label="What kind of report">
+                      <button
+                        class="report-kind"
+                        type="button"
+                        data-kind="problem"
+                        data-selected="true"
+                      >
+                        Problem
+                      </button>
+                      <button class="report-kind" type="button" data-kind="idea">Idea</button>
+                    </div>
+                    <textarea
+                      id="report-message"
+                      name="message"
+                      rows="3"
+                      maxlength="2000"
+                      aria-label="What happened"
+                      placeholder="What happened."
+                    ></textarea>
+                    <div class="report-actions">
+                      <button id="report-send" class="report-send" type="submit">Send</button>
+                      <button id="report-cancel" class="report-cancel" type="button">Cancel</button>
+                    </div>
+                    <p id="report-status" class="report-status" hidden></p>
+                  </form>
                 </div>
               </div>
             </div>

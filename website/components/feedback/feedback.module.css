@@ -23,7 +23,7 @@
 .inner {
   position: relative;
   z-index: 2;
-  max-width: 760px;
+  max-width: 640px;
   margin: 0 auto;
   padding: 132px clamp(20px, 4vw, 56px) 96px;
 }
@@ -41,13 +41,14 @@
 
 .lede {
   margin: 16px 0 0;
-  max-width: 46ch;
+  max-width: 42ch;
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--steel);
 }
 
 .form {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -56,16 +57,6 @@
   border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--surface-page) 88%, transparent);
   box-shadow: var(--shadow-sm);
-}
-
-.banner {
-  margin: 0;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  background: var(--amethyst-wash);
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-  line-height: var(--leading-relaxed);
 }
 
 .kinds {
@@ -111,16 +102,18 @@
   letter-spacing: -0.015em;
 }
 
+.honey {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .field {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px 14px;
 }
 
 .input {
@@ -150,7 +143,7 @@
 
 .area {
   resize: vertical;
-  min-height: 120px;
+  min-height: 140px;
 }
 
 .note {
@@ -167,8 +160,7 @@
   margin-top: 4px;
 }
 
-.primary,
-.ghost {
+.primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -179,31 +171,23 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
+  background: var(--ink);
+  color: var(--text-on-accent);
+  border: 1px solid var(--ink);
   transition:
     background 180ms var(--ease),
     color 180ms var(--ease),
     border-color 180ms var(--ease);
 }
 
-.primary {
-  background: var(--ink);
-  color: var(--text-on-accent);
-  border: 1px solid var(--ink);
-}
-
-.primary:hover {
+.primary:hover:not(:disabled) {
   background: var(--ink-2);
   border-color: var(--ink-2);
 }
 
-.ghost {
-  background: transparent;
-  color: var(--ink);
-  border: 1px solid var(--ink);
-}
-
-.ghost:hover {
-  background: var(--mist);
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .status,
@@ -230,13 +214,11 @@
     padding: 20px 16px 18px;
   }
 
-  .kinds,
-  .grid {
+  .kinds {
     grid-template-columns: 1fr;
   }
 
-  .primary,
-  .ghost {
+  .primary {
     width: 100%;
   }
 }

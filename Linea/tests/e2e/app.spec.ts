@@ -352,15 +352,14 @@ test('rejected commands restore actual playback without changing a replacement t
   await expect(page.locator('#btn-play')).toHaveAttribute('aria-label', 'Play')
 })
 
-test('settings offers a problem report with this session filled in', async () => {
+test('settings report composer sends from the overlay', async () => {
   await page.locator('#app').hover()
   await page.locator('#btn-settings').click()
-  const link = page.locator('#report-problem')
-  await expect(link).toBeVisible()
-  await expect(link).toHaveAttribute('href', /project-linea\.vercel\.app\/feedback/)
-  const href = (await link.getAttribute('href')) ?? ''
-  expect(href).toContain('version=')
-  expect(href).toContain('windows=')
+  await page.locator('#report-problem').click()
+  await expect(page.locator('#report-composer')).toBeVisible()
+  await page.locator('#report-message').fill('Lyrics stuck on the previous song.')
+  await page.locator('#report-send').click()
+  await expect(page.locator('#report-status')).toHaveText('Sent.')
 })
 
 test('renderer reports no unhandled script errors', () => {

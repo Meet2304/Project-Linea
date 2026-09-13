@@ -5,7 +5,7 @@ title: ''
 labels: bug
 ---
 
-The [feedback page](https://project-linea.vercel.app/feedback) asks for these in order and opens a filled-in issue. Use this template if you are already on GitHub.
+The [feedback page](https://project-linea.vercel.app/feedback) files an issue from one box. Use this template if you are already on GitHub.
 
 ### What happened
 
