@@ -81,7 +81,7 @@ export function parseReport(value: unknown): ParseResult {
   if (report.kind === 'crash') {
     if (!diagnostics.crashKind) return { ok: false, error: 'Crash reports need a crash kind' }
   } else if (message.length < MIN_MESSAGE) {
-    return { ok: false, error: 'A short sentence is enough' }
+    return { ok: false, error: 'A short sentence is enough.' }
   }
 
   return { ok: true, spam: false, report }

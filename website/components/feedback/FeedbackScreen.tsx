@@ -32,7 +32,7 @@ export default function FeedbackScreen() {
           <Mono tracking="0.2em">// trouble</Mono>
           <h1 className={s.title}>Something&apos;s off.</h1>
           <p className={s.lede}>
-            A sentence is enough. Send files it as a GitHub issue so it lands next to the rest of
+            A sentence is enough. Send turns it into a GitHub issue, next to the rest of
             Linea&apos;s work.
           </p>
         </header>
