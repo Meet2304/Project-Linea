@@ -8,6 +8,7 @@ import type {
   Prefs,
   UpdateState
 } from '../shared/types'
+import type { SubmitResult, UserReport } from '../shared/report'
 
 function subscribe<T>(channel: string): (callback: (data: T) => void) => () => void {
   return (callback) => {
@@ -47,5 +48,7 @@ contextBridge.exposeInMainWorld('linea', {
   getUpdateState: (): Promise<UpdateState> => ipcRenderer.invoke(IPC.GET_UPDATE_STATE),
   checkForUpdate: (): Promise<void> => ipcRenderer.invoke(IPC.CHECK_FOR_UPDATE),
   installUpdate: (): Promise<void> => ipcRenderer.invoke(IPC.INSTALL_UPDATE),
+  submitReport: (report: UserReport): Promise<SubmitResult> =>
+    ipcRenderer.invoke(IPC.SUBMIT_REPORT, report),
   onUpdateState: subscribe<UpdateState>(IPC.UPDATE_STATE)
 })

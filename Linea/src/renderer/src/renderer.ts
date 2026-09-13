@@ -812,8 +812,7 @@ async function init(): Promise<void> {
     onShowTimestamps: (show) => {
       queuePrefs({ showTimestamps: show })
       applyPrefsToDom(prefs)
-    },
-    onViewChange: () => {}
+    }
   })
 
   window.linea.onNowPlaying(applySnapshot)

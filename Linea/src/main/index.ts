@@ -12,6 +12,7 @@ import {
   powerMonitor
 } from 'electron'
 import { join } from 'path'
+import { release as osRelease, arch as osArch } from 'node:os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { IPC } from '../shared/ipcChannels'
@@ -29,6 +30,8 @@ import {
   installUpdate,
   stopUpdateChecks
 } from './updater'
+import { diagnosticsFromSnapshot, parseUserReport, type OsInfo } from '../shared/report'
+import { reportCrash, submitReport } from './submitReport'
 
 // The panel fills the window minus a 30px shadow gutter per side. The
 // window is freely resizable (custom grips in the renderer drive
@@ -207,13 +210,14 @@ function createWindow(): void {
   // dead panel on screen.
   win.webContents.on('render-process-gone', (_event, details) => {
     console.error('Renderer process gone:', details.reason)
-    if (details.reason !== 'clean-exit' && !win.isDestroyed()) {
-      win.reload()
-    }
+    if (details.reason === 'clean-exit') return
+    sendCrash('render-process-gone', details.reason)
+    if (!win.isDestroyed()) win.reload()
   })
 
   win.on('unresponsive', () => {
     console.error('Window unresponsive — reloading')
+    sendCrash('unresponsive', 'unresponsive')
     if (!win.isDestroyed()) win.reload()
   })
 
@@ -329,10 +333,29 @@ function isValidBounds(
 // (e.g. a media request rejecting during sleep/resume). Log and survive.
 process.on('uncaughtException', (error) => {
   console.error('Uncaught exception in main:', error)
+  sendCrash('uncaughtException', error.name || 'Error')
 })
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled rejection in main:', reason)
 })
+
+function osInfo(): OsInfo {
+  return {
+    version: app.getVersion(),
+    platform: process.platform,
+    osVersion: osRelease(),
+    arch: osArch()
+  }
+}
+
+function sendCrash(crashKind: string, crashReason: string): void {
+  reportCrash({
+    crashKind,
+    crashReason,
+    os: osInfo(),
+    snapshot: playback?.getSnapshot() ?? null
+  })
+}
 
 // The renderer never needs to navigate away from the bundled page (the
 // dev server in dev). Block everything else so a hijacked link can't
@@ -452,6 +475,15 @@ app.whenReady().then(() => {
   })
   ipcMain.handle(IPC.INSTALL_UPDATE, () => {
     installUpdate()
+  })
+  ipcMain.handle(IPC.SUBMIT_REPORT, (_event, payload: unknown) => {
+    const user = parseUserReport(payload)
+    if (!user) return { ok: false as const, error: 'A short sentence is enough.' }
+    return submitReport({
+      kind: user.kind,
+      message: user.message,
+      diagnostics: diagnosticsFromSnapshot(osInfo(), playback?.getSnapshot() ?? null)
+    })
   })
 
   // Everything the renderer needs is registered above, before the window

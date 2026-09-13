@@ -418,6 +418,14 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
                 <span className={s.previewLabel}>Preview</span>
                 <span className={s.previewText}>Sand on a plate, finding the line</span>
               </div>
+              <a
+                className={`${s.setRow} ${s.setRowLink}`}
+                href="/feedback"
+                onClick={stop(() => {})}
+              >
+                <span className={s.setLabel}>Report a problem</span>
+                <span className={s.setLinkAffordance}>Open</span>
+              </a>
             </div>
           ) : (
             <div className={s.nowView}>

@@ -1,15 +1,15 @@
 import CymaticField from './field/CymaticField'
 import Mono from './ui/Mono'
 import { FIELD_BASE, PALETTES, PATTERNS } from '@/lib/palettes'
-import { ISSUES_URL, LICENSE_URL, NOTICE_URL, RELEASES_URL, REPO_URL } from '@/lib/release'
+import { FEEDBACK_PATH, LICENSE_URL, NOTICE_URL, RELEASES_URL, REPO_URL } from '@/lib/release'
 
-const LINKS: { label: string; href: string }[] = [
-  { label: 'GitHub', href: REPO_URL },
-  { label: 'Releases', href: RELEASES_URL },
-  { label: 'Issues', href: ISSUES_URL },
-  { label: 'License', href: LICENSE_URL },
-  { label: 'Notices', href: NOTICE_URL },
-  { label: 'lrclib', href: 'https://lrclib.net' }
+const LINKS: { label: string; href: string; external?: boolean }[] = [
+  { label: 'Feedback', href: FEEDBACK_PATH },
+  { label: 'GitHub', href: REPO_URL, external: true },
+  { label: 'Releases', href: RELEASES_URL, external: true },
+  { label: 'License', href: LICENSE_URL, external: true },
+  { label: 'Notices', href: NOTICE_URL, external: true },
+  { label: 'lrclib', href: 'https://lrclib.net', external: true }
 ]
 
 /**
@@ -54,8 +54,7 @@ export default function Footer() {
             <a
               key={l.label}
               href={l.href}
-              target="_blank"
-              rel="noreferrer noopener"
+              {...(l.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
               style={{ textDecoration: 'none' }}
             >
               <Mono color="var(--steel)">{l.label}</Mono>

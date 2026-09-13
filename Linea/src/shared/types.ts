@@ -14,6 +14,8 @@ export type PlayerCapabilities = Record<PlayerCommand['type'], boolean>
 export interface PlayerState {
   sessionId: string
   mediaRevision: number
+  /** SMTC app id / AUMID — used to name the player in a problem report. */
+  sourceAppId: string
   isPlaying: boolean
   trackId: string | null
   trackName: string

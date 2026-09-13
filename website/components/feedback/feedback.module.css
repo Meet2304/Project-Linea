@@ -1,0 +1,224 @@
+/* Feedback — a letter on a quiet plate. Not a helpdesk. */
+
+.screen {
+  position: relative;
+  overflow: hidden;
+  min-height: 100dvh;
+  background: var(--surface-page);
+  border-bottom: 1px solid var(--line);
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--scrim-rgb) / 0.94),
+    rgb(var(--scrim-rgb) / 0.78) 42%,
+    rgb(var(--scrim-rgb) / 0.92)
+  );
+}
+
+.inner {
+  position: relative;
+  z-index: 2;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 132px clamp(20px, 4vw, 56px) 96px;
+}
+
+.intro {
+  margin-bottom: 36px;
+}
+
+.title {
+  margin: 18px 0 0;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  letter-spacing: -0.04em;
+  line-height: var(--leading-tight);
+}
+
+.lede {
+  margin: 16px 0 0;
+  max-width: 42ch;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--steel);
+}
+
+.form {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px 28px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--surface-page) 88%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.kinds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.kind {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px;
+  text-align: left;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background 180ms var(--ease),
+    border-color 180ms var(--ease),
+    color 180ms var(--ease);
+}
+
+.kind:hover {
+  border-color: var(--line-strong);
+}
+
+.kind[data-selected='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--text-on-accent);
+}
+
+.kindLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.honey {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  transition:
+    border-color 180ms var(--ease),
+    box-shadow 180ms var(--ease);
+}
+
+.input::placeholder {
+  color: var(--slate);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--ink-2);
+  box-shadow: var(--ring);
+}
+
+.area {
+  resize: vertical;
+  min-height: 140px;
+}
+
+.note {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--slate);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 22px;
+  border-radius: var(--radius-round);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  background: var(--ink);
+  color: var(--text-on-accent);
+  border: 1px solid var(--ink);
+  transition:
+    background 180ms var(--ease),
+    color 180ms var(--ease),
+    border-color 180ms var(--ease);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.status,
+.statusError {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.status {
+  color: var(--teal);
+}
+
+.statusError {
+  color: var(--garnet);
+}
+
+@media (max-width: 720px) {
+  .inner {
+    padding: 108px 18px 72px;
+  }
+
+  .form {
+    padding: 20px 16px 18px;
+  }
+
+  .kinds {
+    grid-template-columns: 1fr;
+  }
+
+  .primary {
+    width: 100%;
+  }
+}

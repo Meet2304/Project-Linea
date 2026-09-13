@@ -5,6 +5,9 @@ export const RELEASES_URL = `${REPO_URL}/releases`
 export const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`
 export const NOTICE_URL = `${REPO_URL}/blob/main/NOTICE.md`
 export const ISSUES_URL = `${REPO_URL}/issues`
+export const SITE_URL = 'https://project-linea.vercel.app'
+export const FEEDBACK_PATH = '/feedback'
+export const FEEDBACK_URL = `${SITE_URL}${FEEDBACK_PATH}`
 
 export interface ReleaseAsset {
   url: string

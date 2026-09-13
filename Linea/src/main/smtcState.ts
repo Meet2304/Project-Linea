@@ -142,6 +142,7 @@ export class SessionMapper {
     const state: PlayerState = {
       sessionId: s.id,
       mediaRevision: s.mediaRevision,
+      sourceAppId: s.appId,
       trackId,
       trackName: s.title,
       artistName: s.artist,

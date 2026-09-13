@@ -775,6 +775,25 @@
   text-overflow: ellipsis;
 }
 
+.setRowLink {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.setLinkAffordance {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface-sunken);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
 /* --- Touch ------------------------------------------------------
    Two things the replica cannot inherit from a desktop window.
 

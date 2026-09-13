@@ -6,6 +6,7 @@ import type {
   Prefs,
   UpdateState
 } from '../../shared/types'
+import type { SubmitResult, UserReport } from '../../shared/report'
 
 interface LineaAPI {
   toggleClickThrough: () => Promise<boolean>
@@ -33,6 +34,7 @@ interface LineaAPI {
   getUpdateState: () => Promise<UpdateState>
   checkForUpdate: () => Promise<void>
   installUpdate: () => Promise<void>
+  submitReport: (report: UserReport) => Promise<SubmitResult>
   onUpdateState: (callback: (state: UpdateState) => void) => () => void
 }
 
