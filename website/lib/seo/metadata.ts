@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import {
   DESCRIPTION,
+  GOOGLE_SITE_VERIFICATION,
   KEYWORDS,
   OG_IMAGE,
   SITE_NAME,
@@ -78,7 +79,7 @@ export const rootMetadata: Metadata = {
     }
   },
   ...buildMetadata({ title: TITLE, description: DESCRIPTION, path: '/' }),
-  ...(process.env.GOOGLE_SITE_VERIFICATION
-    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
-    : {})
+  verification: {
+    google: GOOGLE_SITE_VERIFICATION
+  }
 }

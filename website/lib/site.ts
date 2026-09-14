@@ -33,6 +33,9 @@ export const AUTHOR_NAME = 'Meet Bhatt'
 export const AUTHOR_URL = 'https://github.com/Meet2304'
 export { LICENSE_URL, REPO_URL } from '@/lib/release'
 
+/** Search Console HTML-tag verification. Public by design — it ships in <head>. */
+export const GOOGLE_SITE_VERIFICATION = 'LPJGoxWg4UlHdMNf1pXfeeCA_8s9PoliBv18onFvLCA'
+
 export const OG_IMAGE = {
   url: '/social/linea-whatsapp-og.png',
   width: 1200,

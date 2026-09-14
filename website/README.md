@@ -66,8 +66,8 @@ redeploy — `NEXT_PUBLIC_*` is inlined at build time):
 | Name | Value |
 | ---- | ----- |
 | `NEXT_PUBLIC_SITE_URL` | `https://linea.meetbhatt.com` |
-| `GOOGLE_SITE_VERIFICATION` | the `content` value from Search Console’s HTML-tag method |
 
-Do not include a trailing slash on the site URL. After deploy, submit
-`https://linea.meetbhatt.com/sitemap.xml` in Google Search Console. The sitemap
-is generated; you do not upload HTML files for the pages themselves.
+Do not include a trailing slash on the site URL. Google Search Console’s HTML-tag
+verification is already in the homepage `<head>`. After deploy, submit
+`https://linea.meetbhatt.com/sitemap.xml` in Search Console. The sitemap is
+generated; you do not upload HTML files for the pages themselves.
