@@ -1,10 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import HomePage from '@/app/page'
-
-const TITLE = 'Linea — know every word'
-const DESCRIPTION =
-  'Live song lyrics, floating over everything you do. A lightweight, open-source desktop overlay with a Windows media-session beta.'
+import { DESCRIPTION, TITLE } from '@/lib/site'
 
 const shareImages = {
   whatsapp: { image: '/social/linea-whatsapp-og.png', width: 1200, height: 630 },

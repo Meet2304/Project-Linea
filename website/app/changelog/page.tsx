@@ -1,23 +1,30 @@
 import type { Metadata } from 'next'
 import Nav from '@/components/Nav'
 import Changelog from '@/components/changelog/Changelog'
+import JsonLd from '@/components/seo/JsonLd'
 import ThemeProvider from '@/components/theme/ThemeProvider'
 import ReducedMotion from '@/components/motion/ReducedMotion'
+import { RELEASES } from '@/components/changelog/releases'
+import { breadcrumbJsonLd, changelogJsonLd } from '@/lib/seo/jsonld'
+import { buildMetadata } from '@/lib/seo/metadata'
+import { CHANGELOG_DESCRIPTION, CHANGELOG_TITLE, SITE_URL } from '@/lib/site'
 
-const TITLE = 'Changelog — Linea'
-const DESCRIPTION =
-  'Every Linea release, written the night it shipped — with whatever was playing at the time.'
+const base = buildMetadata({
+  title: CHANGELOG_TITLE,
+  description: CHANGELOG_DESCRIPTION,
+  path: '/changelog',
+  type: 'article'
+})
 
 export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  openGraph: {
-    type: 'article',
-    title: TITLE,
-    description: DESCRIPTION,
-    siteName: 'Linea'
-  },
-  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION }
+  ...base,
+  alternates: {
+    ...base.alternates,
+    types: {
+      ...base.alternates?.types,
+      'application/rss+xml': `${SITE_URL}/feed.xml`
+    }
+  }
 }
 
 /**
@@ -30,6 +37,22 @@ export default function ChangelogPage() {
   return (
     <ThemeProvider>
       <ReducedMotion>
+        <JsonLd
+          data={changelogJsonLd(
+            RELEASES.map((r) => ({
+              version: r.version,
+              title: r.title,
+              lede: r.lede,
+              url: r.url
+            }))
+          )}
+        />
+        <JsonLd
+          data={breadcrumbJsonLd([
+            { name: 'Linea', path: '/' },
+            { name: 'Changelog', path: '/changelog' }
+          ])}
+        />
         <Nav />
         <main>
           <Changelog />

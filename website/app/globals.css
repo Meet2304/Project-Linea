@@ -383,3 +383,22 @@ h3 {
   backdrop-filter: blur(var(--blur-panel));
   -webkit-backdrop-filter: blur(var(--blur-panel));
 }
+
+.skip-to-content {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  z-index: 2000;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  transform: translateY(-180%);
+}
+
+.skip-to-content:focus {
+  transform: translateY(0);
+}
