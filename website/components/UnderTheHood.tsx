@@ -43,6 +43,7 @@ const ITEMS: Item[] = [
 export default function UnderTheHood() {
   return (
     <section
+      data-analytics-section="under_the_hood"
       style={{
         borderTop: '1px solid var(--line)',
         borderBottom: '1px solid var(--line)',

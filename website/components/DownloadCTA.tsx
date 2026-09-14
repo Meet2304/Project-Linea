@@ -14,6 +14,7 @@ export default function DownloadCTA() {
 
   return (
     <section
+      data-analytics-section="download_cta"
       style={{
         position: 'relative',
         overflow: 'hidden',
@@ -96,7 +97,8 @@ export default function DownloadCTA() {
             color: 'var(--slate)'
           }}
         >
-          Linea follows compatible Windows media players. Mac downloads retain the legacy Spotify integration.
+          Linea follows compatible Windows media players. Mac downloads retain the legacy Spotify
+          integration.
         </p>
       </div>
 

@@ -17,6 +17,7 @@ export default function OpenSource({ release }: { release: ReleaseInfo }) {
   return (
     <section
       id="source"
+      data-analytics-section="open_source"
       style={{
         position: 'relative',
         overflow: 'hidden',

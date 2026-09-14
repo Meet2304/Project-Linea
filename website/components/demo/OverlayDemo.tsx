@@ -302,7 +302,10 @@ export default function OverlayDemo({ act = 'lyrics', choreograph = true, classN
   }
 
   return (
-    <div className={`${s.demoStage} ${className ?? ''}`}>
+    <div
+      className={`${s.demoStage} ${className ?? ''}`}
+      data-analytics-section="interactive_lyrics_demo"
+    >
       <div
         ref={panelRef}
         className={s.app}

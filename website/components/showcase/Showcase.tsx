@@ -191,6 +191,7 @@ export default function Showcase() {
   return (
     <section
       id="top"
+      data-analytics-section="showcase"
       ref={rootRef}
       className={s.showcase}
       style={{ '--handoff': 0 } as React.CSSProperties}

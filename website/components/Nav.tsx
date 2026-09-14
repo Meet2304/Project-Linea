@@ -25,6 +25,7 @@ const LINKS = [
 export default function Nav() {
   return (
     <header
+      data-analytics-section="navigation"
       className="nav-shade"
       style={{
         position: 'fixed',

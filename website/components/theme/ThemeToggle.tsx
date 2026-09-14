@@ -25,6 +25,8 @@ export default function ThemeToggle({ small }: { small?: boolean }) {
       role="switch"
       aria-checked={dark}
       aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+      data-analytics-event="theme_toggle"
+      data-analytics-value={dark ? 'light' : 'dark'}
       className={small ? `${s.themeToggle} ${s.small}` : s.themeToggle}
       onClick={toggle}
     >

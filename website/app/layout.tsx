@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Outfit, Space_Mono } from 'next/font/google'
 import LoadingVeil from '@/components/loader/LoadingVeil'
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics'
 import JsonLd from '@/components/seo/JsonLd'
 import { siteGraphJsonLd } from '@/lib/seo/jsonld'
 import { rootMetadata } from '@/lib/seo/metadata'
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             hydration, while everything beneath it finishes assembling. */}
         <LoadingVeil />
         {children}
+        <GoogleAnalytics />
       </body>
     </html>
   )

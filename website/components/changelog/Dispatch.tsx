@@ -94,6 +94,7 @@ export default function Dispatch({ release: r, song, accentHex }: Props) {
     <section
       ref={ref}
       className={`${s.screen} ${s.dispatch}`}
+      data-analytics-section={`release_${r.version}`}
       data-notes={open}
       style={{ ['--accent-c' as string]: accent, ['--song-c' as string]: accent }}
     >
